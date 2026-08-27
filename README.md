@@ -11,6 +11,8 @@ CityPass is a full-stack event discovery and pass booking platform that allows u
 - REST APIs
 - MVC Architecture
 - JWT & bcrypt
+- TypeScript
+
 
 ## Key Features
 

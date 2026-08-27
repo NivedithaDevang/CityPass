@@ -1,0 +1,16 @@
+{
+  "scripts": {
+    "start": "npm --prefix backend run start",
+    "dev": "npm --prefix backend run dev"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "mysql2": "^3.24.2",
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0"
+  }
+}
