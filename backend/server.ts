@@ -5,6 +5,9 @@ import cityRouter from "./routes/cityRoute.js";
 import categoryRouter from "./routes/categoryRoute.js";
 import orgReqRouter from "./routes/orgRequestRoute.js";
 import organizerRouter from "./routes/organiserRoute.js";
+import eventRouter from "./routes/eventRoute.js";
+import bookRouter from "./routes/bookingRoute.js";
+import passRouter from "./routes/passRoute.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -23,6 +26,10 @@ app.use("/cities", cityRouter);
 app.use("/categories", categoryRouter);
 app.use("/orgreq", orgReqRouter);
 app.use("/organizers", organizerRouter);
+app.use("/events", eventRouter);
+app.use("/bookings", bookRouter);
+app.use("/passes", passRouter);
+
 
 const PORT = process.env.PORT || 5000;
 
