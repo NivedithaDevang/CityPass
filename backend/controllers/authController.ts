@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { findUserByEmail } from "../models/authModel.js";
+import jwt from "jsonwebtoken";
 
 export const loginUser = (
     req: Request,
@@ -31,6 +32,17 @@ export const loginUser = (
                 message: "Invalid email or password"
             });
         }
+
+          const token = jwt.sign(
+            {
+                id: user.id,
+                role: user.role
+            },
+            process.env.JWT_SECRET as string,
+            {
+                expiresIn: "1h"
+            }
+        );
 
         res.status(200).json({
             message: "Login successful",

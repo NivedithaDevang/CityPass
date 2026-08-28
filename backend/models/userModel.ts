@@ -7,7 +7,7 @@ type User = {
     name: string;
     email: string;
     password: string;
-    role: string;
+    role: "USER" | "ORGANIZER" | "ADMIN";
 };
 
 type UserCallback = (
