@@ -30,25 +30,26 @@ export const getEvents = (req: Request, res: Response) => {
 
 //for posting new event
 export const addEvent = async (req: Request, res: Response) => {
-    const { name, description, city, category, location, event_date, price, capacity, status } = req.body;
-     if (!name || !city || !category || !location || !event_date || !price || !capacity) {
+    const { organizer_id, city_id, category_id, name, description, location, event_date, price, capacity, status = "PENDING" } = req.body;
+     if (organizer_id === undefined || city_id === undefined || category_id === undefined || !name || !event_date || price === undefined || capacity === undefined) {
         return res.status(400).json({
-            message: "Name, city, category, location, event_date, price and capacity are required"
+            message: "city_id, category_id, name, event_date, price and capacity are required"
         });
     }
 
     createEvent(
-        { name, description, city, category, location, event_date, price, capacity, status },
+        { organizer_id, city_id, category_id, name, description, location, event_date, price, capacity, status },
             (err: any, result) => {
             if (err) {
                 return res.status(500).json({
-                    message: "Unable to create event"
+                    message: "Unable to create event",
+                    error: err.message
                 });
             }
 
             res.status(201).json({
                 message: "Event created successfully",
-                userId: result?.insertId
+                event_id: result?.insertId
             });
         }
     );
@@ -58,7 +59,7 @@ export const addEvent = async (req: Request, res: Response) => {
 //for updating event details
 export const updateEvent = (req: Request, res: Response) => {
     const eventId = Number(req.params.id);
-    const { name, description, city, category, location, event_date, price, capacity, status } = req.body;
+    const { name, description, city_id, category_id, location, event_date, price, capacity, status } = req.body;
 
     if (!Number.isInteger(eventId) || eventId <= 0) {
         return res.status(400).json({
@@ -66,13 +67,16 @@ export const updateEvent = (req: Request, res: Response) => {
         });
     }
 
-    if (!name || !description || !city || !category || !location || !event_date || !price || !capacity || !status) {
+    if (!name || city_id === undefined || category_id === undefined || !event_date || price === undefined || capacity === undefined || !status) {
         return res.status(400).json({
-            message: "Name, description, city, category, location, event_date, price, capacity and status are required"
+            message: "Name, city_id, category_id, event_date, price, capacity and status are required"
         });
     }
 
-    updateEventModel(eventId, { name, description, city, category, location, event_date, price, capacity, status }, (err: any, result: ResultSetHeader) => {
+    updateEventModel(eventId, {
+        name, description, city_id, category_id, location, event_date, price, capacity, status,
+        organizer_id: undefined
+    }, (err: any, result: ResultSetHeader) => {
         if (err) {
             return res.status(500).json({
                 message: "Unable to update event"

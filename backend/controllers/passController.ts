@@ -29,21 +29,22 @@ export const getPasses = (req: Request, res: Response) => {
 
 //for posting new pass
 export const addPass = async (req: Request, res: Response) => {
-    const { name, description, price, status } = req.body;
-     if (!name || !description || !price || !status) {
+    const { event_id, name, description, price, status = "ACTIVE" } = req.body;
+     if (event_id === undefined || !name || price === undefined) {
         return res.status(400).json({
-            message: "Pass name, description, price, status are required"
+            message: "event_id, name and price are required"
         });
     }
 
 
     createPass(
-        { name, description, price, status },
+        { event_id, name, description, price, status },
             (err: any, result) => {
             if (err) {
             
                 return res.status(500).json({
-                    message: "Unable to create pass"
+                    message: "Unable to create pass",
+                    error: err.message
                 });
             }
 

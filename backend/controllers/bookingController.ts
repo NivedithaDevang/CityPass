@@ -29,21 +29,22 @@ export const getBookings = (req: Request, res: Response) => {
 
 //for posting new booking
 export const addBooking = async (req: Request, res: Response) => {
-    const { booking_date, number_of_tickets, total_amount, status } = req.body;
-     if (!booking_date || !number_of_tickets || !total_amount || !status) {
+    const { user_id, pass_id, booking_date, number_of_tickets, total_amount, status = "CONFIRMED" } = req.body;
+     if (user_id === undefined || pass_id === undefined || !booking_date || number_of_tickets === undefined || total_amount === undefined) {
         return res.status(400).json({
-            message: "Booking date, Number of tickets, total amount are required"
+            message: "user_id, pass_id, booking_date, number_of_tickets and total_amount are required"
         });
     }
 
 
     createBooking(
-        { booking_date, number_of_tickets, total_amount, status },
+        { user_id, pass_id, booking_date, number_of_tickets, total_amount, status },
             (err: any, result) => {
             if (err) {
             
                 return res.status(500).json({
-                    message: "Unable to create booking"
+                    message: "Unable to create booking",
+                    error: err.message
                 });
             }
 

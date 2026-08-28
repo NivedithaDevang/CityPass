@@ -5,6 +5,8 @@ import { ResultSetHeader } from "mysql2";
 //creating a type
 type Booking = {
     id?: number;
+    user_id: number;
+    pass_id: number;
     booking_date: Date;
     number_of_tickets: number;
     total_amount: number;
@@ -25,13 +27,13 @@ export const getAllBookings = (callback: any) => {
 //posting a new booking
 export const createBooking = (book: Booking, callback: BookingCallback) => {
     const sql = `
-        INSERT INTO bookings (booking_date, number_of_tickets, total_amount, status)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO bookings (user_id, pass_id, booking_date, number_of_tickets, total_amount, status)
+        VALUES (?, ?, ?, ?, ?, ?)
     `;
 
     db.query<ResultSetHeader>(
         sql,
-        [book.booking_date, book.number_of_tickets, book.total_amount, book.status],
+        [book.user_id, book.pass_id, book.booking_date, book.number_of_tickets, book.total_amount, book.status],
         callback
     );
 };

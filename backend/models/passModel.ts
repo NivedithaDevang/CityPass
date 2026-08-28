@@ -5,6 +5,7 @@ import { ResultSetHeader } from "mysql2";
 //creating a type
 type Pass = {
     id?: number;
+    event_id : number;
     name: string;
     description: string;
     price: number;
@@ -25,13 +26,13 @@ export const getAllPasses = (callback: any) => {
 //posting a new pass
 export const createPass = (pass: Pass, callback: PassCallback) => {
     const sql = `
-        INSERT INTO passes (name, description, price, status)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO passes (event_id, name, description, price, status)
+        VALUES (?, ?, ?, ?, ?)
     `;
 
     db.query<ResultSetHeader>(
         sql,
-        [pass.name, pass.description, pass.price, pass.status],
+        [pass.event_id, pass.name, pass.description, pass.price, pass.status],
         callback
     );
 };

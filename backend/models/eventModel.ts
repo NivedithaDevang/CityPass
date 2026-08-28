@@ -1,15 +1,16 @@
 import express from "express";
 import db from "../config/database.js";
-import { ResultSetHeader } from "mysql2";
+import { QueryValues, ResultSetHeader } from "mysql2";
 
 
 //creating a type
 type Event = {
+    organizer_id: {} | QueryValues;
+    city_id: number;
+    category_id: number;
     name: string;
-    description: string;
-    location: string;
-    city: string;
-    category: string;
+    description?: string;
+    location?: string;
     event_date: Date;
     price: number;
     capacity: number;
@@ -30,13 +31,13 @@ export const getAllEvents = (callback: any) => {
 //posting a new event
 export const createEvent = (event: Event, callback: EventCallback) => {
     const sql = `
-        INSERT INTO events (name, description, city, category, location, event_date, price, capacity, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO events (organizer_id, city_id, category_id, name, description, location, event_date, price, capacity, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     db.query<ResultSetHeader>(
         sql,
-        [event.name, event.description, event.city, event.category, event.location, event.event_date, event.price, event.capacity, event.status],
+        [ event.organizer_id, event.city_id, event.category_id, event.name, event.description, event.location, event.event_date, event.price, event.capacity, event.status],
         callback
     );
 };
@@ -45,13 +46,13 @@ export const createEvent = (event: Event, callback: EventCallback) => {
 export const updateEvent = (id: number, event: Event, callback: any) => {
     const sql = `
         UPDATE events
-        SET name = ?, description = ?, city = ?, category = ?, location = ?, event_date = ?, price = ?, capacity = ?, status = ?
+        SET name = ?, description = ?, city_id = ?, category_id = ?, location = ?, event_date = ?, price = ?, capacity = ?, status = ?
         WHERE id = ?
     `;
 
     db.query(
         sql,
-        [event.name, event.description, event.city, event.category, event.location, event.event_date, event.price, event.capacity, event.status, id],
+        [event.name, event.description, event.city_id, event.category_id, event.location, event.event_date, event.price, event.capacity, event.status, id],
         callback
     );
 };
