@@ -1,4 +1,5 @@
-import db from "../config/database.js";
+import { db } from "../config/env.js";
+import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 
 //creating a type
@@ -8,41 +9,41 @@ type OrgReq = {
     description: string;
     status: string;
 };
+
+type OrgReqRow = RowDataPacket & OrgReq & { id: number };
+
 //getting all organiser requests
-export const getAllRequests = (callback: any) => {
-    db.query("SELECT * FROM organizer_requests", callback);
+export const getAllRequests = async () => {
+    const [results] = await db.query<OrgReqRow[]>("SELECT * FROM organizer_requests");
+    return results;
 };
 
 //posting a new organizer request
-export const createRequest = (request: OrgReq, callback: any) => {
+export const createRequest = async (request: OrgReq) => {
     const sql = `
         INSERT INTO organizer_requests (user_id, organization_name, description, status)
         VALUES (?, ?, ?, ?)
     `;
 
-    db.query(
+    const [results] = await db.query<ResultSetHeader>(
         sql,
-        [request.user_id, request.organization_name, request.description, request.status],
-        callback
+        [request.user_id, request.organization_name, request.description, request.status]
     );
+    return results;
 };
 
-//updating a user details
-export const updateRequest = (id: number, org: OrgReq, callback: any) => {
+//updating a request details
+export const updateRequest = async (id: number, org: OrgReq) => {
     const sql = `
         UPDATE organizer_requests
         SET organization_name = ?, description = ?, status = ?
         WHERE id = ?
     `;
 
-    db.query(
+    const [results] = await db.query<ResultSetHeader>(
         sql,
-        [org.status, id],
-        callback
+        [org.organization_name, org.description, org.status, id]
     );
+    return results;
 };
 
-//deleting a user
-export const removeRequest = (id: number, callback: any) => {
-    db.query("DELETE FROM organizer_requests WHERE id = ?", [id], callback);
-};

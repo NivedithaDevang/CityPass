@@ -7,7 +7,8 @@ type Organizers = {
     name: string;
     description: string
 };
-//getting all cities
+//getting all organizers
+
 export const getAllOrganizers = (callback: any) => {
     db.query("SELECT * from organizers", callback);
 };

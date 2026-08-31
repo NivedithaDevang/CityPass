@@ -1,18 +1,17 @@
 import express from "express";
 import db from "./config/database.js";
-import userRouter from "./routes/userRoutes.js"; 
-import cityRouter from "./routes/cityRoute.js";
-import categoryRouter from "./routes/categoryRoute.js";
-import orgReqRouter from "./routes/orgRequestRoute.js";
-import organizerRouter from "./routes/organiserRoute.js";
-import eventRouter from "./routes/eventRoute.js";
-import bookRouter from "./routes/bookingRoute.js";
-import passRouter from "./routes/passRoute.js";
+import userRouter from "./routes/v1/userRoutes.js"; 
+import cityRouter from "./routes/v1/cityRoute.js";
+import categoryRouter from "./routes/v1/categoryRoute.js";
+import orgReqRouter from "./routes/v1/orgRequestRoute.js";
+import organizerRouter from "./routes/v1/organiserRoute.js";
+import eventRouter from "./routes/v1/eventRoute.js";
+import bookRouter from "./routes/v1/bookingRoute.js";
+import ticketRouter from "./routes/v1/ticketRoute.js";
+import errorHandler from "./middleware/errorHandler.js";
 
-import authRoutes from "./routes/authRoute.js";
-import dotenv from "dotenv";
-dotenv.config();
-
+import authRoutes from "./routes/v1/authRoute.js";
+import { error } from "node:console";
 const app = express();
 
 app.use(express.json());
@@ -23,16 +22,16 @@ app.get("/", (req, res) => {
     });
 });
 
-app.use("/users", userRouter);
-app.use("/cities", cityRouter);
-app.use("/categories", categoryRouter);
-app.use("/orgreq", orgReqRouter);
-app.use("/organizers", organizerRouter);
-app.use("/events", eventRouter);
-app.use("/bookings", bookRouter);
-app.use("/passes", passRouter);
-
-app.use("/auth", authRoutes);
+app.use("/v1/users", userRouter);
+app.use("/v1/cities", cityRouter);
+app.use("/v1/categories", categoryRouter);
+app.use("/v1/orgreq", orgReqRouter);
+app.use("/v1/organizers", organizerRouter);
+app.use("/v1/events", eventRouter);
+app.use("/v1/bookings", bookRouter);
+app.use("/v1/tickets", ticketRouter);
+app.use("/v1/auth", authRoutes);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 

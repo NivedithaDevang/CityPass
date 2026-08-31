@@ -1,5 +1,5 @@
-import db from "../config/database.js";
-import { ResultSetHeader } from "mysql2";
+import { db } from "../config/env.js";
+import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 
 //creating a type
@@ -13,33 +13,25 @@ type Booking = {
     status: string
 };
 
-type BookingCallback = (
-    err: Error | null,
-    result?: ResultSetHeader
-) => void;
+type BookingRow = RowDataPacket & Booking;
 
 
 //getting all bookings
-export const getAllBookings = (callback: any) => {
-    db.query("SELECT * FROM bookings", callback);
+export const getAllBookings = async () => {
+    const [results] = await db.query<BookingRow[]>("SELECT * FROM bookings");
+    return results;
 };
 
 //posting a new booking
-export const createBooking = (book: Booking, callback: BookingCallback) => {
+export const createBooking = async (book: Booking) => {
     const sql = `
         INSERT INTO bookings (user_id, pass_id, booking_date, number_of_tickets, total_amount, status)
         VALUES (?, ?, ?, ?, ?, ?)
     `;
 
-    db.query<ResultSetHeader>(
+    const [results] = await db.query<ResultSetHeader>(
         sql,
-        [book.user_id, book.pass_id, book.booking_date, book.number_of_tickets, book.total_amount, book.status],
-        callback
+        [book.user_id, book.pass_id, book.booking_date, book.number_of_tickets, book.total_amount, book.status]
     );
-};
-
-
-//deleting a booking
-export const removeBooking = (id: number, callback: any) => {
-    db.query("DELETE FROM bookings WHERE id = ?", [id], callback);
+    return results;
 };

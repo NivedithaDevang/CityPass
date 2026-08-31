@@ -3,18 +3,14 @@ import bcrypt from "bcrypt";
 import { findUserByEmail } from "../models/authModel.js";
 import jwt from "jsonwebtoken";
 
-export const loginUser = (
+export const loginUser = async (
     req: Request,
     res: Response
 ) => {
-    const { email, password } = req.body;
+    try {
+        const { email, password } = req.body;
 
-    findUserByEmail(email, async (err, user) => {
-        if (err) {
-            return res.status(500).json({
-                message: "Unable to login"
-            });
-        }
+        const user = await findUserByEmail(email);
 
         if (!user) {
             return res.status(401).json({
@@ -33,7 +29,7 @@ export const loginUser = (
             });
         }
 
-          const token = jwt.sign(
+        const token = jwt.sign(
             {
                 id: user.id,
                 role: user.role
@@ -51,7 +47,12 @@ export const loginUser = (
                 name: user.name,
                 email: user.email,
                 role: user.role
-            }
+            },
+            token
         });
-    });
+    } catch (err) {
+        res.status(500).json({
+            message: "Unable to login"
+        });
+    }
 };

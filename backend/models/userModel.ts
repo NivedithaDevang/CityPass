@@ -1,5 +1,5 @@
-import db from "../config/database.js";
-import { ResultSetHeader } from "mysql2";
+import { db } from "../config/env.js";
+import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 
 //creating a type
@@ -10,47 +10,46 @@ type User = {
     role: "USER" | "ORGANIZER" | "ADMIN";
 };
 
-type UserCallback = (
-    err: Error | null,
-    result?: ResultSetHeader
-) => void;
+type UserRow = RowDataPacket & {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+};
 
 
 //getting all users
-export const getAllUsers = (callback: any) => {
-    db.query("SELECT id, name, email, role FROM users", callback);
+export const getAllUsers = async () => {
+    const [results] = await db.query<UserRow[]>("SELECT id, name, email, role FROM users");
+    return results;
 };
 
 //posting a new user
-export const createUser = (user: User, callback: UserCallback) => {
+export const createUser = async (user: User) => {
     const sql = `
         INSERT INTO users (name, email, password, role)
         VALUES (?, ?, ?, ?)
     `;
 
-    db.query<ResultSetHeader>(
+    const [results] = await db.query<ResultSetHeader>(
         sql,
-        [user.name, user.email, user.password, user.role],
-        callback
+        [user.name, user.email, user.password, user.role]
     );
+    return results;
 };
 
 //updating a user details
-export const updateUser = (id: number, user: User, callback: any) => {
+export const updateUser = async (id: number, user: User) => {
     const sql = `
         UPDATE users
         SET name = ?, email = ?, password = ?, role = ?
         WHERE id = ?
     `;
 
-    db.query(
+    const [results] = await db.query<ResultSetHeader>(
         sql,
-        [user.name, user.email, user.password, user.role, id],
-        callback
+        [user.name, user.email, user.password, user.role, id]
     );
+    return results;
 };
 
-//deleting a user
-export const removeUser = (id: number, callback: any) => {
-    db.query("DELETE FROM users WHERE id = ?", [id], callback);
-};

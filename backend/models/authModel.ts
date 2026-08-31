@@ -1,5 +1,5 @@
-import db from "../config/database.js";
-import { RowDataPacket } from "mysql2";
+import { db } from "../config/env.js";
+import { RowDataPacket } from "mysql2/promise";
 
 export type AuthUser = RowDataPacket & {
     id: number;
@@ -9,21 +9,16 @@ export type AuthUser = RowDataPacket & {
     role: "USER" | "ORGANIZER" | "ADMIN";
 };
 
-export const findUserByEmail = (
-    email: string,
-    callback: (err: Error | null, user?: AuthUser) => void
-) => {
+/*This is the answer for the question : 
+Does a user with this email exist, and if so, give me their details.
+*/
+export const findUserByEmail = async (email: string): Promise<AuthUser | undefined> => {
     const sql = `
         SELECT id, name, email, password, role
         FROM users
         WHERE email = ?
     `;
 
-    db.query<AuthUser[]>(sql, [email], (err, results) => {
-        if (err) {
-            return callback(err);
-        }
-
-        callback(null, results[0]);
-    });
+    const [results] = await db.query<AuthUser[]>(sql, [email]);
+    return results[0];
 };
