@@ -6,7 +6,7 @@ import {
     changeCityStatus
  } from "../../controllers/cityController.js";
 import express from "express";
-import { validateCity } from "../../validators/cityValidator.js";
+import { validateCity } from "../../service/cityValidator.js";
 import { authenticate } from "../../middleware/authMiddleware.js";
 import { authorize } from "../../middleware/roleMiddleware.js";
 const cityRouter = express.Router();

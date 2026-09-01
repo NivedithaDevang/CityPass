@@ -9,3 +9,5 @@ export const db = mysql.createPool({
     database: process.env.DB_NAME,
     port: process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined
 });
+
+export const saltRounds = 10;

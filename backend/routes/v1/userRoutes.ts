@@ -7,10 +7,12 @@ import {
 
 const userRouter = express.Router();
 
-userRouter.get("/", getUsers);
+//oonly admin can access the get users 
+//add getUserById route using token
+userRouter.get("/users", getUsers);
 
-userRouter.post("/", addUser);
+userRouter.post("/adduser", addUser);
 
-userRouter.put("/:id", updateUser);
+userRouter.put("/updateuser", updateUser);
 
 export default userRouter; 

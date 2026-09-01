@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import db from "./config/database.js";
 import userRouter from "./routes/v1/userRoutes.js"; 
 import cityRouter from "./routes/v1/cityRoute.js";
@@ -13,7 +14,7 @@ import errorHandler from "./middleware/errorHandler.js";
 import authRoutes from "./routes/v1/authRoute.js";
 import { error } from "node:console";
 const app = express();
-
+app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());
 
 app.get("/", (req, res) => {

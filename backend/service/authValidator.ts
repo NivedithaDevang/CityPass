@@ -7,9 +7,19 @@ export const validateLogin = (
 ) => {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (!email && !password) {
         return res.status(400).json({
             message: "Email and password are required"
+        });
+    }
+    if (!email) {
+        return res.status(400).json({
+            message: "Email is required"
+        });
+    } 
+    if (!password) {
+        return res.status(400).json({
+            message: "Password is required"
         });
     }
 

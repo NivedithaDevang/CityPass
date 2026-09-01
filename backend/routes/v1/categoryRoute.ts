@@ -6,11 +6,11 @@ import {
     changeCategoryStatus
  } from "../../controllers/categoryController.js";
 import express from "express";
-import { validateCity } from "../../validators/cityValidator.js";
+import { validateCity } from "../../service/cityValidator.js";
 import { authenticate } from "../../middleware/authMiddleware.js";
 import { authorize } from "../../middleware/roleMiddleware.js";
 import { getCategoryById } from "../../models/categoryModel.js";
-import { validateCategory } from "../../validators/categoryValidator.js";
+import { validateCategory } from "../../service/categoryValidator.js";
 const categoryRouter = express.Router();
 
 

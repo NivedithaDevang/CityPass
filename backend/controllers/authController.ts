@@ -1,8 +1,55 @@
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
-import { findUserByEmail } from "../models/authModel.js";
+import { createUser, findUserByEmail } from "../models/authModel.js";
 import jwt from "jsonwebtoken";
+import { saltRounds } from "../config/env.js";
 
+
+//registering a new user
+export const registerUser = async (req: Request, res: Response) => {
+    try {
+        const { name, email, password, role } = req.body;
+
+        const existingUser = await findUserByEmail(email);
+        if (existingUser) {
+            return res.status(400).json({
+                message: "User with this email already exists"
+            });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        const result = await createUser({
+            name,
+            email,
+            password: hashedPassword,
+            role
+        });
+
+        const token = jwt.sign(
+            {
+                id: result?.insertId,
+                role
+            },
+            process.env.JWT_SECRET as string,
+            {
+                expiresIn: "1h"
+            }
+        );
+
+        res.status(201).json({
+            message: "User registered successfully",
+            token
+        });
+    } catch (err) {
+        res.status(500).json({
+            message: "Unable to register user"
+        });
+    }
+};
+
+
+//for logging in a user
 export const loginUser = async (
     req: Request,
     res: Response
@@ -25,7 +72,7 @@ export const loginUser = async (
 
         if (!isPasswordValid) {
             return res.status(401).json({
-                message: "Invalid email or password"
+                message: "Invalid password"
             });
         }
 
@@ -42,12 +89,6 @@ export const loginUser = async (
 
         res.status(200).json({
             message: "Login successful",
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role
-            },
             token
         });
     } catch (err) {
@@ -55,4 +96,6 @@ export const loginUser = async (
             message: "Unable to login"
         });
     }
-};
+}
+
+

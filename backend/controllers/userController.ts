@@ -6,6 +6,8 @@ import {
 import { NextFunction, Request, Response } from "express";
 import { ResultSetHeader } from "mysql2";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { saltRounds } from "../config/env.js";
 
 
 //for getting all users
@@ -33,8 +35,10 @@ export const addUser = async (req: Request, res: Response, next: NextFunction) =
             });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
 
+
+         //register user and return token
         const result = await createUser({
             name,
             email,
@@ -42,9 +46,26 @@ export const addUser = async (req: Request, res: Response, next: NextFunction) =
             role
         });
 
+        const token = jwt.sign(
+            {
+                id: result?.insertId,
+                role
+            },
+            process.env.JWT_SECRET as string,
+            {
+                expiresIn: "1h"
+            }
+        );
+
         res.status(201).json({
             message: "User created successfully",
-            userId: result?.insertId
+            token,
+            user: {
+                id: result?.insertId,
+                name,
+                email,
+                role
+            }
         });
     } catch (err: any) {
         if (err.code === "ER_DUP_ENTRY") {
@@ -63,6 +84,8 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
         const userId = Number(req.params.id);
         const { name, email, password, role } = req.body;
 
+
+        //change to token based authentication and authorization later
         if (!Number.isInteger(userId) || userId <= 0) {
             return res.status(400).json({
                 message: "A valid user id is required"
