@@ -1,12 +1,11 @@
-import "../../styles/CitySection.css";
-import Bangalore from "../cities/Bangalore.jpeg";
-import Chennai from "../cities/Chennai.jpeg";
-import Delhi from "../cities/Delhi.jpeg";
-import Goa from "../cities/Goa.jpeg";
-import Hyderabad from "../cities/Hyderabad.jpeg";
-import Lucknow from "../cities/Lucknow.jpeg";
-import Mumbai from "../cities/Mumbai.jpeg";
-import Trivandrum from "../cities/Trivandrum.jpeg";
+import "./CitySection.css"
+import Bangalore from "../../../public/cities/Bangalore.jpeg";
+import Chennai from "../../../public/cities/Chennai.jpeg";
+import Delhi from "../../../public/cities/Delhi.jpeg";
+import Hyderabad from "../../../public/cities/Hyderabad.jpeg";
+import Lucknow from "../../../public/cities/Lucknow.jpeg";
+import Mumbai from "../../../public/cities/Mumbai.jpeg";
+import Trivandrum from "../../../public/cities/Trivandrum.jpeg";
 
 function CitySection() {
   const cities = [

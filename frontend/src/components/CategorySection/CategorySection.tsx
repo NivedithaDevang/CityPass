@@ -1,12 +1,12 @@
-import "../../styles/CategorySection.css";
+import "./CategorySection.css";
 
-import Adventure from "../categories/adventure.jpeg";
-import Art from "../categories/art.jpeg";
-import Comedy from "../categories/comedy.jpeg";
-import Entertainment from "../categories/entertainment.jpeg";
-import Food from "../categories/food.jpeg";
-import Music from "../categories/music.jpeg";
-import Sports from "../categories/sports.jpeg";
+import Adventure from "../../../public/categories/adventure.jpeg";
+import Art from "../../../public/categories/art.jpeg";
+import Comedy from "../../../public/categories/comedy.jpeg";
+import Entertainment from "../../../public/categories/entertainment.jpeg";
+import Food from "../../../public/categories/food.jpeg";
+import Music from "../../../public/categories/music.jpeg";
+import Sports from "../../../public/categories/sports.jpeg";
 
 function CategorySection() {
   const categories = [
