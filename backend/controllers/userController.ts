@@ -1,5 +1,6 @@
 import {
     getAllUsers,
+    getUserById,
     createUser,
     updateUser as updateUserModel
 } from "../models/userModel.js";
@@ -8,9 +9,10 @@ import { ResultSetHeader } from "mysql2";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { saltRounds } from "../config/env.js";
+import { checkAdminRole } from "../middleware/roleMiddleware.js";
 
 
-//for getting all users
+//getting all users only if role is admin
 
 export const getUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -24,6 +26,35 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
         next(err);
     }
 };
+
+//get user by id
+export const getUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = Number(req.params.id);
+
+        if (!Number.isInteger(userId) || userId <= 0) {
+            return res.status(400).json({
+                message: "A valid user id is required"
+            });
+        }
+
+        const user = await getUserById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "User fetched successfully",
+            user
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 
 //for posting new user
 export const addUser = async (req: Request, res: Response, next: NextFunction) => {

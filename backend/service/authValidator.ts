@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 
-export const validateLogin = (
+export const validatingLogin = (
     req: Request,
     res: Response,
     next: NextFunction

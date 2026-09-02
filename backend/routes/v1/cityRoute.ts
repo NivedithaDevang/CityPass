@@ -8,7 +8,7 @@ import {
 import express from "express";
 import { validateCity } from "../../service/cityValidator.js";
 import { authenticate } from "../../middleware/authMiddleware.js";
-import { authorize } from "../../middleware/roleMiddleware.js";
+import { checkAdminRole } from "../../middleware/roleMiddleware.js";
 const cityRouter = express.Router();
 
 
@@ -20,7 +20,7 @@ cityRouter.get("/:id", getCity);
 
 //create city [ only admin can post]
 cityRouter.post("/", authenticate,
-    authorize("ADMIN"),
+    checkAdminRole,
     validateCity,
     addCity
 );
@@ -28,7 +28,7 @@ cityRouter.post("/", authenticate,
 //update city [admin only]
 cityRouter.put("/:id",
     authenticate,
-    authorize("ADMIN"),
+    checkAdminRole,
     validateCity,
     editCity
 );
@@ -37,7 +37,7 @@ cityRouter.put("/:id",
 cityRouter.patch(
     "/:id/status",
     authenticate,
-    authorize("ADMIN"),
+    checkAdminRole,
     changeCityStatus
 )
 export default cityRouter; 

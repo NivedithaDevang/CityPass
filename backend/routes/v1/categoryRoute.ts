@@ -8,7 +8,7 @@ import {
 import express from "express";
 import { validateCity } from "../../service/cityValidator.js";
 import { authenticate } from "../../middleware/authMiddleware.js";
-import { authorize } from "../../middleware/roleMiddleware.js";
+import { checkAdminRole } from "../../middleware/roleMiddleware.js";
 import { getCategoryById } from "../../models/categoryModel.js";
 import { validateCategory } from "../../service/categoryValidator.js";
 const categoryRouter = express.Router();
@@ -20,26 +20,26 @@ categoryRouter.get("/", getCategories);
 //get category by id
 categoryRouter.get("/:id", getCategoryById);
 
-//create categor [ only admin can post]
+//create category [ only admin can post]
 categoryRouter.post("/", authenticate,
-    authorize("ADMIN"),
+    checkAdminRole,
     validateCategory,
     addCategory
 );
 
-//update city [admin only]
+//update category [admin only]
 categoryRouter.put("/:id",
     authenticate,
-    authorize("ADMIN"),
+    checkAdminRole,
     validateCategory,
     editCategory
 );
 
-//active or inactive city
+//active or inactive category
 categoryRouter.patch(
     "/:id/status",
     authenticate,
-    authorize("ADMIN"),
+    checkAdminRole,
     changeCategoryStatus
 )
 export default categoryRouter; 

@@ -1,12 +1,10 @@
 import { db } from "../config/env.js";
 import { RowDataPacket } from "mysql2/promise";
-
-export type AuthUser = RowDataPacket & {
-    id: number;
+import { AuthPayLoad } from "../types/auth.js";
+export type AuthUser = RowDataPacket & AuthPayLoad & {
     name: string;
     email: string;
     password: string;
-    role: "USER" | "ORGANIZER" | "ADMIN";
 };
 
 

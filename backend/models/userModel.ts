@@ -24,6 +24,15 @@ export const getAllUsers = async () => {
     return results;
 };
 
+//get user by id
+export const getUserById = async (id: number) => {
+    const [results] = await db.query<UserRow[]>(
+        "SELECT id, name, email, role FROM users WHERE id = ?",
+        [id]
+    );
+    return results[0];
+}
+
 //posting a new user
 export const createUser = async (user: User) => {
     const sql = `

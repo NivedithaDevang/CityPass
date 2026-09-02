@@ -2,14 +2,19 @@ import express from "express";
 import {
 	getUsers,
 	addUser,
-	updateUser
+	updateUser,
+	getUser
 } from "../../controllers/userController.js";
+import { authenticate } from "../../middleware/authMiddleware.js";
+import { checkAdminRole } from "../../middleware/roleMiddleware.js";
 
 const userRouter = express.Router();
 
-//oonly admin can access the get users 
 //add getUserById route using token
-userRouter.get("/users", getUsers);
+userRouter.get("/user/:id", authenticate, getUser);
+
+//get all users only if the user is admin
+userRouter.get("/admin/users", authenticate, checkAdminRole, getUsers);
 
 userRouter.post("/adduser", addUser);
 
