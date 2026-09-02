@@ -1,6 +1,14 @@
-import mysql from "mysql2";
-import "./env.js";
+import mysql from "mysql2/promise";
 import { db } from "./env.js";
 
+export const dbConfig = mysql.createPool(db);
 
-export default db;
+dbConfig.getConnection()
+  .then(() => {
+    console.log("Database connection established");
+  })
+  .catch(() => {
+    console.error("Failed to establish database connection");
+  });
+
+export default dbConfig;

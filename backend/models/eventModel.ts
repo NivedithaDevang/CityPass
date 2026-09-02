@@ -1,4 +1,4 @@
-import { db } from "../config/env.js";
+import { dbConfig } from "../config/database.js";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 
@@ -21,7 +21,7 @@ type EventRow = RowDataPacket & Event & { id: number };
 
 //getting all events
 export const getAllEvents = async () => {
-    const [results] = await db.query<EventRow[]>("SELECT * FROM events");
+    const [results] = await dbConfig.query<EventRow[]>("SELECT * FROM events");
     return results;
 };
 
@@ -32,7 +32,7 @@ export const createEvent = async (event: Event) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    const [results] = await db.query<ResultSetHeader>(
+    const [results] = await dbConfig.query<ResultSetHeader>(
         sql,
         [ event.organizer_id, event.city_id, event.category_id, event.name, event.description, event.location, event.event_date, event.price, event.capacity, event.status]
     );
@@ -47,7 +47,7 @@ export const updateEvent = async (id: number, event: Event) => {
         WHERE id = ?
     `;
 
-    const [results] = await db.query<ResultSetHeader>(
+    const [results] = await dbConfig.query<ResultSetHeader>(
         sql,
         [event.name, event.description, event.city_id, event.category_id, event.location, event.event_date, event.price, event.capacity, event.status, id]
     );

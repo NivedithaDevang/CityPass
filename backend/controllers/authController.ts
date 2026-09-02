@@ -9,6 +9,7 @@ import { saltRounds } from "../config/env.js";
 export const registerUser = async (req: Request, res: Response) => {
     try {
         const { name, email, password, role } = req.body;
+        console.log(req.body);
 
         const existingUser = await findUserByEmail(email);
         if (existingUser) {
@@ -26,21 +27,20 @@ export const registerUser = async (req: Request, res: Response) => {
             role
         });
 
-        const token = jwt.sign(
-            {
-                id: result?.insertId,
-                role
-            },
-            process.env.JWT_SECRET as string,
-            {
-                expiresIn: "1h"
-            }
-        );
+        if(result){
 
-        res.status(201).json({
-            message: "User registered successfully",
-            token
+            res.status(201).json({
+            message: "User registered successfully"
         });
+
+        }
+        else{
+            res.status(400).json({
+                message: "User registration failed"
+            });
+        }
+
+        
     } catch (err) {
         res.status(500).json({
             message: "Unable to register user"

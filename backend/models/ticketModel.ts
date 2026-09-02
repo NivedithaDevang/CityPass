@@ -1,4 +1,4 @@
-import { db } from "../config/env.js";
+import { dbConfig } from "../config/database.js";   
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 
@@ -17,7 +17,7 @@ type TicketRow = RowDataPacket & Ticket;
 
 //getting all tickets
 export const getAllTickets = async () => {
-    const [results] = await db.query<TicketRow[]>("SELECT * FROM tickets");
+    const [results] = await dbConfig.query<TicketRow[]>("SELECT * FROM tickets");
     return results;
 };
 
@@ -28,7 +28,7 @@ export const createTicket = async (ticket: Ticket) => {
         VALUES (?, ?, ?, ?, ?)
     `;
 
-    const [results] = await db.query<ResultSetHeader>(
+    const [results] = await dbConfig.query<ResultSetHeader>(
         sql,
         [ticket.event_id, ticket.name, ticket.description, ticket.price, ticket.status]
     );

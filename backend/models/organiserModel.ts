@@ -1,4 +1,4 @@
-import db from "../config/database.js";
+import { dbConfig } from "../config/database.js";
 
 
 //creating a type
@@ -10,5 +10,5 @@ type Organizers = {
 //getting all organizers
 
 export const getAllOrganizers = (callback: any) => {
-    db.query("SELECT * from organizers", callback);
+    dbConfig.query("SELECT * from organizers", callback);
 };

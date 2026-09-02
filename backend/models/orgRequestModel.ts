@@ -1,4 +1,4 @@
-import { db } from "../config/env.js";
+import { dbConfig } from "../config/database.js";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 
@@ -14,7 +14,7 @@ type OrgReqRow = RowDataPacket & OrgReq & { id: number };
 
 //getting all organiser requests
 export const getAllRequests = async () => {
-    const [results] = await db.query<OrgReqRow[]>("SELECT * FROM organizer_requests");
+    const [results] = await dbConfig.query<OrgReqRow[]>("SELECT * FROM organizer_requests");
     return results;
 };
 
@@ -25,7 +25,7 @@ export const createRequest = async (request: OrgReq) => {
         VALUES (?, ?, ?, ?)
     `;
 
-    const [results] = await db.query<ResultSetHeader>(
+    const [results] = await dbConfig.query<ResultSetHeader>(
         sql,
         [request.user_id, request.organization_name, request.description, request.status]
     );
@@ -40,7 +40,7 @@ export const updateRequest = async (id: number, org: OrgReq) => {
         WHERE id = ?
     `;
 
-    const [results] = await db.query<ResultSetHeader>(
+    const [results] = await dbConfig.query<ResultSetHeader>(
         sql,
         [org.organization_name, org.description, org.status, id]
     );

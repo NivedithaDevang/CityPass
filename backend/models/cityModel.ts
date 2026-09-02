@@ -1,4 +1,4 @@
-import { db } from "../config/env.js";
+import { dbConfig } from "../config/database.js";
 import { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 
 export type City = RowDataPacket & {
@@ -15,7 +15,7 @@ export const getAllCities = async (): Promise<City[]> => {
         FROM cities
     `;
 
-    const [results] = await db.query<City[]>(sql);
+    const [results] = await dbConfig.query<City[]>(sql);
 
     return results;
 };
@@ -30,7 +30,7 @@ export const getCityById = async (
         WHERE id = ?
     `;
 
-    const [results] = await db.query<City[]>(sql, [id]);
+    const [results] = await dbConfig.query<City[]>(sql, [id]);
 
     return results[0];
 };
@@ -45,7 +45,7 @@ export const createCity = async (
         VALUES (?, ?, TRUE)
     `;
 
-    const [result] = await db.execute<ResultSetHeader>(
+    const [result] = await dbConfig.execute<ResultSetHeader>(
         sql,
         [name, description]
     );
@@ -65,7 +65,7 @@ export const updateCity = async (
         WHERE id = ?
     `;
 
-    const [result] = await db.execute<ResultSetHeader>(
+    const [result] = await dbConfig.execute<ResultSetHeader>(
         sql,
         [name, description, id]
     );
@@ -84,7 +84,7 @@ export const updateCityStatus = async (
         WHERE id = ?
     `;
 
-    const [result] = await db.execute<ResultSetHeader>(
+    const [result] = await dbConfig.execute<ResultSetHeader>(
         sql,
         [isActive, id]
     );

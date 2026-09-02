@@ -1,4 +1,4 @@
-import { db } from "../config/env.js";
+import { dbConfig } from "../config/database.js";
 import { RowDataPacket } from "mysql2/promise";
 import { AuthPayLoad } from "../types/auth.js";
 export type AuthUser = RowDataPacket & AuthPayLoad & {
@@ -20,7 +20,7 @@ export const findUserByEmail = async (email: string): Promise<AuthUser | undefin
 
 
     //Grabs the very first row found in the database.
-    const [results] = await db.query<AuthUser[]>(sql, [email]);
+    const [results] = await dbConfig.query<AuthUser[]>(sql, [email]);
     return results[0];
 };
 
@@ -35,7 +35,7 @@ export const createUser = async (user: {
         VALUES (?, ?, ?, ?)
     `;
 
-    const [result] = await db.query<any>(sql, [
+    const [result] = await dbConfig.query<any>(sql, [
         user.name,
         user.email,
         user.password,

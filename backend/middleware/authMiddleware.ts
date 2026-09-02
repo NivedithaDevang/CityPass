@@ -11,7 +11,7 @@ export const authenticate = (
 
     if (!authHeader) {
         return res.status(401).json({
-            message: "Authorisation token required"
+            message: "No token provided"
         });
     }
 
@@ -22,7 +22,7 @@ export const authenticate = (
             token,
             process.env.JWT_SECRET as string
         ) as AuthPayLoad; 
-        req.user = decoded;
+        req.user = { ...decoded, id: String(decoded.id) };
 
         next();
 

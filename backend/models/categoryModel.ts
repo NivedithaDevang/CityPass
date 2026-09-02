@@ -1,4 +1,4 @@
-import { db } from "../config/env.js";
+import { dbConfig } from "../config/database.js";
 import { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 
 export type Category = RowDataPacket & {
@@ -14,7 +14,7 @@ export const getAllCategory = async (): Promise<Category[]> => {
         FROM categories
     `;
 
-    const [results] = await db.query<Category[]>(sql);
+    const [results] = await dbConfig.query<Category[]>(sql);
 
     return results;
 };
@@ -29,7 +29,7 @@ export const getCategoryById = async (
         WHERE id = ?
     `;
 
-    const [results] = await db.query<Category[]>(sql, [id]);
+    const [results] = await dbConfig.query<Category[]>(sql, [id]);
 
     return results[0];
 };
@@ -43,7 +43,7 @@ export const createCategory = async (
         VALUES (?, TRUE)
     `;
 
-    const [result] = await db.execute<ResultSetHeader>(
+    const [result] = await dbConfig.execute<ResultSetHeader>(
         sql,
         [name]
     );
@@ -62,7 +62,7 @@ export const updateCategory = async (
         WHERE id = ?
     `;
 
-    const [result] = await db.execute<ResultSetHeader>(
+    const [result] = await dbConfig.execute<ResultSetHeader>(
         sql,
         [name, id]
     );
@@ -81,7 +81,7 @@ export const updateCategoryStatus = async (
         WHERE id = ?
     `;
 
-    const [result] = await db.execute<ResultSetHeader>(
+    const [result] = await dbConfig.execute<ResultSetHeader>(
         sql,
         [isActive, id]
     );

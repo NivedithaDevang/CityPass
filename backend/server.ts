@@ -14,7 +14,7 @@ import errorHandler from "./middleware/errorHandler.js";
 import authRoutes from "./routes/v1/authRoute.js";
 import { error } from "node:console";
 const app = express();
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
