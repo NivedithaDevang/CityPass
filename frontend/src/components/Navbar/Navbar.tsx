@@ -3,6 +3,7 @@ import { FaUserCircle } from "react-icons/fa";
 import Auth from "../Auth/Auth";
 import "./Navbar.css";
 import { useState } from "react";
+
 function Navbar() {
   const [showAuth, setShowAuth] = useState(false);
 
@@ -27,18 +28,16 @@ function Navbar() {
         <a href="#">Concerts</a>
       </div>
 
-        <button className="profile" onClick={() => setShowAuth(true)}>
-          <FaUserCircle size={20} />
-        </button>
+      <button className="profile" onClick={() => setShowAuth(true)}>
+        <FaUserCircle size={20} />
+      </button>
 
-        <div className="profile-menu">
-          <a href="/login">Login</a>
-          <a href="/register">Register</a>
-        </div>
+      <div className="profile-menu">
+        <a href="/login">Login</a>
+        <a href="/register">Register</a>
+      </div>
 
-      {showAuth && (
-        <Auth onClose={() => setShowAuth(false)} />
-      )}
+      {showAuth && <Auth onClose={() => setShowAuth(false)} />}
     </nav>
   );
 }

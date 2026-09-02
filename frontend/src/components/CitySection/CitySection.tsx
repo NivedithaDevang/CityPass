@@ -1,11 +1,4 @@
 import "./CitySection.css"
-import Bangalore from "../../../public/cities/Bangalore.jpeg";
-import Chennai from "../../../public/cities/Chennai.jpeg";
-import Delhi from "../../../public/cities/Delhi.jpeg";
-import Hyderabad from "../../../public/cities/Hyderabad.jpeg";
-import Lucknow from "../../../public/cities/Lucknow.jpeg";
-import Mumbai from "../../../public/cities/Mumbai.jpeg";
-import Trivandrum from "../../../public/cities/Trivandrum.jpeg";
 
 function CitySection() {
   const cities = [
@@ -20,14 +13,14 @@ function CitySection() {
   ];
 
   const cityImages: Record<string, string> = {
-    Bengaluru: Bangalore,
-    Mumbai: Mumbai,
-    Delhi: Delhi,
-    Lucknow: Lucknow,
-    Panaji: Lucknow,
-    Hyderabad: Hyderabad,
-    Chennai: Chennai,
-    Thiruvananthapuram: Trivandrum,
+    Bengaluru: "./cities/Bangalore.jpeg",
+    Mumbai: "./cities/Mumbai.jpeg",
+    Delhi: "./cities/Delhi.jpeg",
+    Lucknow: "./cities/Lucknow.jpeg",
+    Panaji: "./cities/Goa.jpeg",
+    Hyderabad: "./cities/Hyderabad.jpeg",
+    Chennai: "./cities/Chennai.jpeg",
+    Thiruvananthapuram: "./cities/Trivandrum.jpeg",
   };
 
   return (

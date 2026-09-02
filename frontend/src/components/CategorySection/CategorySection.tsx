@@ -1,12 +1,14 @@
 import "./CategorySection.css";
 
-import Adventure from "../../../public/categories/adventure.jpeg";
-import Art from "../../../public/categories/art.jpeg";
-import Comedy from "../../../public/categories/comedy.jpeg";
-import Entertainment from "../../../public/categories/entertainment.jpeg";
-import Food from "../../../public/categories/food.jpeg";
-import Music from "../../../public/categories/music.jpeg";
-import Sports from "../../../public/categories/sports.jpeg";
+ const categoryImages: Record<string, string> = {
+    Music: "./categories/music.jpeg",
+    Sports: "./categories/sports.jpeg",
+    Comedy: "./categories/comedy.jpeg",
+    Food: "./categories/food.jpeg",
+    "Art&Culture": "./categories/art.jpeg",
+    Adventure: "./categories/adventure.jpeg",
+    Entertainment: "./categories/entertainment.jpeg",
+  };
 
 function CategorySection() {
   const categories = [
@@ -19,15 +21,6 @@ function CategorySection() {
     "Entertainment",
   ];
 
-  const categoryImages: Record<string, string> = {
-    Music: Music,
-    Sports: Sports,
-    Comedy: Comedy,
-    Food: Food,
-    "Art&Culture": Art,
-    Adventure: Adventure,
-    Entertainment: Entertainment,
-  };
 
   return (
     <section className="category-section">

@@ -1,82 +1,197 @@
 import { useState } from "react";
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError } from "axios";
 import "./Auth.css";
 
-interface RegisterResponse {
-    message: string;
+
+interface ApiResponse {
+  message: string;
+  token?: string;
 }
 
 interface ApiErrorResponse {
-    message: string;
-    error?: string;
+  message?: string;
+  error?: string;
 }
 
-interface RegisterProps {
-    onClose?: () => void;
+interface AuthProps {
+  onClose: () => void;
 }
 
-export const Register: React.FC<RegisterProps> = ({ onClose }) => {
-    const [email, setEmail] = useState<string>("");
-    const [password, setPassword] = useState<string>("");
-    const [error, setError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
+function Auth({ onClose }: AuthProps) {
+  const [isLogin, setIsLogin] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-    const handleRegister = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError(null);
-        setSuccessMessage(null);
-        setIsLoading(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRegisteredSuccess, setIsRegisteredSuccess] = useState(false);
 
-        try {
-            const response = await axios.post<RegisterResponse>('http://localhost:5000/api/v1/auth/register', {
-                email,
-                password
-            });
 
-            setSuccessMessage(response.data.message);
-            setEmail("");
-            setPassword("");
-            if (onClose) onClose();
-        } catch (err) {
-            const axiosError = err as AxiosError<ApiErrorResponse>;
-            if(axiosError.response?.data?.error){
-                setError(axiosError.response.data.error);
-            }
-            else if (axiosError.message) {
-                setError(axiosError.message);
-            } else {
-                setError("An unknown error occurred.");
-            }
-        } finally {
-            setIsLoading(false);
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    console.log("Form submitted");
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const url = isLogin
+        ? "http://localhost:5000/v1/auth/login"
+        : "http://localhost:5000/v1/auth/register";
+
+      // Include 'name' during registration
+      const payload = isLogin
+        ? { email, password }
+        : { name, email, password, role: "USER" };
+
+
+      const response = 
+        await axios.post<ApiResponse>(url, payload);
+        console.log(response.data);
+
+      if (isLogin) {
+        // Successful login
+        if (response.data.token) {
+          localStorage.setItem("token", response.data.token);
         }
-    };
+        setEmail("");
+        setPassword("");
+        onClose();
+      } else {
+        // Successful registration -> trigger success screen
+        setName("");
+        setEmail("");
+        setPassword("");
+        setIsRegisteredSuccess(true);
+      }
+    } catch (err) {
+      const axiosError = err as AxiosError<ApiErrorResponse>;
+      console.log("err",axiosError.message);
+      console.log(axiosError.response);
 
-    return (
-        <div className="auth-container">
-            <form onSubmit={handleRegister}>
-                <h2>Register</h2>
-                {error && <div className="error">{error}</div>}
-                {successMessage && <div className="success">{successMessage}</div>}
+      if (axiosError.response?.data?.error) {
+        setError(axiosError.response.data.error);
+      } else if (axiosError.response?.data?.message) {
+        setError(axiosError.response.data.message);
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoToLogin = () => {
+    setIsRegisteredSuccess(false);
+    setIsLogin(true);
+    setError(null);
+  };
+
+  return (
+    <div className="auth-overlay" onClick={onClose}>
+      <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="auth-close" onClick={onClose}>
+          &times;
+        </button>
+
+        {isRegisteredSuccess ? (
+          /* Success Screen after Registration */
+          <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
+            <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>Registration Successful! 🎉</h2>
+            <p style={{ color: "#666", marginBottom: "1.5rem" }}>
+              Your account has been created. Please login to continue.
+            </p>
+            <button
+              type="button"
+              className="auth-submit"
+              onClick={handleGoToLogin}
+            >
+              Go to Login
+            </button>
+          </div>
+        ) : (
+          /* Normal Auth Form (Login or Register) */
+          <>
+            {!isLogin ? (
+              <>
+                <h2>Create your account</h2>
+                <p>Join CityPass and explore your city</p>
+              </>
+            ) : (
+              <>
+                <h2>Welcome back</h2>
+                <p>Login to continue exploring CityPass</p>
+              </>
+            )}
+
+            {error && <div className="auth-error">{error}</div>}
+
+            <form onSubmit={handleSubmit}>
+              {!isLogin && (
                 <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
+                  type="text"
+                  placeholder="Full Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
                 />
-                <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                />
-                <button type="submit" disabled={isLoading}>
-                    {isLoading ? "Registering..." : "Register"}
-                </button>
+              )}
+
+              <input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+
+              <button
+                type="submit"
+                className="auth-submit"
+                disabled={isLoading}
+              >
+                {isLoading
+                  ? isLogin
+                    ? "Logging in..."
+                    : "Creating account..."
+                  : isLogin
+                  ? "Login"
+                  : "Create account"}
+              </button>
             </form>
-        </div>
-    );
-};
+
+            <div className="auth-switch">
+              {isLogin ? (
+                <>
+                  Don't have an account?{" "}
+                  <button type="button" onClick={() => setIsLogin(false)}>
+                    Register
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{" "}
+                  <button type="button" onClick={() => setIsLogin(true)}>
+                    Login
+                  </button>
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default Auth;
+
+
