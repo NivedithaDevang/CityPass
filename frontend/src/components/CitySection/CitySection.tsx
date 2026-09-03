@@ -13,14 +13,14 @@ function CitySection() {
   ];
 
   const cityImages: Record<string, string> = {
-    Bengaluru: "./cities/Bangalore.jpeg",
-    Mumbai: "./cities/Mumbai.jpeg",
-    Delhi: "./cities/Delhi.jpeg",
-    Lucknow: "./cities/Lucknow.jpeg",
-    Panaji: "./cities/Goa.jpeg",
-    Hyderabad: "./cities/Hyderabad.jpeg",
-    Chennai: "./cities/Chennai.jpeg",
-    Thiruvananthapuram: "./cities/Trivandrum.jpeg",
+    Bengaluru:"../public/cities/Bangalore.jpeg",
+    Mumbai: "../public/cities/Mumbai.jpeg",
+    Delhi: "../public/cities/Delhi.jpeg",
+    Lucknow: "../public/cities/Lucknow.jpeg",
+    Panaji: "../public/cities/Goa.jpeg",
+    Hyderabad: "../public/cities/Hyderabad.jpeg",
+    Chennai: "../public/cities/Chennai.jpeg",
+    Thiruvananthapuram: "../public/cities/Trivandrum.jpeg",
   };
 
   return (

@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import axios, { AxiosError } from "axios";
 import "./Auth.css";
+import { API_BASE_URL } from "../../config/config";
+import type { User } from "../../types/auth";
 
 
 interface ApiResponse {
   message: string;
-  token?: string;
+  user?: User;
 }
 
 interface ApiErrorResponse {
@@ -15,14 +17,14 @@ interface ApiErrorResponse {
 
 interface AuthProps {
   onClose: () => void;
+  onSuccess: (user: User) => void;
 }
 
-function Auth({ onClose }: AuthProps) {
+function Auth({ onClose, onSuccess }: AuthProps) {
   const [isLogin, setIsLogin] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRegisteredSuccess, setIsRegisteredSuccess] = useState(false);
@@ -36,8 +38,8 @@ function Auth({ onClose }: AuthProps) {
 
     try {
       const url = isLogin
-        ? "http://localhost:5000/v1/auth/login"
-        : "http://localhost:5000/v1/auth/register";
+        ? `${API_BASE_URL}/v1/auth/login`
+        : `${API_BASE_URL}/v1/auth/register`;
 
       // Include 'name' during registration
       const payload = isLogin
@@ -46,18 +48,23 @@ function Auth({ onClose }: AuthProps) {
 
 
       const response = 
-        await axios.post<ApiResponse>(url, payload);
+        await axios.post<ApiResponse>(url, payload,
+        {
+          withCredentials : true,
+        });
         console.log(response.data);
-
+      
       if (isLogin) {
-        // Successful login
-        if (response.data.token) {
-          localStorage.setItem("token", response.data.token);
-        }
-        setEmail("");
-        setPassword("");
-        onClose();
-      } else {
+  // Successful login
+
+  if (response.data.user) {
+    onSuccess(response.data.user);
+  }
+
+  setEmail("");
+  setPassword("");
+  onClose();
+} else {
         // Successful registration -> trigger success screen
         setName("");
         setEmail("");
@@ -97,7 +104,7 @@ function Auth({ onClose }: AuthProps) {
         {isRegisteredSuccess ? (
           /* Success Screen after Registration */
           <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
-            <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>Registration Successful! 🎉</h2>
+            <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>Registration Successful!</h2>
             <p style={{ color: "#666", marginBottom: "1.5rem" }}>
               Your account has been created. Please login to continue.
             </p>
