@@ -10,12 +10,19 @@ import eventRouter from "./routes/v1/eventRoute.js";
 import bookRouter from "./routes/v1/bookingRoute.js";
 import ticketRouter from "./routes/v1/ticketRoute.js";
 import errorHandler from "./middleware/errorHandler.js";
-
+import cookieParser from "cookie-parser";
 import authRoutes from "./routes/v1/authRoute.js";
-import { error } from "node:console";
+import { REACTURL } from "../backend/config/env.js";
+
 const app = express();
-app.use(cors());
+
 app.use(express.json());
+
+app.use(cors({
+    origin: REACTURL,
+    credentials: true
+}));
+app.use(cookieParser());
 
 app.get("/", (req, res) => {
     res.json({

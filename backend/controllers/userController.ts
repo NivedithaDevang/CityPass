@@ -10,7 +10,8 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { saltRounds } from "../config/env.js";
 import { checkAdminRole } from "../middleware/roleMiddleware.js";
-
+import { checkToken, validateToken } from "../middleware/authMiddleware.js";
+import { generateToken } from "../middleware/tokenMiddleware.js";
 
 //getting all users only if role is admin
 
@@ -30,13 +31,16 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
 //get user by id
 export const getUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const userId = Number(req.params.id);
+        const userId = req.user_id;
+        console.log(userId); 
+        
+        // Number(req.params.id);
 
-        if (!Number.isInteger(userId) || userId <= 0) {
-            return res.status(400).json({
-                message: "A valid user id is required"
-            });
-        }
+        // if (!Number.isInteger(userId) || userId <= 0) {
+        //     return res.status(400).json({
+        //         message: "A valid user id is required"
+        //     });
+        // }
 
         const user = await getUserById(userId);
 
@@ -51,9 +55,12 @@ export const getUser = async (req: Request, res: Response, next: NextFunction) =
             user
         });
     } catch (err) {
+        console.log(err);
         next(err);
     }
 };
+
+    
 
 
 //for posting new user
@@ -74,25 +81,17 @@ export const addUser = async (req: Request, res: Response, next: NextFunction) =
             name,
             email,
             password: hashedPassword,
-            role
-        });
+            role,
+        } as Parameters<typeof createUser>[0]);
 
-        const token = jwt.sign(
-            {
-                id: result?.insertId,
-                role
-            },
-            process.env.JWT_SECRET as string,
-            {
-                expiresIn: "1h"
-            }
-        );
+        const userId = Number(result?.insertId ?? 0);
+        const token = generateToken(userId, role, "1h");
 
         res.status(201).json({
             message: "User created successfully",
             token,
             user: {
-                id: result?.insertId,
+                id: userId,
                 name,
                 email,
                 role
@@ -129,7 +128,9 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
             });
         }
 
-        const result = await updateUserModel(userId, { name, email, password, role });
+        const result = await updateUserModel(userId, {
+            name, email, password, role
+                } as Parameters<typeof updateUserModel>[1]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({
@@ -146,3 +147,35 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
     }
 };
 
+//for getting user details(profile)
+export const getProfile = async (req: Request, res: Response) => {
+    try {
+        const userId = Number(req.user?.id);
+
+        if (!Number.isInteger(userId) || userId <= 0) {
+            return res.status(401).json({
+                message: "Unauthorized"
+            });
+        }
+
+        const user = await getUserById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
+        res.status(200).json({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+        });
+
+    } catch (err) {
+        res.status(500).json({
+            message: "Unable to fetch profile"
+        });
+    }
+};

@@ -24,6 +24,7 @@ export const findUserByEmail = async (email: string): Promise<AuthUser | undefin
     return results[0];
 };
 
+
 export const createUser = async (user: {
     name: string;
     email: string;

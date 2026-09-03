@@ -1,12 +1,13 @@
 import { dbConfig } from "../config/database.js";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
+import { AuthPayLoad } from "../types/auth.js";
 
 
 //creating a type
-type User = {
+export type User = RowDataPacket & AuthPayLoad & {
     name: string;
     email: string;
-    password: string;
+    password?: string;
     role: "USER" | "ORGANIZER" | "ADMIN";
 };
 
@@ -61,4 +62,8 @@ export const updateUser = async (id: number, user: User) => {
     );
     return results;
 };
+
+
+
+
 

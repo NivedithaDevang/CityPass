@@ -11,3 +11,5 @@ export const db = {
 
 
 export const saltRounds = 10;
+
+export const REACTURL= "http://localhost:5173";
