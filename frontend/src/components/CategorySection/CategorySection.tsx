@@ -1,14 +1,5 @@
 import "./CategorySection.css";
 
- const categoryImages: Record<string, string> = {
-    Music: "./categories/music.jpeg",
-    Sports: "./categories/sports.jpeg",
-    Comedy: "./categories/comedy.jpeg",
-    Food: "./categories/food.jpeg",
-    "Art&Culture": "./categories/art.jpeg",
-    Adventure: "./categories/adventure.jpeg",
-    Entertainment: "./categories/entertainment.jpeg",
-  };
 
 function CategorySection() {
   const categories = [
@@ -16,12 +7,23 @@ function CategorySection() {
     "Sports",
     "Comedy",
     "Food",
-    "Art&Culture",
+    "Art",
     "Adventure",
     "Entertainment",
   ];
 
+const categoryImages: Record<string, string> = {
+  Music: "../public/categories/music.jpeg",
+  Sports: "../public/categories/sports.jpeg",
+  Comedy: "../public/categories/comedy.jpeg",
+  Food: "../public/categories/food.jpeg",
+  Art: "../public/categories/art.jpeg",
+  Adventure: "../public/categories/adventure.jpeg",
+  Entertainment: "../public/categories/entertainment.jpeg",
 
+
+}
+ 
   return (
     <section className="category-section">
       <div className="section-heading">

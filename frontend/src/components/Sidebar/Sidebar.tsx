@@ -1,8 +1,6 @@
-import React, { useEffect, useState } from "react";
-import type { User } from "../../types/auth";
+import { useState } from "react";
+import { useUser } from "../../context/UserContext";
 import "./Sidebar.css";
-import axios, {AxiosError} from "axios";
-import { API_BASE_URL } from "../../config/config";
 
 
 interface SidebarProps {
@@ -15,43 +13,10 @@ export function Sidebar({ isOpen, onClose, onLogout} : SidebarProps)
    {
     console.log("Sidebar compoonent loaded");
     console.log("Sidebar open: ", isOpen);
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
+    const { user } = useUser();
   const [isBookingsOpen, setIsBookingsOpen] = useState(false);
 
-  useEffect(() => {
-if(!isOpen)
-  return;
-
-const fetchUserDetails = async() => {
-  setLoading(true);
-  setError(null);
-
-  try{
-    // const token = JSON.parse(localStorage.getItem('token'));
-    // const header = {
-    //   headers: {
-    //     Authorisation : `Bearer ${token}`
-    //   }
-    // }
-    const response = await axios.get<User>
-    (`${API_BASE_URL}/v1/users/userdetails` , {
-          withCredentials: true, 
-        });
-console.log("User details : ", response.data);
-        setUser(response.data);
-      } catch (err) {
-        console.log("Error: ", err);
-        const axiosErr = err as AxiosError<{ message?: string }>;
-        setError(axiosErr.response?.data?.message || "Failed to load profile");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserDetails();
-  }, [isOpen]);
+  
 
   const getInitial = () => {
     if (user?.name) {
@@ -82,21 +47,13 @@ console.log("User details : ", response.data);
 
         {/* Profile */}
         <div className="profile-section">
-          {loading ? (
-            <div className="profile-loading">Loading profile...</div>
-          ) : error ? (
-            <div className="profile-error">{error}</div>
-          ) : (
-            <>
-              <div className="profile-avatar">{getInitial()}</div>
+          <div className="profile-avatar">{getInitial()}</div>
 
-              <div className="profile-details">
-                <h2>{user?.name || "User"}</h2>
-                <p>{user?.email || ""}</p>
-                <span className="role-badge">USER</span>
-              </div>
-            </>
-          )}
+          <div className="profile-details">
+            <h2>{user?.name || "User"}</h2>
+            <p>{user?.email || ""}</p>
+            <span className="role-badge">{user?.role || "USER"}</span>
+          </div>
         </div>
 
         {/* Divider */}

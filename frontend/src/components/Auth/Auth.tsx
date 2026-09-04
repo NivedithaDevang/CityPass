@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import axios, { AxiosError } from "axios";
 import "./Auth.css";
 import { API_BASE_URL } from "../../config/config";
 import type { User } from "../../types/auth";
+import { useUser } from "../../context/UserContext";
 
 interface ApiResponse {
   message: string;
@@ -20,6 +21,7 @@ interface AuthProps {
 }
 
 function Auth({ onClose, onSuccess }: AuthProps) {
+  const { setUser } = useUser();
   const [isLogin, setIsLogin] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -59,6 +61,7 @@ function Auth({ onClose, onSuccess }: AuthProps) {
 
   if (response.data.user) {
     console.log("User found: ", response.data.user);
+    setUser(response.data.user);
     onSuccess(response.data.user);
   }
   else{
@@ -77,16 +80,19 @@ function Auth({ onClose, onSuccess }: AuthProps) {
         setPassword("");
         setIsRegisteredSuccess(true);
       }
-    } catch (err) {
-      const axiosError = err as AxiosError<ApiErrorResponse>;
-      console.log("Error : ", axiosError);
-      console.log("Status: ", axiosError.response?.status);
-      console.log("Response:", axiosError.response?.data);
-    console.log("Request URL:", axiosError.config?.url);
+   } catch (err) {
+  const axiosError = err as AxiosError<ApiErrorResponse>;
 
+  console.log("Error:", axiosError);
+  console.log("Status:", axiosError.response?.status);
+  console.log("Response:", axiosError.response?.data);
+  console.log("Request URL:", axiosError.config?.url);
 
-      
-    } finally {
+  setError(
+    axiosError.response?.data?.message ||
+    "Something went wrong. Please try again."
+  );
+} finally {
       setIsLoading(false);
     }
   };
