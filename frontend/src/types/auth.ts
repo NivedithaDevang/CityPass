@@ -12,4 +12,11 @@ export interface SidebarProps {
   onLogout: () => Promise<void>;
 }
 
+export interface City {
+  id: number;
+  name: string;
+  description: string;
+  is_active: boolean
+}
+
 export type BookingCategory = 'events' | 'activities' | 'concerts';
