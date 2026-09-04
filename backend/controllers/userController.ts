@@ -31,7 +31,7 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
 //get user by id
 export const getUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const userId = req.user_id;
+        const userId = req.user?.id;
         console.log(userId); 
         
         // Number(req.params.id);
@@ -49,6 +49,8 @@ export const getUser = async (req: Request, res: Response, next: NextFunction) =
                 message: "User not found"
             });
         }
+
+        
 
         res.status(200).json({
             message: "User fetched successfully",

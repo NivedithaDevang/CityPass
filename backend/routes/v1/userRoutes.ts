@@ -22,7 +22,7 @@ const userRouter = express.Router();
 // userRouter.put("/updateuser", updateUser);
 
 //get particular user details by passing the token through header
-userRouter.get("/userdetails", checkToken, validateToken, getUser);
+// userRouter.get("/userdetails", checkToken, validateToken, getUser);
 
-
+userRouter.get("/userdetails", authenticate, getUser);
 export default userRouter; 

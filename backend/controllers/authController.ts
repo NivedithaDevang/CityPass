@@ -3,6 +3,8 @@ import bcrypt from "bcrypt";
 import { createUser, findUserByEmail } from "../models/authModel.js";
 import jwt from "jsonwebtoken";
 import { saltRounds } from "../config/env.js";
+import { generateToken } from "../middleware/tokenMiddleware.js";
+import { error } from "node:console";
 
 
 //registering a new user
@@ -42,6 +44,7 @@ export const registerUser = async (req: Request, res: Response) => {
 
         
     } catch (err) {
+        console.log("register error: ", err);
         res.status(500).json({
             message: "Unable to register user"
         });
@@ -76,32 +79,17 @@ export const loginUser = async (
             });
         }
 
-        const token = jwt.sign(
-            {
-                id: user.id,
-                role: user.role
-            },
-            process.env.JWT_SECRET as string,
-            {
-                expiresIn: "1h"
-            }
-        );
+        generateToken(res, user);
 
         //"token" means the cookie name and given the same in the middleware also
         //token means the jwt value name
         //httpOnly : true means JS cannot access this cookie
         //lax means send the cookies in citypass but not when other website tries to access citypass backend
 
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: false,
-            sameSite: "lax",
-            maxAge: 24 * 60 * 60 * 1000 // 1 day
-        });
+       
 
         res.status(200).json({
             message: "Login successful",
-            token,
             user: {
                 id: user.id,
                 name: user.name,
@@ -111,6 +99,7 @@ export const loginUser = async (
         });
 
     } catch (err) {
+        console.log("login error: ", err)
         res.status(500).json({
             message: "Unable to login"
         });

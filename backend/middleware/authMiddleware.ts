@@ -5,8 +5,7 @@ import { AuthPayLoad } from "../types/auth.js";
 declare global {
     namespace Express {
         interface Request {
-            token?: string;
-            user?: string         
+            user?: AuthPayLoad         
         }
     }
 }
@@ -18,6 +17,7 @@ export const authenticate = (
     next: NextFunction
 ) => {
     try {
+        
         // Get JWT from HttpOnly cookie
         const token = req.cookies.token;
 
@@ -32,14 +32,12 @@ export const authenticate = (
             process.env.JWT_SECRET as string
         ) as AuthPayLoad;
 
-        req.user = {
-            ...decoded,
-            id: String(decoded.id)
-        };
+        req.user = decoded;
 
         next();
 
     } catch (error) {
+        console.log("Auth error: ", error);
         return res.status(401).json({
             message: "Invalid or expired token"
         });

@@ -1,27 +1,26 @@
-import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { Response } from "express";
 
-export const generateToken = (req: Request, res: Response, next: NextFunction) => {
-    const user = res.locals.user;
+export const generateToken = (res: Response, user: any) => {
 
-    if (!user) {
-        return res.status(500).json({ message: "User context missing for token generation" });
-    }
+    const token = jwt.sign(
+        {
+            id: user.id,
+            email: user.email,
+            role: user.role
+        },
+        process.env.JWT_SECRET as string,
+        {
+            expiresIn: "1h"
+        }
+    );
 
-    try {
-        const token = jwt.sign(
-            {
-                id: user.id,
-                email: user.email,
-                role: user.role
-            },
-            process.env.JWT_SECRET as string,
-            { expiresIn: "1h" }
-        );
+    res.cookie("token", token, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        maxAge: 24 * 60 * 60 * 1000
+    });
 
-        res.locals.token = token;
-        next();
-    } catch (err) {
-        next(err);
-    }
+    return token;
 };
