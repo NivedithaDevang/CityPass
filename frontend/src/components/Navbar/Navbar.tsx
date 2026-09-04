@@ -1,10 +1,11 @@
 import { MapPin } from "lucide-react";
 import { FaUserCircle } from "react-icons/fa";
 import Auth from "../Auth/Auth";
-import Sidebar from "../Sidebar/Sidebar";
+import { Sidebar } from "../Sidebar/Sidebar";
 import "./Navbar.css";
 import { useState } from "react";
 import type { User } from "../../types/auth";
+import { API_BASE_URL } from "../../config/config";
 
 function Navbar() {
   const [user, setUser] = useState<User | null>(null);
@@ -21,7 +22,7 @@ function Navbar() {
 
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:3000/api/logout", {
+      await fetch(`${API_BASE_URL}/api/logout`, {
         method: "POST",
         credentials: "include",
       });
@@ -63,6 +64,7 @@ function Navbar() {
             onSuccess={(loggedInUser: User) => {
               setUser(loggedInUser);
               setShowAuth(false);
+              setIsSidebarOpen(true);
             }}
           />
         )}
@@ -72,7 +74,6 @@ function Navbar() {
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
-        user={user}
         onLogout={handleLogout}
       />
     </>
