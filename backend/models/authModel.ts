@@ -11,15 +11,16 @@ export type AuthUser = RowDataPacket & AuthPayLoad & {
 /*This is the answer for the question : 
 Does a user with this email exist, and if so, give me their details.
 */
-export const findUserByEmail = async (email: string): Promise<AuthUser | undefined> => {
+export const findUserByEmail = async (
+    email: string
+): Promise<AuthUser | undefined> => {
+
     const sql = `
-        SELECT id, name, email, password, role
+        SELECT id, name, email, password, role, status
         FROM users
         WHERE email = ?
     `;
 
-
-    //Grabs the very first row found in the database.
     const [results] = await dbConfig.query<AuthUser[]>(sql, [email]);
     return results[0];
 };

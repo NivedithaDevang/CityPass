@@ -73,11 +73,22 @@ export const loginUser = async (
             user.password
         );
 
-        if (!isPasswordValid) {
-            return res.status(401).json({
-                message: "Invalid password"
-            });
-        }
+      if (!isPasswordValid) {
+    return res.status(401).json({
+        message: "Invalid password"
+    });
+}
+
+// Check if account is inactive
+if (user.status === "INACTIVE") {
+    return res.status(403).json({
+        message: "Your account is inactive",
+        accountInactive: true,
+        userId: user.id
+    });
+}
+
+generateToken(res, user);
 
         generateToken(res, user);
 
@@ -104,6 +115,19 @@ export const loginUser = async (
             message: "Unable to login"
         });
     }
+};
+
+export const logoutUser = (_req: Request, res: Response) => {
+    res.clearCookie("token", {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        path: "/"
+    });
+
+    res.status(200).json({
+        message: "Logout successful"
+    });
 };
 
 

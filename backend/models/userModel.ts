@@ -8,6 +8,7 @@ export type User = RowDataPacket & AuthPayLoad & {
     name: string;
     email: string;
     password?: string;
+    status?: string;
     role: "USER" | "ORGANIZER" | "ADMIN";
 };
 
@@ -16,8 +17,11 @@ type UserRow = RowDataPacket & {
     name: string;
     email: string;
     role: string;
+    phone: string | null;
+    dob: string | null;
+    gender: "MALE" | "FEMALE" | "OTHER" | null;
+    status: "ACTIVE" | "INACTIVE";
 };
-
 
 //getting all users
 export const getAllUsers = async () => {
@@ -28,12 +32,13 @@ export const getAllUsers = async () => {
 //get user by id
 export const getUserById = async (id: number) => {
     const [results] = await dbConfig.query<UserRow[]>(
-        "SELECT id, name, email, role FROM users WHERE id = ?",
+        `SELECT id, name, email, role, phone, dob, gender, status
+         FROM users WHERE id = ?`,
         [id]
     );
-    return results[0];
-}
 
+    return results[0];
+};
 //posting a new user
 export const createUser = async (user: User) => {
     const sql = `
@@ -62,6 +67,21 @@ export const updateUser = async (id: number, user: User) => {
     );
     return results;
 };
+
+
+
+//update password
+export const updatePassword = async(id: number, hashedPassword: string) => {
+    const sql = `
+    update users set password = ? where id = ?`;
+    const [results] = await dbConfig.query<ResultSetHeader>(
+        sql, [hashedPassword, id]
+    );
+
+    return results;
+}
+
+
 
 
 

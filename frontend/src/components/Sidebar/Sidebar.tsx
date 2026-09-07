@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useUser } from "../../context/UserContext";
+import { useNavigate } from "react-router-dom";
 import "./Sidebar.css";
+import { IoSettings, IoLogOut, IoTicket, IoPersonCircle } from "react-icons/io5";
+import { IoIosArrowForward, IoMdCloseCircle } from "react-icons/io";
 
 
 interface SidebarProps {
@@ -13,7 +16,9 @@ export function Sidebar({ isOpen, onClose, onLogout} : SidebarProps)
    {
     console.log("Sidebar compoonent loaded");
     console.log("Sidebar open: ", isOpen);
+    
     const { user } = useUser();
+    const navigate = useNavigate();
   const [isBookingsOpen, setIsBookingsOpen] = useState(false);
 
   
@@ -41,7 +46,8 @@ export function Sidebar({ isOpen, onClose, onLogout} : SidebarProps)
         {/* Header */}
         <div className="sidebar-top">
           <button className="close-btn" onClick={onClose}>
-            ✕
+            <IoMdCloseCircle />
+
           </button>
         </div>
 
@@ -62,7 +68,10 @@ export function Sidebar({ isOpen, onClose, onLogout} : SidebarProps)
         {/* Menu */}
         <div className="sidebar-content">
           <button className="sidebar-menu-item" onClick={onClose}>
-            <span className="menu-icon">👤</span>
+            <span className="profile-icon">
+              <IoPersonCircle />
+
+            </span>
             <span>My Account</span>
           </button>
 
@@ -73,42 +82,55 @@ export function Sidebar({ isOpen, onClose, onLogout} : SidebarProps)
               onClick={() => setIsBookingsOpen((prev) => !prev)}
             >
               <div className="menu-left">
-                <span className="menu-icon">🎟️</span>
+                <span className="ticket-icon">
+                  <IoTicket />
+
+                </span>
                 <span>My Bookings</span>
               </div>
 
               <span className={`booking-arrow ${isBookingsOpen ? "rotate" : ""}`}>
-                ›
+                <IoIosArrowForward />
+
               </span>
             </button>
 
             <div
               className={`booking-categories ${
                 isBookingsOpen ? "expanded" : ""
-              }`}
-            >
-              <a href="/bookings/events" onClick={onClose}>
+              }`} >
+            
+              <a onClick={onClose}>
                 Events
               </a>
-              <a href="/bookings/activities" onClick={onClose}>
+              <a onClick={onClose}>
                 Activities
               </a>
-              <a href="/bookings/concerts" onClick={onClose}>
+              <a onClick={onClose}>
                 Concerts
               </a>
             </div>
           </div>
 
-          <button className="sidebar-menu-item" onClick={onClose}>
-            <span className="menu-icon">⚙️</span>
-            <span>Settings</span>
-          </button>
+          <button
+  className="sidebar-menu-item"
+  onClick={() => {
+    onClose();
+    navigate("/settings");
+  }}
+>
+  <span className="menu-icon">
+    <IoSettings />
+
+  </span>
+  <span>Settings</span>
+</button>
         </div>
 
         {/* Bottom */}
         <div className="sidebar-bottom">
           <button className="logout-btn" onClick={onLogout}>
-            <span>↪</span>
+            <span><IoLogOut /></span>
             Log Out
           </button>
         </div>
