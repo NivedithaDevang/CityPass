@@ -7,15 +7,17 @@ import { useState, useEffect, useRef } from "react";
 import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../config/config";
 import { type City } from "../../types/auth";
+import { useNavigate } from "react-router-dom";
 function Navbar() {
-const { user, setUser } = useUser();
+  const navigate = useNavigate();
+  const { user, setUser } = useUser();
   const [showAuth, setShowAuth] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [cities, setCities] = useState<City[]>([]);
   const [selectedCity, setSelectedCity] = useState<string>("");
   const [isCityMenuOpen, setIsCityMenuOpen] = useState<boolean>(false);
   const cityDropdownRef = useRef<HTMLDivElement>(null);
-  
+
     // Fetch cities
   useEffect(() => {
     const fetchCities = async () => {
@@ -74,13 +76,14 @@ const { user, setUser } = useUser();
 
   const handleLogout = async () => {
     try {
-      await fetch(`${API_BASE_URL}/api/logout`, {
+      await fetch(`${API_BASE_URL}/v1/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
     } finally {
       setUser(null);
       setIsSidebarOpen(false);
+      navigate("/");
     }
   };
 
@@ -88,8 +91,9 @@ const { user, setUser } = useUser();
     <>
       <nav className="navbar">
         <div className="navbar-left">
-          <h2 className="logo">CityPass</h2>
-
+<h2 className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+  CityPass
+</h2>
           <div className="location city-dropdown" ref={cityDropdownRef}>
             <MapPin size={18} />
 
@@ -144,7 +148,7 @@ const { user, setUser } = useUser();
         <div className="profile-area">
           {user && (
             <div className="profile-summary" aria-label="Logged-in user details">
-              <h2>{user.name || "User"}</h2>
+              
               <small>{user.role || "USER"}</small>
             </div>
           )}

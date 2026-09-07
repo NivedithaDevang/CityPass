@@ -216,6 +216,21 @@
   background: #f6f6f6;
 }
 
+.profile-icon{
+  width: 25px;
+  font-size: 25px;
+  display: flex;
+  justify-content: center;
+  color: darkblue;
+}
+
+.ticket-icon{
+  font-size: 25px;
+  width: 20px;
+  display: flex;
+  justify-content: center;
+  color: rgb(229, 76, 127);
+}
 .menu-icon {
   width: 25px;
 
@@ -257,7 +272,7 @@
 
 .booking-categories {
   max-height: 0;
-
+color: #222;
   overflow: hidden;
 
   display: flex;

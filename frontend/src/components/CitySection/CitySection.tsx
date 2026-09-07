@@ -15,16 +15,13 @@ function CitySection() {
     Panaji: "/cities/Goa.jpeg",
     Hyderabad: "/cities/Hyderabad.jpeg",
     Chennai: "/cities/Chennai.jpeg",
-    Thiruvananthapuram: "/cities/Trivandrum.jpeg",
+    Trivandrum: "/cities/Trivandrum.jpeg",
   };
 
   useEffect(() => {
     const fetchCities = async () => {
       try {
         const response = await axios.get(`${API_BASE_URL}/v1/cities`);
-
-        console.log("City Section:", response.data);
-
         setCities(response.data.cities);
       } catch (error) {
         console.error("Error fetching cities:", error);
@@ -46,20 +43,13 @@ function CitySection() {
         {cities
           .filter((city) => city.is_active)
           .map((city) => (
-            <div
-              className="city-card"
-              key={city.id}
-              style={{
-                backgroundImage: `url(${cityImages[city.name]})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}
-            >
-              <h3>{city.name}</h3>
+            <div className="city-card" key={city.id}>
+              <img
+                src={cityImages[city.name]}
+                alt={city.name}
+              />
 
-              <span className="explore-events">
-                Explore events →
-              </span>
+              <h2>{city.name}</h2>
             </div>
           ))}
       </div>

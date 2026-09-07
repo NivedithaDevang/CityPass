@@ -2,7 +2,11 @@ export interface User {
   id: string;
   name?: string;
   email: string;
-  role?: string
+  role?: string;
+  phone?: string | null;
+  dob?: string | null;
+  gender?: "MALE" | "FEMALE" | "OTHER" | null;
+  status?: "ACTIVE" | "INACTIVE";
 }
 
 export interface SidebarProps {
@@ -13,6 +17,13 @@ export interface SidebarProps {
 }
 
 export interface City {
+  id: number;
+  name: string;
+  description: string;
+  is_active: boolean
+}
+
+export interface Category {
   id: number;
   name: string;
   description: string;
