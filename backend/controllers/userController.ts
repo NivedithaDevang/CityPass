@@ -2,7 +2,8 @@ import {
     getAllUsers,
     getUserById,
     createUser,
-    updateUser as updateUserModel
+    updateUser as updateUserModel,
+    updatePassword
 } from "../models/userModel.js";
 import { NextFunction, Request, Response } from "express";
 import { ResultSetHeader } from "mysql2";
@@ -12,6 +13,7 @@ import { saltRounds } from "../config/env.js";
 import { checkAdminRole } from "../middleware/roleMiddleware.js";
 import { checkToken, validateToken } from "../middleware/authMiddleware.js";
 import { generateToken } from "../middleware/tokenMiddleware.js";
+import { dbConfig } from "../config/database.js";
 
 //getting all users only if role is admin
 
@@ -148,6 +150,185 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
         next(err);
     }
 };
+
+// Update logged-in user's profile from Settings
+export const updateProfile = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const userId = Number(req.user?.id);
+
+        if (!Number.isInteger(userId) || userId <= 0) {
+            return res.status(401).json({
+                message: "Invalid user id"
+            });
+        }
+
+        const { name, email, phone, dob, gender } = req.body;
+
+        if (!name || !email) {
+            return res.status(400).json({
+                message: "Name and email are required"
+            });
+        }
+
+        const sql = `
+            UPDATE users
+            SET name = ?, email = ?, phone = ?, dob = ?, gender = ?
+            WHERE id = ?
+        `;
+
+        const [result] = await dbConfig.query<ResultSetHeader>(
+            sql,
+            [
+                name, email, phone || null, dob || null, gender || null,
+                userId
+            ]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
+        const updatedUser = await getUserById(userId);
+
+        res.status(200).json({
+            message: "Profile updated successfully",
+            user: updatedUser
+        });
+
+    } catch (err: any) {
+
+        if (err.code === "ER_DUP_ENTRY") {
+            return res.status(409).json({
+                message: "Email already exists"
+            });
+        }
+
+        next(err);
+    }
+};
+
+//updating password
+export const changePassword = async(req: Request, res: Response, next: NextFunction) => {
+    try{
+        const userId = Number(req.user?.id);
+        if(!Number.isInteger(userId) || userId <= 0){
+            return res.status(401).json({
+                message: "Invalid user id"
+            });
+        }
+
+        const { newPassword, confirmPassword } = req.body;
+        if (!newPassword || !confirmPassword){
+            return res.status(400).json({
+                message : "both the field are required"
+            });
+        }
+        if (newPassword !== confirmPassword){
+            return res.status(400).json({
+                message : "passwords do not match"
+            })
+        }
+
+        const hashedPassword = await bcrypt.hash( newPassword, saltRounds);
+        const result = await updatePassword(
+            userId, hashedPassword
+        );
+        if(result.affectedRows === 0){
+            return res.status(404).json({
+                message : "user not found"
+            })
+
+        }
+        res.status(200).json({
+            message : "password updated succesfully"
+        })
+    }
+    catch(err){
+        next(err);
+    }
+}
+
+// Reactivate logged-in user's account
+export const reactivateAccount = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const userId = Number(req.params.id);
+
+        if (!Number.isInteger(userId) || userId <= 0) {
+            return res.status(400).json({
+                message: "A valid user id is required"
+            });
+        }
+
+        const sql = ` UPDATE users SET status = 'ACTIVE'  WHERE id = ? `;
+
+        const [result] = await dbConfig.query<ResultSetHeader>(
+            sql,
+            [userId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "Account reactivated successfully"
+        });
+
+    } catch (err) {
+        next(err);
+    }
+};
+
+
+// Inactivate logged-in user's account
+export const deactivateAccount = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const userId = Number(req.user?.id);
+
+        if (!Number.isInteger(userId) || userId <= 0) {
+            return res.status(401).json({
+                message: "Invalid user id"
+            });
+        }
+
+        const sql = `UPDATE users SET status = 'INACTIVE' WHERE id = ? `;
+
+        const [result] = await dbConfig.query<ResultSetHeader>(
+            sql,
+            [userId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                message: "User not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "Account deactivated successfully"
+        });
+
+    } catch (err) {
+        next(err);
+    }
+};
+
 
 //for getting user details(profile)
 export const getProfile = async (req: Request, res: Response) => {
