@@ -13,3 +13,5 @@ export const db = {
 export const saltRounds = 10;
 
 export const REACTURL= "http://localhost:5174";
+
+export const JWT_SECRET = process.env.JWT_SECRET;

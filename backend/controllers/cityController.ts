@@ -4,7 +4,7 @@ import { getAllCities,
     updateCity,
     updateCityStatus
  } from "../models/cityModel.js";
-import { Request, response, Response } from "express";
+import { Request, Response } from "express";
 
 export const getCities = async(
     req : Request,

@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { AuthPayLoad } from "../types/auth.js";
+import { JWT_SECRET } from "../config/env.js";
+import { validationResult } from "express-validator";
 
 declare global {
     namespace Express {
@@ -10,6 +12,17 @@ declare global {
     }
 }
 
+
+export const handleValidation = (req: Request, res: Response, next: NextFunction) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      errors: errors.array(),
+    });
+  }
+  next();
+};
 
 export const authenticate = (
     req: Request,
@@ -70,7 +83,7 @@ export const validateToken = (
     res: Response,
     next: NextFunction
 ) => {
-jwt.verify(req.token, process.env.JWT_SECRET, (err, authorizedData) => {
+jwt.verify(req.token, JWT_SECRET, (err, authorizedData) => {
             if(err){
                 //If error send Forbidden (403)
                 console.log('ERROR: Could not connect to the protected route');

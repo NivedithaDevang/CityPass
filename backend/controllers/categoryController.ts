@@ -4,7 +4,7 @@ import { getAllCategory,
     updateCategory,
     updateCategoryStatus
  } from "../models/categoryModel.js";
-import { Request, response, Response } from "express";
+import { Request, Response } from "express";
 
 export const getCategories = async(
     req : Request,

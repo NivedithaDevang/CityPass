@@ -1,9 +1,10 @@
 import { Router } from "express";
-import { getUser } from "../../controllers/userController.js";
+import { handleValidation } from "../../middleware/authMiddleware.js";
+// import { getUser } from "../../controllers/userController.js";
 import { loginUser, logoutUser, registerUser } from "../../controllers/authController.js";
 import { validateRegister, validateLogin } from "../../validators/authValid.js";
-import { verifyRole } from "../../middleware/validate.js";
-import { authenticate, checkToken, validateToken } from "../../middleware/authMiddleware.js";
+// import { verifyRole } from "../../middleware/validate.js";
+// import { authenticate, checkToken, validateToken } from "../../middleware/authMiddleware.js";
 const router = Router();
 
 // router.get("/user/data", checkToken, validateToken, getUser);
@@ -13,7 +14,7 @@ const router = Router();
 // router.get("/user", authenticate, verifyRole(["user"]));
 // router.get("/profile", authenticate, getProfile);
 router.post("/login", validateLogin, loginUser);
-router.post("/register", validateRegister, registerUser);
+router.post("/register", validateRegister, handleValidation, registerUser);
 router.post("/logout", logoutUser);
 export default router;
 

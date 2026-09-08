@@ -8,10 +8,7 @@ import {
 import { NextFunction, Request, Response } from "express";
 import { ResultSetHeader } from "mysql2";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import { saltRounds } from "../config/env.js";
-import { checkAdminRole } from "../middleware/roleMiddleware.js";
-import { checkToken, validateToken } from "../middleware/authMiddleware.js";
 import { generateToken } from "../middleware/tokenMiddleware.js";
 import { dbConfig } from "../config/database.js";
 
@@ -174,27 +171,38 @@ export const updateProfile = async (
             });
         }
 
+        if (phone && (phone.length !== 10 || isNaN(Number(phone)))) {
+            return res.status(400).json({
+                message: "Phone number must be exactly 10 digits"
+            });
+        }
+
         const sql = `
             UPDATE users
             SET name = ?, email = ?, phone = ?, dob = ?, gender = ?
             WHERE id = ?
         `;
 
-        const [result] = await dbConfig.query<ResultSetHeader>(
+        await dbConfig.query<ResultSetHeader>(
             sql,
             [
-                name, email, phone || null, dob || null, gender || null,
+                name,
+                email,
+                phone || null,
+                dob || null,
+                gender || null,
                 userId
             ]
         );
 
-        if (result.affectedRows === 0) {
+        // Fetch the user after updating
+        const updatedUser = await getUserById(userId);
+
+        if (!updatedUser) {
             return res.status(404).json({
                 message: "User not found"
             });
         }
-
-        const updatedUser = await getUserById(userId);
 
         res.status(200).json({
             message: "Profile updated successfully",
@@ -212,7 +220,6 @@ export const updateProfile = async (
         next(err);
     }
 };
-
 //updating password
 export const changePassword = async(req: Request, res: Response, next: NextFunction) => {
     try{

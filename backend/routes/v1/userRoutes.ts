@@ -10,8 +10,7 @@ import {
 	getUser
 } from "../../controllers/userController.js";
 import { authenticate, checkToken, validateToken } from "../../middleware/authMiddleware.js";
-import { checkAdminRole } from "../../middleware/roleMiddleware.js";
-import { validateRegister } from "../../validators/authValid.js";
+// import { checkAdminRole } from "../../middleware/roleMiddleware.js";
 
 const userRouter = express.Router();
 

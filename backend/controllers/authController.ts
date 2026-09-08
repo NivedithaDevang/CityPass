@@ -1,10 +1,8 @@
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { createUser, findUserByEmail } from "../models/authModel.js";
-import jwt from "jsonwebtoken";
 import { saltRounds } from "../config/env.js";
 import { generateToken } from "../middleware/tokenMiddleware.js";
-import { error } from "node:console";
 
 
 //registering a new user
@@ -79,15 +77,6 @@ export const loginUser = async (
     });
 }
 
-// Check if account is inactive
-if (user.status === "INACTIVE") {
-    return res.status(403).json({
-        message: "Your account is inactive",
-        accountInactive: true,
-        userId: user.id
-    });
-}
-
 generateToken(res, user);
 
         generateToken(res, user);
@@ -105,7 +94,8 @@ generateToken(res, user);
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                status: user.status
             }
         });
 
