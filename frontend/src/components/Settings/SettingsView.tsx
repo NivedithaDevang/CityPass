@@ -4,10 +4,11 @@ import Navbar from "../Navbar/Navbar";
 import { IoPerson } from "react-icons/io5";
 import { IoIosArrowForward } from "react-icons/io";
 import { FaLock } from "react-icons/fa";
-import { MdLocationOn, MdDeleteForever } from "react-icons/md";
+import { MdDeleteForever } from "react-icons/md";
 import axios from "axios";
 import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../config/config";
+import { getNumberErrors } from "../../config/numberCheck";
 
 type ActiveTab = "profile" | "password" | "location" | "delete";
 
@@ -33,6 +34,7 @@ const [passwordSaving, setPasswordSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [showDeactivatePopup, setShowDeactivatePopup] = useState(false);
 const [deactivating, setDeactivating] = useState(false);
+  const phoneErrors = profile.phone ? getNumberErrors(profile.phone) : [];
 
 
   // Fetching logged-in user's complete details
@@ -70,6 +72,11 @@ setProfile({
   }, [setUser]);
 
   const handleSaveProfile = async () => {
+    const phoneErrors = getNumberErrors(profile.phone);
+    if (profile.phone && phoneErrors.length > 0) {
+      return;
+    }
+
     try {
       setSaving(true);
       setMessage("");
@@ -80,7 +87,7 @@ setProfile({
           name: profile.name,
           email: profile.email,
           phone: profile.phone,
-          dob: profile.dob,
+          dob: profile.dob ? profile.dob.split("T")[0] : null,
           gender: profile.gender || null,
         },
         {
@@ -124,7 +131,7 @@ setProfile({
         </p>
 
         <div className="form-group">
-          <label>Name</label>
+          <label>Name <span className="text-red-500">*</span></label>
           <input
             type="text"
             value={profile.name}
@@ -134,7 +141,7 @@ setProfile({
         </div>
 
         <div className="form-group">
-          <label>Email</label>
+          <label>Email <span className="text-red-500">*</span></label>
           <input
             type="email"
             value={profile.email}
@@ -151,6 +158,11 @@ setProfile({
             onChange={(e) => setProfile({...profile, phone: e.target.value})}
             placeholder="Enter your phone number"
           />
+          {phoneErrors.length > 0 && (
+            <span className="phone-error" role="alert">
+              {phoneErrors[0]}
+            </span>
+          )}
         </div>
 
         <div className="form-group">
@@ -323,15 +335,12 @@ const handleDeactivateAccount = async () => {
 const accountDelete = () => {
   return (
     <div className="panel-content">
-      <h2>Delete Account</h2>
+      <h2>Deactivate Account</h2>
 
       <p className="panel-subtitle">
-        Deactivate your account
-      </p>
+Take a temporary break from CityPass    
+ </p>
 
-      <p>
-        Your account will be deactivated instead of permanently deleted.
-      </p>
 
       <button
         className="deactivate-btn"
@@ -447,8 +456,8 @@ const accountDelete = () => {
               </div>
 
               <div className="settings-info">
-                <h3>Delete Account</h3>
-                <p>Deactivate your account</p>
+                <h3>Deactivate Account</h3>
+                <p>Your account will be set to inactive.</p>
               </div>
 
               <span className="settings-arrow">

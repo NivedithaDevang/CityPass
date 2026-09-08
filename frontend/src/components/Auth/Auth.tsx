@@ -4,7 +4,7 @@ import "./Auth.css";
 import { API_BASE_URL } from "../../config/config";
 import type { User } from "../../types/auth";
 import { useUser } from "../../context/UserContext";
-
+import { getPasswordErrors } from "../../config/passwordCheck";
 interface ApiResponse {
   message: string;
   user?: User;
@@ -13,6 +13,7 @@ interface ApiResponse {
 interface ApiErrorResponse {
   message?: string;
   error?: string;
+  errors?: Array<{ msg?: string }>;
 }
 
 interface AuthProps {
@@ -29,12 +30,19 @@ function Auth({ onClose, onSuccess }: AuthProps) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRegisteredSuccess, setIsRegisteredSuccess] = useState(false);
+  const passwordErrors = !isLogin ? getPasswordErrors(password) : [];
 
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     console.log("Form submitted");
     e.preventDefault();
     setError(null);
+
+    if (!isLogin && passwordErrors.length > 0) {
+      setError(passwordErrors.join(". "));
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -65,7 +73,7 @@ function Auth({ onClose, onSuccess }: AuthProps) {
     onSuccess(response.data.user);
   }
   else{
-    console.log("No user in login respoonse");
+    console.log("No user in login response");
     setError("login successful, but user details not returned");
     return;
   }
@@ -90,6 +98,7 @@ function Auth({ onClose, onSuccess }: AuthProps) {
 
   setError(
     axiosError.response?.data?.message ||
+    axiosError.response?.data?.errors?.map((validationError) => validationError.msg).filter(Boolean).join(". ") ||
     "Something went wrong. Please try again."
   );
 } finally {
@@ -168,6 +177,14 @@ function Auth({ onClose, onSuccess }: AuthProps) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+
+              {!isLogin && password && passwordErrors.length > 0 && (
+                <div className="password-errors" role="alert">
+                  {passwordErrors.map((passwordError) => (
+                    <div key={passwordError}>{passwordError}</div>
+                  ))}
+                </div>
+              )}
 
               <button
                 type="submit"

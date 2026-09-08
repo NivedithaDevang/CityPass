@@ -56,9 +56,13 @@ export function Sidebar({ isOpen, onClose, onLogout} : SidebarProps)
           <div className="profile-avatar">{getInitial()}</div>
 
           <div className="profile-details">
-            <h2>{user?.name || "User"}</h2>
-            <p>{user?.email || ""}</p>
-            <span className="role-badge">{user?.role || "USER"}</span>
+            <h2>
+              {user?.name || "User"}
+            </h2>
+            <span className={`status ${user?.status === "INACTIVE" ? "status-inactive" : ""}`}>
+                {user?.status || "ACTIVE"}
+               
+              </span>
           </div>
         </div>
 

@@ -167,6 +167,11 @@
   font-size: 14px;
 }
 
+.phone-error {
+  color: #c62828;
+  font-size: 13px;
+}
+
 .save-btn {
   background: #000;
   color: #fff;

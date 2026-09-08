@@ -126,6 +126,13 @@
   font-size: 14px;
 }
 
+.password-errors {
+  margin-top: -7px;
+  color: #c62828;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .auth-success {
   background: #e5f8e9;
   color: #218838;

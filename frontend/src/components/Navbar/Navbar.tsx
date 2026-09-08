@@ -3,6 +3,7 @@ import { FaUserCircle } from "react-icons/fa";
 import Auth from "../Auth/Auth";
 import { Sidebar } from "../Sidebar/Sidebar";
 import "./Navbar.css";
+import { TiThMenu } from "react-icons/ti";
 import { useState, useEffect, useRef } from "react";
 import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../config/config";
@@ -149,12 +150,16 @@ function Navbar() {
           {user && (
             <div className="profile-summary" aria-label="Logged-in user details">
               
-              <small>{user.role || "USER"}</small>
+              <small className="user-role">
+                <FaUserCircle className="user-icon" aria-hidden="true" />
+                {user.role || "USER"}
+              </small>
+
             </div>
           )}
 
           <button className="profile" onClick={handleProfileClick} aria-label="Open profile">
-            <FaUserCircle size={24} />
+            <TiThMenu size={24} />
           </button>
         </div>
 
