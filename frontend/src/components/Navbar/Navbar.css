@@ -12,6 +12,38 @@
   z-index: 1000;
 }
 
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 88px;
+  position: absolute;
+  left: 30%;
+}
+
+/* Default pill style */
+.nav-item {
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+}
+
+/* Hover state */
+.nav-item:hover {
+  color: white;
+  background-color: rgb(179, 175, 53);
+  opacity: 30%;
+}
+
+/* Active highlighted pill (District's soft yellow highlight) */
+.nav-item.active {
+  background-color: rgb(179, 175, 53); /* Soft beige/yellow matching District */
+  color: white;
+  font-weight: 700;
+}
 /* Left section */
 .navbar-left {
   display: flex;
@@ -40,26 +72,10 @@
   color: #e63946;
 }
 
-/* Center navigation */
-.navbar-links {
-  display: flex;
-  align-items: center;
-  gap: 32px;
-}
-
 .navbar-links a {
   text-decoration: none;
   color: #555555;
   transition: 0.2s ease;
-}
-
-.navbar-links a:hover {
-  color: #000000;
-}
-
-.navbar-links a.active {
-  color: #000000;
-  font-weight: 600;
 }
 
 /* Profile */
@@ -119,10 +135,9 @@
 .profile:hover {
   background-color: #e8e8e8;
 }
- 
-  .navbar-links {
-    display: none;
-  }
+.navbar-links {
+  display: flex;
+}
 
 /* Navbar right part i.e., Profile */
 
@@ -254,6 +269,10 @@
 }
 
 @media (max-width: 480px) {
+  .navbar-links {
+    display: none;
+  }
+
   .city-trigger {
     min-width: 115px;
     font-size: 14px;

@@ -1,5 +1,4 @@
 import { ChevronDown, MapPin } from "lucide-react";
-import { FaUserCircle } from "react-icons/fa";
 import Auth from "../Auth/Auth";
 import { Sidebar } from "../Sidebar/Sidebar";
 import "./Navbar.css";
@@ -8,16 +7,23 @@ import { useState, useEffect, useRef } from "react";
 import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../config/config";
 import { type City } from "../../types/auth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams, NavLink } from "react-router-dom";
 function Navbar() {
   const navigate = useNavigate();
-  const { user, setUser } = useUser();
+  const [searchParams] = useSearchParams();
+  const { user, setUser, clearUser } = useUser();
   const [showAuth, setShowAuth] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [cities, setCities] = useState<City[]>([]);
   const [selectedCity, setSelectedCity] = useState<string>("");
   const [isCityMenuOpen, setIsCityMenuOpen] = useState<boolean>(false);
   const cityDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (searchParams.get("login") === "true") {
+      setShowAuth(true);
+    }
+  }, [searchParams]);
 
     // Fetch cities
   useEffect(() => {
@@ -82,7 +88,7 @@ function Navbar() {
         credentials: "include",
       });
     } finally {
-      setUser(null);
+clearUser();
       setIsSidebarOpen(false);
       navigate("/");
     }
@@ -138,26 +144,27 @@ function Navbar() {
 </div>
 
         <div className="navbar-links">
-          <a href="#" className="active">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
+          >
             For You
-          </a>
-          <a href="#">Events</a>
-          <a href="#">Activities</a>
-          <a href="#">Concerts</a>
+          </NavLink>
+
+          <NavLink
+            to="/events"
+            className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
+          >
+            Events
+          </NavLink>
+
+          <p> Activities </p>
+
+          <p>Concerts</p>
         </div>
 
         <div className="profile-area">
-          {user && (
-            <div className="profile-summary" aria-label="Logged-in user details">
-              
-              <small className="user-role">
-                <FaUserCircle className="user-icon" aria-hidden="true" />
-                {user.role || "USER"}
-              </small>
-
-            </div>
-          )}
-
           <button className="profile" onClick={handleProfileClick} aria-label="Open profile">
             <TiThMenu size={24} />
           </button>
@@ -167,6 +174,7 @@ function Navbar() {
         {showAuth && (
           <Auth
             onClose={() => setShowAuth(false)}
+            initialLogin={searchParams.get("login") === "true"}
             onSuccess={(loggedInUser) => {
               setUser(loggedInUser);
               setShowAuth(false);

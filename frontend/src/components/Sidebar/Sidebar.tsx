@@ -162,7 +162,6 @@ const [isSettingsOpen, setIsSettingsOpen] = useState(false)
    </div>
         </div>
         
-
         {/* Bottom */}
         <div className="sidebar-bottom">
           <button className="logout-btn" onClick={onLogout}>

@@ -19,11 +19,12 @@ interface ApiErrorResponse {
 interface AuthProps {
   onClose: () => void;
   onSuccess: (user: User) => void;
+  initialLogin?: boolean;
 }
 
-function Auth({ onClose, onSuccess }: AuthProps) {
+function Auth({ onClose, onSuccess, initialLogin = false }: AuthProps) {
   const { setUser } = useUser();
-  const [isLogin, setIsLogin] = useState(false);
+  const [isLogin, setIsLogin] = useState(initialLogin);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

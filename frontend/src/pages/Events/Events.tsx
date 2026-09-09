@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
-import "./EventSection.css";
+import "./Events.css";
 import { type Events } from "../../types/auth";
-import { useNavigate } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import Navbar from "../../components/Navbar/Navbar";
 
 function EventSection() {
   const [events, setEvents] = useState<Events[]>([]);
-const navigate = useNavigate();
   const formatEventDate = (eventDate?: string) => {
     if (!eventDate) return "Date to be announced";
 
@@ -33,20 +31,14 @@ setEvents(response.data.events);
 
 
   return (
+    <>
+    <Navbar />
     <section className="event-section">
       <div className="section-heading">
-        <h2>Popular Events        </h2>
+        <h2>Explore events happening in the city </h2>
         <p>Top-rated concerts, masterclasses, and weekend pop-ups selling fast
-</p>
+        </p>
 
-          <span
-          className="browse-events"
-          onClick={() => navigate("/events")}>
-          Browse all events
-          <ArrowRight className="browse-arrow" />
-        </span>
-
-        
       </div>
 
       <div className="event-grid">
@@ -61,8 +53,8 @@ setEvents(response.data.events);
         {!events.length && (
           <p className="event-empty">No upcoming events are available right now.</p>
         )}
-</div>
-</section>
+      </div>
+    </section></>
   );
 }
 

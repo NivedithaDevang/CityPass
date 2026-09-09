@@ -4,6 +4,7 @@ import type { User } from "../types/auth";
 interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
+  clearUser: () => void;
   profileImage: string | null;
   setProfileImage: (image: string | null) => void;
 }
@@ -27,6 +28,11 @@ export function UserProvider({ children }: UserProviderProps) {
     );
   }, []);
 
+  const clearUser = useCallback(() => {
+    setUserState(null);
+    setProfileImageState(null);
+  }, []);
+
   const setProfileImage = useCallback((image: string | null) => {
     if (!user?.id) {
       return;
@@ -42,7 +48,7 @@ export function UserProvider({ children }: UserProviderProps) {
   }, [user?.id]);
 
   return (
-    <UserContext.Provider value={{ user, setUser, profileImage, setProfileImage }}>
+    <UserContext.Provider value={{ user, setUser, clearUser, profileImage, setProfileImage }}>
       {children}
     </UserContext.Provider>
   );

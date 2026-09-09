@@ -34,6 +34,8 @@ const [passwordSaving, setPasswordSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [showReloginPopup, setShowReloginPopup] = useState(false);
+  const [reloginLoading, setReloginLoading] = useState(false);
   const [showDeactivatePopup, setShowDeactivatePopup] = useState(false);
 const [deactivating, setDeactivating] = useState(false);
   const phoneErrors = profile.phone ? getNumberErrors(profile.phone) : [];
@@ -131,9 +133,24 @@ setProfile({
       } else {
         setMessage("Unable to update profile.");
       }
+      setShowReloginPopup(true);
 
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRelogin = async () => {
+    try {
+      setReloginLoading(true);
+      await fetch(`${API_BASE_URL}/v1/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } finally {
+      setUser(null);
+      setShowReloginPopup(false);
+      window.location.href = "/?login=true";
     }
   };
 
@@ -235,6 +252,33 @@ setProfile({
           <p className="profile-message">
             {message}
           </p>
+        )}
+
+        {showReloginPopup && (
+          <div className="relogin-overlay">
+            <div className="relogin-popup" role="dialog" aria-modal="true">
+              <h2>Session expired</h2>
+              <p>Your session may have expired. Please log in again to update your profile.</p>
+              <div className="relogin-actions">
+                <button
+                  className="cancel-deactivate-btn"
+                  type="button"
+                  onClick={() => setShowReloginPopup(false)}
+                  disabled={reloginLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="confirm-relogin-btn"
+                  type="button"
+                  onClick={handleRelogin}
+                  disabled={reloginLoading}
+                >
+                  {reloginLoading ? "Logging out..." : "Log in again"}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         <button
