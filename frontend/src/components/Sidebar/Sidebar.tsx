@@ -17,10 +17,10 @@ export function Sidebar({ isOpen, onClose, onLogout} : SidebarProps)
     console.log("Sidebar compoonent loaded");
     console.log("Sidebar open: ", isOpen);
     
-    const { user } = useUser();
+    const { user, profileImage } = useUser();
     const navigate = useNavigate();
   const [isBookingsOpen, setIsBookingsOpen] = useState(false);
-
+const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   
 
   const getInitial = () => {
@@ -53,7 +53,9 @@ export function Sidebar({ isOpen, onClose, onLogout} : SidebarProps)
 
         {/* Profile */}
         <div className="profile-section">
-          <div className="profile-avatar">{getInitial()}</div>
+          <div className="profile-avatar">
+            {profileImage ? <img src={profileImage} alt="" /> : getInitial()}
+          </div>
 
           <div className="profile-details">
             <h2>
@@ -71,7 +73,13 @@ export function Sidebar({ isOpen, onClose, onLogout} : SidebarProps)
 
         {/* Menu */}
         <div className="sidebar-content">
-          <button className="sidebar-menu-item" onClick={onClose}>
+          <button
+            className="sidebar-menu-item"
+            onClick={() => {
+              onClose();
+              navigate("/settings");
+            }}
+          >
             <span className="profile-icon">
               <IoPersonCircle />
 
@@ -115,21 +123,45 @@ export function Sidebar({ isOpen, onClose, onLogout} : SidebarProps)
               </a>
             </div>
           </div>
-
+<div className="settings-section">
           <button
-  className="sidebar-menu-item"
-  onClick={() => {
-    onClose();
-    navigate("/settings");
-  }}
->
+  className="sidebar-menu-item settings-button"
+  onClick={() => setIsSettingsOpen ((prev) => !prev)}>
+    
+  <div className="menu-left">
+
   <span className="menu-icon">
     <IoSettings />
 
   </span>
   <span>Settings</span>
+  </div>
+  <span className= {`settings-arrow ${isSettingsOpen ? "rotate" : ""}`}>
+    <IoIosArrowForward /> </span>
 </button>
+<div className={`booking-categories ${isSettingsOpen ? "expanded" : ""}`}  >
+
+<a
+  onClick={() => {
+    onClose();
+    navigate("/settings");
+  }}
+>
+  Update Password
+</a>
+<a
+  onClick={() => {
+    onClose();
+    navigate("/settings");
+  }}
+>
+  Deactivate account
+</a>
+
+  </div>     
+   </div>
         </div>
+        
 
         {/* Bottom */}
         <div className="sidebar-bottom">
@@ -139,6 +171,7 @@ export function Sidebar({ isOpen, onClose, onLogout} : SidebarProps)
           </button>
         </div>
       </aside>
+      
     </>
   );
 }

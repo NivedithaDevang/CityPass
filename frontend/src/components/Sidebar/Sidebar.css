@@ -116,6 +116,13 @@
   flex-shrink: 0;
 }
 
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .profile-details {
   display: flex !important;
   flex-direction: column !important;
@@ -285,6 +292,20 @@
   color: #777;
 
   transition: transform 0.25s;
+}
+
+.settings-button {
+  justify-content: space-between;
+}
+
+.settings-arrow {
+  font-size: 25px;
+  color: #777;
+
+  transition: transform 0.25s;
+}
+.settings-arrow.rotate {
+  transform: rotate(90deg);
 }
 
 .booking-arrow.rotate {

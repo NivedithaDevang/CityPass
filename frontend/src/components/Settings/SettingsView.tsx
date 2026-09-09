@@ -1,7 +1,8 @@
 import "./SettingsView.css";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import Navbar from "../Navbar/Navbar";
 import { IoPerson } from "react-icons/io5";
+import { IoAdd } from "react-icons/io5";
 import { IoIosArrowForward } from "react-icons/io";
 import { FaLock } from "react-icons/fa";
 import { MdDeleteForever } from "react-icons/md";
@@ -13,7 +14,8 @@ import { getNumberErrors } from "../../config/numberCheck";
 type ActiveTab = "profile" | "password" | "location" | "delete";
 
 function SettingsView() {
-  const { user, setUser } = useUser();
+  const { user, setUser, profileImage, setProfileImage } = useUser();
+  const profileImageInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("profile");
 
@@ -35,6 +37,26 @@ const [passwordSaving, setPasswordSaving] = useState(false);
   const [showDeactivatePopup, setShowDeactivatePopup] = useState(false);
 const [deactivating, setDeactivating] = useState(false);
   const phoneErrors = profile.phone ? getNumberErrors(profile.phone) : [];
+
+  const handleProfileImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setMessage("Please choose an image file.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage("Profile photos must be smaller than 5 MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => setProfileImage(reader.result as string);
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
 
 
   // Fetching logged-in user's complete details
@@ -124,7 +146,29 @@ setProfile({
 
     return (
       <div className="panel-content">
-        <h2>My Profile</h2>
+        <div className="profile-heading">
+          <h2>My Profile</h2>
+          <button
+            className="profile-photo-upload"
+            type="button"
+            onClick={() => profileImageInputRef.current?.click()}
+            aria-label={profileImage ? "Change profile photo" : "Upload profile photo"}
+          >
+            {profileImage ? (
+              <img src={profileImage} alt="" />
+            ) : (
+              <span>{(user?.name || "U").charAt(0).toUpperCase()}</span>
+            )}
+            <span className="profile-photo-plus" aria-hidden="true"><IoAdd /></span>
+          </button>
+          <input
+            ref={profileImageInputRef}
+            className="profile-image-input"
+            type="file"
+            accept="image/*"
+            onChange={handleProfileImageChange}
+          />
+        </div>
 
         <p className="panel-subtitle">
           Manage your personal information
