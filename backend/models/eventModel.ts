@@ -18,10 +18,21 @@ type Event = {
 
 type EventRow = RowDataPacket & Event & { id: number };
 
+export type EventWithCategory = EventRow & {
+    category_name: string | null;
+};
+
 
 //getting all events
 export const getAllEvents = async () => {
-    const [results] = await dbConfig.query<EventRow[]>("SELECT * FROM events");
+    const sql = `
+        SELECT events.*, categories.name AS category_name
+        FROM events
+        LEFT JOIN categories ON categories.id = events.category_id
+        WHERE events.status = 'APPROVED'
+        ORDER BY events.event_date ASC
+    `;
+    const [results] = await dbConfig.query<EventWithCategory[]>(sql);
     return results;
 };
 

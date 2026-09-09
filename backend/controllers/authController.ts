@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { createUser, findUserByEmail } from "../models/authModel.js";
 import { saltRounds } from "../config/env.js";
 import { generateToken } from "../middleware/tokenMiddleware.js";
+import dbConfig from "../config/database.js";
 
 
 //registering a new user
@@ -107,7 +108,20 @@ generateToken(res, user);
     }
 };
 
-export const logoutUser = (_req: Request, res: Response) => {
+export const logoutUser = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.id;
+
+        if (userId) {
+            await dbConfig.query(
+                `update users set token_version = token_version + 1 where id = ?`,
+                [userId]
+            );
+        }
+    } catch (err) {
+        console.log("logout error: ", err);
+    }
+
     res.clearCookie("token", {
         httpOnly: true,
         secure: false,

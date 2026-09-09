@@ -10,6 +10,7 @@ export type User = RowDataPacket & AuthPayLoad & {
     password?: string;
     status?: string;
     role: "USER" | "ORGANIZER" | "ADMIN";
+    token_version: number;
 };
 
 type UserRow = RowDataPacket & {
@@ -21,6 +22,8 @@ type UserRow = RowDataPacket & {
     dob: string | null;
     gender: "MALE" | "FEMALE" | "OTHER" | null;
     status: "ACTIVE" | "INACTIVE";
+        token_version: number;
+
 };
 
 //getting all users
@@ -32,7 +35,7 @@ export const getAllUsers = async () => {
 //get user by id
 export const getUserById = async (id: number) => {
     const [results] = await dbConfig.query<UserRow[]>(
-        `SELECT id, name, email, role, phone, dob, gender, status
+        `SELECT id, name, email, role, phone, dob, gender, status, token_version
          FROM users WHERE id = ?`,
         [id]
     );

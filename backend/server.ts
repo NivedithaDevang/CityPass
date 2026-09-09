@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import db from "./config/database.js";
 import userRouter from "./routes/v1/userRoutes.js"; 
 import cityRouter from "./routes/v1/cityRoute.js";
 import categoryRouter from "./routes/v1/categoryRoute.js";
@@ -19,7 +18,14 @@ const app = express();
 app.use(express.json());
 
 app.use(cors({
-    origin: REACTURL,
+    origin: (origin, callback) => {
+        // Block if it doesn't match REACTURL (localhost:5174)
+        if (origin === REACTURL) {
+            callback(null, true);
+        } else {
+            callback(new Error("Blocked by CORS: Only localhost:5174 is allowed"));
+        }
+    },
     credentials: true
 }));
 app.use(cookieParser());

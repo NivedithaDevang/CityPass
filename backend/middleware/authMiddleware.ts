@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 import { AuthPayLoad } from "../types/auth.js";
 import { JWT_SECRET } from "../config/env.js";
 import { validationResult } from "express-validator";
+import dbConfig from "../config/database.js";
+import { doesNotMatch } from "node:assert";
 
 declare global {
     namespace Express {
@@ -24,7 +26,7 @@ export const handleValidation = (req: Request, res: Response, next: NextFunction
   next();
 };
 
-export const authenticate = (
+export const authenticate = async (
     req: Request,
     res: Response,
     next: NextFunction
@@ -44,6 +46,24 @@ export const authenticate = (
             token,
             process.env.JWT_SECRET as string
         ) as AuthPayLoad;
+
+        const [rows] = await dbConfig.query<any[]>(
+            "SELECT token_version from users where id = ?",
+            [decoded.id]
+        );
+
+        if(rows.length === 0){
+            return res.status(401).json({
+                message: "User not found"
+            })
+        }
+
+        const currentTokenVersion = rows[0].token_version;
+        if(decoded.token_version !== currentTokenVersion){
+            return res.status(401).json({
+                message: "Token is no longer valid"
+            });
+        }
 
         req.user = decoded;
 
