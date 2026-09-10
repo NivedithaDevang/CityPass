@@ -30,6 +30,20 @@ export interface Category {
   is_active: boolean
 }
 
+export interface Activities {
+  id: number;
+  name?: string;
+  description?: string;
+  location?: string;
+  event_date?: string;
+    category_name?: string | null;
+
+  price?: string;
+  capacity?: number;
+  is_active: boolean;
+  status?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"
+}
+
 export interface Events {
   id : number;
   organizer_id?: number;

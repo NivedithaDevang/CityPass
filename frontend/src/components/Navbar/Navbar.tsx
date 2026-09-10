@@ -159,8 +159,13 @@ clearUser();
             Events
           </NavLink>
 
-          <p> Activities </p>
-
+ <NavLink
+            to="/activities"
+            onClick={() => navigate("/activities")}
+            className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
+          >
+            Activities
+          </NavLink>
           <p>Concerts</p>
         </div>
 

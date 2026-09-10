@@ -33,29 +33,29 @@ setEvents(response.data.events);
 
 
   return (
-    <>
     <section className="event-section">
       <div className="section-heading">
-        <h2>POPULAR EVENTS</h2>
-        <p>Top-rated concerts, masterclasses, and weekend pop-ups selling fast</p>
+        <h2>Popular Events        </h2>
+        <p>Top-rated concerts, masterclasses, and weekend pop-ups selling fast
+</p>
 
-        <span
+          <span
           className="browse-events"
           onClick={() => navigate("/events")}>
           Browse all events
           <ArrowRight className="browse-arrow" />
         </span>
+
+        
       </div>
 
       <div className="event-grid">
-        {events.slice(0, 6).map((event) => (
+        {events.map((event) => (
           <article className="event-card" key={event.id}>
             <span className="event-badge">{event.category_name || "Event"}</span>
             <h3>{event.name || "Untitled event"}</h3>
             <p className="event-location">{event.location || "Location to be announced"}</p>
             <span className="event-date">{formatEventDate(event.event_date)}</span>
-                      <p className="event-price">₹ {event.price || "Price yet to be announced"}</p>
-
           </article>
         ))}
         {!events.length && (
@@ -63,7 +63,6 @@ setEvents(response.data.events);
         )}
 </div>
 </section>
-</>
   );
 }
 

@@ -37,17 +37,19 @@ const navigate = useNavigate();
         <p>Curated entertainment, live gigs & dining experiences</p>
       </div>
 
-      <div className="category-grid">
+      <div className="category-grid" 
+      onClick={() => navigate('/events')} style={{ cursor: 'pointer' }}>
         {categories
           .filter((category) => category.is_active)
           .map((category) => (
             <div className="category-card" key={category.id}>
               <img
                 src={categoryImages[category.name]}
-                alt={category.name}
-onClick={() => navigate('/events')} style={{ cursor: 'pointer' }}              />
+                alt={category.name} />
 
-              <h2>{category.name}</h2>
+              <h2 >
+                {category.name}
+              </h2>
             </div>
           ))}
       </div>
