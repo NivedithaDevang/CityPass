@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-
+import { UserProvider } from "./context/UserContext";
+import { CityProvider } from "./context/CityContext";
 import Home from "./pages/Home/Home";
 import Settings from "./pages/Settings/Settings";
 import Events from "./pages/Events/Events";
@@ -8,6 +9,8 @@ import { Concerts } from "./pages/Concerts/Concerts";
 
 function App() {
   return (
+    <UserProvider>
+      <CityProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
@@ -17,6 +20,8 @@ function App() {
         <Route path="/concerts" element={<Concerts />} />
       </Routes>
     </BrowserRouter>
+    </CityProvider>
+    </UserProvider>
   );
 }
 
