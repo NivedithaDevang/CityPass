@@ -3,6 +3,7 @@ import Hero from "../../components/Hero/Hero";
 import CategorySection from "../../components/CategorySection/CategorySection";
 import EventSection from "../../components/EventSection/EventSection";
 import CitySection from "../../components/CitySection/CitySection";
+import { Footer } from "../../components/Footer/Footer";
 function Home() {
   return (
     <>
@@ -13,6 +14,7 @@ function Home() {
         <CategorySection />
         <EventSection />
         <CitySection />
+        <Footer />
       </main>
 
     </>

@@ -1,18 +1,31 @@
+
+
 .event-section {
-  padding: 30px 8% 60px;
+  padding: 40px 8%;
+}
+
+.event-section .section-heading {
+  width: 100%;
+  margin: 0 0 28px;
 }
 
 .event-section .section-heading p {
-  margin:6px 0 6px;
+  margin: 0 0 6px;
   letter-spacing: 0.5px;
-  font-size: 15px;
+  font-size: 18px;
+}
+
+.event-section .section-heading h2 {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 800;
+  color: #111;
 }
 
 .event-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 20px;
-  margin-top: 28px;
 }
 
 
@@ -25,7 +38,7 @@
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 600;
   transition: color 0.2s ease;
 }

@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import { type Category } from "../../types/auth";
-
+import { useNavigate } from "react-router-dom";
 function CategorySection() {
   const [categories, setCategories] = useState<Category[]>([]);
-
+const navigate = useNavigate();
   const categoryImages: Record<string, string> = {
     Music: "/categories/music.jpeg",
     Sports: "/categories/sports.jpeg",
@@ -33,8 +33,8 @@ function CategorySection() {
   return (
     <section className="category-section">
       <div className="section-heading">
-        <p>EXPLORE</p>
-        <h2>EVENTS HAPPENING</h2>
+        <h2>EXPLORE BY CATEGORIES</h2>
+        <p>Curated entertainment, live gigs & dining experiences</p>
       </div>
 
       <div className="category-grid">
@@ -45,7 +45,7 @@ function CategorySection() {
               <img
                 src={categoryImages[category.name]}
                 alt={category.name}
-              />
+onClick={() => navigate('/events')} style={{ cursor: 'pointer' }}              />
 
               <h2>{category.name}</h2>
             </div>

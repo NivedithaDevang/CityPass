@@ -169,14 +169,13 @@ setProfile({
             className="profile-photo-upload"
             type="button"
             onClick={() => profileImageInputRef.current?.click()}
-            aria-label={profileImage ? "Change profile photo" : "Upload profile photo"}
           >
             {profileImage ? (
               <img src={profileImage} alt="" />
             ) : (
               <span>{(user?.name || "U").charAt(0).toUpperCase()}</span>
             )}
-            <span className="profile-photo-plus" aria-hidden="true"><IoAdd /></span>
+            <span className="profile-photo-plus"><IoAdd /></span>
           </button>
           <input
             ref={profileImageInputRef}
@@ -184,6 +183,7 @@ setProfile({
             type="file"
             accept="image/*"
             onChange={handleProfileImageChange}
+            hidden
           />
         </div>
 
