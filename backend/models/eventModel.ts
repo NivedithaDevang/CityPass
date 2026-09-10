@@ -21,6 +21,9 @@ type EventRow = RowDataPacket & Event & { id: number };
 export type EventWithCategory = EventRow & {
     category_name: string | null;
 };
+export type ConcertWithCategory = EventRow & {
+    category_name: string | null;
+};
 
 
 //getting all events
@@ -49,6 +52,21 @@ ORDER BY events.event_date ASC
         const [results] = await dbConfig.query<EventWithCategory[]>(sql);
         return results;
 }
+
+//get only concerts [music category]
+export const getAllConcerts = async() => {
+    const sql = `
+SELECT events.*, categories.name AS category_name 
+FROM events 
+INNER JOIN categories ON categories.id = events.category_id 
+WHERE events.status = 'APPROVED' 
+  AND categories.id IN (1)
+ORDER BY events.event_date ASC;
+`;
+const [results] = await dbConfig.query<ConcertWithCategory[]>(sql);
+return results;
+}
+
 
 //posting a new event
 export const createEvent = async (event: Event) => {
