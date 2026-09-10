@@ -20,7 +20,7 @@ app.use(express.json());
 app.use(cors({
     origin: (origin, callback) => {
         // Block if it doesn't match REACTURL (localhost:5174)
-        if (origin === REACTURL) {
+        if (!origin || origin === REACTURL) {
             callback(null, true);
         } else {
             callback(new Error("Blocked by CORS: Only localhost:5174 is allowed"));
