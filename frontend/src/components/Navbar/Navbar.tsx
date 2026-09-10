@@ -166,8 +166,12 @@ clearUser();
           >
             Activities
           </NavLink>
-          <p>Concerts</p>
-        </div>
+<NavLink
+            to="/concerts"
+            className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
+          >
+            Concerts
+          </NavLink>        </div>
 
         <div className="profile-area">
           <button className="profile" onClick={handleProfileClick} aria-label="Open profile">
