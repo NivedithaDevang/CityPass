@@ -36,6 +36,20 @@ export const getAllEvents = async () => {
     return results;
 };
 
+//get only activities
+export const getAllActivities = async() => {
+    const sql = `
+    SELECT events.*, categories.name AS category_name 
+FROM events 
+INNER JOIN categories ON categories.id = events.category_id 
+WHERE events.status = 'APPROVED' 
+  AND categories.id IN (2, 5, 6)
+ORDER BY events.event_date ASC
+ `;
+        const [results] = await dbConfig.query<EventWithCategory[]>(sql);
+        return results;
+}
+
 //posting a new event
 export const createEvent = async (event: Event) => {
     const sql = `
