@@ -4,17 +4,37 @@ import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import { type Category } from "../../types/auth";
 import { useNavigate } from "react-router-dom";
+import { FaMicrophone } from "react-icons/fa";
+import { MdSportsFootball, MdTheaterComedy} from "react-icons/md";
+import { IoFastFoodSharp } from "react-icons/io5";
+import { FaPaintbrush, FaMountain } from "react-icons/fa6";
+import { FaLaughSquint } from "react-icons/fa";
+import type { IconType } from "react-icons";
+
 function CategorySection() {
   const [categories, setCategories] = useState<Category[]>([]);
 const navigate = useNavigate();
-  const categoryImages: Record<string, string> = {
-    Music: "/categories/music.jpeg",
-    Sports: "/categories/sports.jpeg",
-    Comedy: "/categories/comedy.jpeg",
-    Food: "/categories/food.jpeg",
-    Art: "/categories/art.jpeg",
-    Adventure: "/categories/adventure.jpeg",
-    Entertainment: "/categories/entertainment.jpeg",
+
+/* 
+const categoryImages: Record<string, string> = {
+    Music: "./music.jpeg",
+    Sports: "./sports.jpeg",
+    Comedy: "./comedy.jpeg",
+    Food: "./food.jpeg",
+    Art: "./art.jpeg",
+    Adventure: "./adventure.jpeg",
+    Entertainment: "./entertainment.jpeg",
+  };
+*/
+
+  const categoryIcons: Record<string, IconType> = {
+    Music: FaMicrophone,
+    Sports: MdSportsFootball,
+    Comedy: MdTheaterComedy,
+    Food: IoFastFoodSharp,
+    Art: FaPaintbrush,
+    Adventure: FaMountain,
+    Entertainment: FaLaughSquint,
   };
 
   useEffect(() => {
@@ -40,16 +60,23 @@ const navigate = useNavigate();
       <div className="category-grid">
         {categories
           .filter((category) => category.is_active)
-          .map((category) => (
-            <div className="category-card" key={category.id}>
-              <img
-                src={categoryImages[category.name]}
-                alt={category.name}
-onClick={() => navigate('/events')} style={{ cursor: 'pointer' }}              />
+          .map((category) => {
+            const CategoryIcon = categoryIcons[category.name];
+
+            return (
+            <div
+              className="category-card"
+              key={category.id}
+              onClick={() => navigate("/events")}
+            >
+              <div className="category-icon" aria-label={category.name}>
+                {CategoryIcon ? <CategoryIcon /> : null}
+              </div>
 
               <h2>{category.name}</h2>
             </div>
-          ))}
+            );
+          })}
       </div>
     </section>
   );

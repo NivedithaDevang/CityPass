@@ -11,9 +11,9 @@ function Home() {
 
       <main>
         <Hero />
+            <CitySection />
         <CategorySection />
         <EventSection />
-        <CitySection />
         <Footer />
       </main>
 

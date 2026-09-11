@@ -5,8 +5,41 @@ import "./Events.css";
 import { type Events } from "../../types/auth";
 import Navbar from "../../components/Navbar/Navbar";
 import { Footer } from "../../components/Footer/Footer";
+import { FaMapPin } from "react-icons/fa";
+import { FaMicrophone } from "react-icons/fa";
+import { MdSportsFootball, MdTheaterComedy} from "react-icons/md";
+import { IoFastFoodSharp } from "react-icons/io5";
+import { FaPaintbrush, FaMountain } from "react-icons/fa6";
+import { FaLaughSquint } from "react-icons/fa";
+import type { IconType } from "react-icons";
 
 function EventSection() {
+
+
+  const categoryIcons: Record<string, IconType> = {
+    Music: FaMicrophone,
+    Sports: MdSportsFootball,
+    Comedy: MdTheaterComedy,
+    Food: IoFastFoodSharp,
+    Art: FaPaintbrush,
+    Adventure: FaMountain,
+    Entertainment: FaLaughSquint,
+  };
+
+  const getCategoryIcon = (categoryName?: string | null) => {
+    const normalizedCategory = categoryName?.toLowerCase() || "";
+
+    if (normalizedCategory.includes("music")) return categoryIcons.Music;
+    if (normalizedCategory.includes("sport")) return categoryIcons.Sports;
+    if (normalizedCategory.includes("comedy")) return categoryIcons.Comedy;
+    if (normalizedCategory.includes("food")) return categoryIcons.Food;
+    if (normalizedCategory.includes("art")) return categoryIcons.Art;
+    if (normalizedCategory.includes("adventure")) return categoryIcons.Adventure;
+    if (normalizedCategory.includes("entertainment")) return categoryIcons.Entertainment;
+
+    return null;
+  };
+
   const [search, setSearch] = useState("");
   const [events, setEvents] = useState<Events[]>([]);
   const normalizedSearch = search.trim().toLowerCase();
@@ -66,13 +99,34 @@ setEvents(response.data.events);
       <div className="event-grid">
         {filteredEvents.map((event) => (
           <article className="event-card" key={event.id}>
-            <span className="event-badge">{event.category_name || "Event"}</span>
-            
-            <h3>{event.name || "Untitled event"}</h3>
-            <p className="event-location">{event.location || "Location to be announced"}</p>
-            <span className="event-date">{formatEventDate(event.event_date)}</span>
-            <p className="event-price">₹ {event.price || "Price yet to be announced"}</p>
+            <div className="event-card-media">
+              <span className="event-badge">
+                {(() => {
+                  const CategoryIcon = getCategoryIcon(event.category_name);
 
+                  return CategoryIcon ? <CategoryIcon className="event-category-icon" /> : null;
+                })()}
+                {event.category_name || "Event"}
+              </span>
+              <p className="event-location">
+                <FaMapPin className="event-location-pin" />
+                {event.location || "Location to be announced"}
+              </p>
+            </div>
+            <div className="event-card-content">
+              <span className="event-date">{formatEventDate(event.event_date)}</span>
+              <h3>{event.name || "Untitled event"}</h3>
+              <p className="event-description">
+                {event.description || "Description yet to be set"}
+              </p>
+              <div className="event-card-footer">
+                <div>
+                  <span className="event-price-label">Starting from</span>
+                  <p className="event-price">₹ {event.price || "Price yet to be announced"}</p>
+                </div>
+                <button type="button" className="event-pass-button">Get Tickets</button>
+              </div>
+            </div>
           </article>
 
         ))}

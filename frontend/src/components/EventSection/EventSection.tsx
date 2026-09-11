@@ -6,6 +6,7 @@ import { type Events } from "../../types/auth";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 
+
 function EventSection() {
   const [events, setEvents] = useState<Events[]>([]);
 const navigate = useNavigate();

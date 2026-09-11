@@ -12,20 +12,29 @@
 
 .event-badge {
   position: absolute;
-  top: 16px;
-  left: 16px;
-  background: rgba(59, 130, 246, 0.12);
-  color: #1d4ed8;
-  border-radius: 999px;
-  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  top: 14px;
+  left: 14px;
+  background: #fff;
+  color: #4f46e5;
+  border-radius: 6px;
+  padding: 5px 8px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.event-price {
+
+.event-category-icon {
   font-size: 13px;
-  color: #6b7280;
+}
+.event-price {
+  margin: 2px 0 0;
+  color: #18213d;
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .event-search label {
@@ -80,15 +89,110 @@
 
 .event-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 440px);
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 30px;
   margin-top: 30px;
 }
 
 .event-card {
+  overflow: hidden;
   width: 100%;
-  min-height: 220px;
+  min-height: 410px;
   box-sizing: border-box;
+  border: 1px solid #e4e7ef;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(24, 33, 61, 0.06);
+}
+
+.event-card-media {
+  position: relative;
+  display: flex;
+  min-height: 200px;
+  align-items: flex-end;
+  padding: 16px;
+  box-sizing: border-box;
+  background: rgb(245, 238, 176);
+}
+
+.event-card-media .event-location {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  color: #3f421e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.event-location-pin {
+  color: #e53935;
+  flex: 0 0 auto;
+}
+
+.event-card-content {
+  display: flex;
+  min-height: 132px;
+  flex-direction: column;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.event-card .event-date {
+  color: #5b50e6;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.event-card h3 {
+  margin: 8px 0 6px;
+  color: #18213d;
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.event-description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: #8a91a7;
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+}
+
+.event-card-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid #edf0f5;
+}
+
+.event-price-label {
+  color: #969caf;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.event-pass-button {
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 15px;
+  background: #5144ed;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.event-pass-button:hover {
+  background: #3f35c8;
 }
 
 .event-empty {

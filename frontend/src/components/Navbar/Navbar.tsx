@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../config/config";
 import { type City } from "../../types/auth";
+import { FaUserAlt } from "react-icons/fa";
 import { useNavigate, useSearchParams, NavLink } from "react-router-dom";
 function Navbar() {
   const navigate = useNavigate();
@@ -165,9 +166,17 @@ clearUser();
         </div>
 
         <div className="profile-area">
+          {/* User Role Badge */}
+          {user && (
+            <span className={`user-role ${(user.role || "user").toLowerCase()}`}>
+              <FaUserAlt className="user-icon" aria-hidden="true" />
+              {user.role || "USER"}
+            </span>
+          )}
           <button className="profile" onClick={handleProfileClick} aria-label="Open profile">
             <TiThMenu size={24} />
           </button>
+          
         </div>
 
         {/* Auth Modal */}

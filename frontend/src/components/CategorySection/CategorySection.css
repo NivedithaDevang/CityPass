@@ -43,15 +43,18 @@
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
 }
 
-.category-card img {
+.category-icon {
+  display: grid;
+  place-items: center;
   width: 80px;
   height: 80px;
-  margin-bottom: 12px;
+  margin: 0 auto 12px;
   border-radius: 50%;
-  object-fit: cover;
+  color: rgb(9, 9, 106);
+  font-size: 38px;
 }
 
-.category-card h3 {
+.category-card h2 {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
