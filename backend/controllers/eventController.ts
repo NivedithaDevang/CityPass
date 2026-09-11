@@ -4,7 +4,7 @@ import {
     updateEvent as updateEventModel
 } from "../models/eventModel.js";
 import { Request, Response, NextFunction } from "express";
-
+import { generateEventToken } from "../middleware/tokenMiddleware.js";
 
 //for getting all events
 export const getEvents = async (req: Request, res: Response, next: NextFunction) => {
@@ -34,8 +34,11 @@ export const addEvent = async (req: Request, res: Response, next: NextFunction) 
             { organizer_id, city_id, category_id, name, description, location, event_date, price, capacity, status }
         );
 
+        const eventId = Number(result?.insertId ?? 0);
+const token = generateEventToken(res, eventId);
         res.status(201).json({
             message: "Event created successfully",
+            token,
             event_id: result?.insertId
         });
     } catch (err) {

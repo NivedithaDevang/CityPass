@@ -9,7 +9,7 @@ import { NextFunction, Request, Response } from "express";
 import { ResultSetHeader } from "mysql2";
 import bcrypt from "bcrypt";
 import { saltRounds } from "../config/env.js";
-import { generateToken } from "../middleware/tokenMiddleware.js";
+import { generateUserToken } from "../middleware/tokenMiddleware.js";
 import { dbConfig } from "../config/database.js";
 
 //getting all users only if role is admin
@@ -86,7 +86,7 @@ export const addUser = async (req: Request, res: Response, next: NextFunction) =
         } as Parameters<typeof createUser>[0]);
 
         const userId = Number(result?.insertId ?? 0);
-        const token = generateToken(userId, role, "1h");
+        const token = generateUserToken(userId, role, "1h");
 
         res.status(201).json({
             message: "User created successfully",
