@@ -5,12 +5,20 @@ import "./Events.css";
 import { type Events } from "../../types/auth";
 import Navbar from "../../components/Navbar/Navbar";
 import { Footer } from "../../components/Footer/Footer";
+import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
 
 function EventSection() {
   const [search, setSearch] = useState("");
   const [events, setEvents] = useState<Events[]>([]);
+  const { selectedCity } = useCity();
   const normalizedSearch = search.trim().toLowerCase();
   const filteredEvents = events.filter((event) => {
+    const matchesCity =
+      !selectedCity ||
+      selectedCity === ALL_LOCATIONS ||
+      event.location?.trim().toLowerCase() === selectedCity.trim().toLowerCase();
+
+    if (!matchesCity) return false;
     if (!normalizedSearch) return true;
 
     return [event.name, event.category_name, event.location]
@@ -76,7 +84,11 @@ setEvents(response.data.events);
 
         ))}
         {!filteredEvents.length && (
-          <p className="event-empty">No upcoming events are available right now.</p>
+          <p className="event-empty">
+            {selectedCity && selectedCity !== ALL_LOCATIONS
+              ? "Currently no events in this place."
+              : "No upcoming events are available right now."}
+          </p>
         )}
       </div>
     </section>

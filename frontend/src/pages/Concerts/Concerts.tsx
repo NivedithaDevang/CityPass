@@ -5,10 +5,17 @@ import { API_BASE_URL } from "../../config/config";
 import { type Activities } from "../../types/auth";
 import axios from "axios";
 import "./Concerts.css";
+import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
 
 export function Concerts() {
     const [concerts, setConcerts] = useState<Activities[]>([]);
     const [error, setError] = useState(false);
+    const { selectedCity } = useCity();
+    const filteredConcerts = concerts.filter((concert) =>
+        !selectedCity ||
+        selectedCity === ALL_LOCATIONS ||
+        concert.location?.trim().toLowerCase() === selectedCity.trim().toLowerCase()
+    );
 
     useEffect(() => {
         const fetchConcerts = async() => {
@@ -38,7 +45,7 @@ export function Concerts() {
             )}
 
             <div className="concert-grid">
-                {!error && concerts.slice(0, 4).map((concert) => {
+                {!error && filteredConcerts.slice(0, 4).map((concert) => {
                     const eventDate = concert.event_date
                         ? new Date(concert.event_date).toLocaleDateString()
                         : "Date to be announced";
@@ -62,8 +69,12 @@ export function Concerts() {
                         </article>
                     );
                 })}
-                {!error && !concerts.length && (
-                    <p className="concert-empty">No concerts are available right now.</p>
+                {!error && !filteredConcerts.length && (
+                    <p className="concert-empty">
+                        {selectedCity && selectedCity !== ALL_LOCATIONS
+                            ? "Currently no concerts in this place."
+                            : "No concerts are available right now."}
+                    </p>
                 )}
             </div>
             </main>

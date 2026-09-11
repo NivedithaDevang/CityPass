@@ -4,10 +4,17 @@ import { API_BASE_URL } from "../../config/config";
 import { type Activities } from "../../types/auth";
 import axios from "axios";
 import "./Activities.css";
+import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
 
 export function Activities() {
     const [activities, setActivities] = useState<Activities[]>([]);
     const [error, setError] = useState(false);
+    const { selectedCity } = useCity();
+    const filteredActivities = activities.filter((activity) =>
+        !selectedCity ||
+        selectedCity === ALL_LOCATIONS ||
+        activity.location?.trim().toLowerCase() === selectedCity.trim().toLowerCase()
+    );
 
     useEffect(() => {
         const fetchActivities = async() => {
@@ -37,7 +44,7 @@ export function Activities() {
             )}
 
             <div className="act-grid">
-                {!error && activities.slice(0, 4).map((activity) => {
+                {!error && filteredActivities.slice(0, 4).map((activity) => {
                     const eventDate = activity.event_date
                         ? new Date(activity.event_date).toLocaleDateString()
                         : "Date to be announced";
@@ -61,8 +68,12 @@ export function Activities() {
                         </article>
                     );
                 })}
-                {!error && !activities.length && (
-                    <p className="act-empty">No activities are available right now.</p>
+                {!error && !filteredActivities.length && (
+                    <p className="act-empty">
+                        {selectedCity && selectedCity !== ALL_LOCATIONS
+                            ? "Currently no activities in this place."
+                            : "No activities are available right now."}
+                    </p>
                 )}
             </div>
             </main>
