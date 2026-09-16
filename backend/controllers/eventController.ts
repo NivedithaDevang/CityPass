@@ -1,5 +1,8 @@
+import { Result } from "express-validator";
 import {
     getAllEvents,
+    getAllActivities,
+    getAllConcerts,
     createEvent,
     updateEvent as updateEventModel
 } from "../models/eventModel.js";
@@ -19,6 +22,34 @@ export const getEvents = async (req: Request, res: Response, next: NextFunction)
         next(err);
     }
 };
+
+//for getting only activities where categories are sports, art & adventure
+export const getActivities = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const activities = await getAllActivities();
+        res.status(200).json({
+            message : "Activities fetched succesfully",
+            activities: activities
+        });
+    }
+    catch(err){
+        next(err);
+    }
+}
+
+//get concerts where category is music
+export const getConcerts = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const concerts = await getAllConcerts();
+        res.status(200).json({
+            message: "Concerts fetched succesfully",
+            concerts: concerts
+        });
+    }
+    catch(err){
+        next(err);
+    }
+}
 
 //for posting new event
 export const addEvent = async (req: Request, res: Response, next: NextFunction) => {

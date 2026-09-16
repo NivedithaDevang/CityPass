@@ -7,7 +7,11 @@ import { useState, useEffect, useRef } from "react";
 import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../config/config";
 import { type City } from "../../types/auth";
+<<<<<<< HEAD
+import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
+=======
 import { FaUserAlt } from "react-icons/fa";
+>>>>>>> events-page
 import { useNavigate, useSearchParams, NavLink } from "react-router-dom";
 function Navbar() {
   const navigate = useNavigate();
@@ -16,7 +20,7 @@ function Navbar() {
   const [showAuth, setShowAuth] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [cities, setCities] = useState<City[]>([]);
-  const [selectedCity, setSelectedCity] = useState<string>("");
+  const {selectedCity, setSelectedCity} = useCity();
   const [isCityMenuOpen, setIsCityMenuOpen] = useState<boolean>(false);
   const cityDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -47,7 +51,7 @@ function Navbar() {
           (city: City) => city.is_active
         );
 
-        if (firstActiveCity) {
+        if (firstActiveCity && !selectedCity) {
           setSelectedCity(firstActiveCity.name);
         }
       } catch (error) {
@@ -56,7 +60,7 @@ function Navbar() {
     };
 
     fetchCities();
-  }, []);
+  }, [selectedCity, setSelectedCity]);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -112,7 +116,7 @@ clearUser();
               aria-haspopup="listbox"
               onClick={() => setIsCityMenuOpen((isOpen) => !isOpen)}
             >
-              <span>{selectedCity || "Select city"}</span>
+              <span>{selectedCity || ALL_LOCATIONS}</span>
               <ChevronDown
                 size={16}
                 className={isCityMenuOpen ? "city-chevron open" : "city-chevron"}
@@ -121,6 +125,22 @@ clearUser();
 
             {isCityMenuOpen && (
               <div className="city-menu" role="listbox" aria-label="Cities">
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={selectedCity === ALL_LOCATIONS}
+                  className={`city-option ${
+                    selectedCity === ALL_LOCATIONS ? "selected" : ""
+                  }`}
+                  onClick={() => {
+                    setSelectedCity(ALL_LOCATIONS);
+                    setIsCityMenuOpen(false);
+                  }}
+                >
+                  <span>{ALL_LOCATIONS}</span>
+                  {selectedCity === ALL_LOCATIONS && <span className="city-check">&#10003;</span>}
+                </button>
+
                 {cities.filter((city) => city.is_active).map((city) => (
                   <button
                     type="button"
@@ -160,10 +180,19 @@ clearUser();
             Events
           </NavLink>
 
-          <p> Activities </p>
-
-          <p>Concerts</p>
-        </div>
+ <NavLink
+            to="/activities"
+            onClick={() => navigate("/activities")}
+            className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
+          >
+            Activities
+          </NavLink>
+<NavLink
+            to="/concerts"
+            className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
+          >
+            Concerts
+          </NavLink>        </div>
 
         <div className="profile-area">
           {/* User Role Badge */}
