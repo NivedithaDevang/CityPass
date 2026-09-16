@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
 
+
 function EventSection() {
   const [events, setEvents] = useState<Events[]>([]);
   const { selectedCity } = useCity();

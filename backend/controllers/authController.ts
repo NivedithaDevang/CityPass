@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { createUser, findUserByEmail } from "../models/authModel.js";
 import { saltRounds } from "../config/env.js";
-import { generateToken } from "../middleware/tokenMiddleware.js";
+import { generateUserToken } from "../middleware/tokenMiddleware.js";
 import dbConfig from "../config/database.js";
 
 
@@ -78,9 +78,7 @@ export const loginUser = async (
     });
 }
 
-generateToken(res, user);
-
-        generateToken(res, user);
+        generateUserToken(res, user);
 
         //"token" means the cookie name and given the same in the middleware also
         //token means the jwt value name

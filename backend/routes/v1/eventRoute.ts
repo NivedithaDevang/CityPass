@@ -6,17 +6,23 @@ import {
     addEvent,
     updateEvent
 } from "../../controllers/eventController.js";
+import { handleValidation } from "../../middleware/authMiddleware.js";
+import { validateEvent } from "../../validators/eventValidator.js";
 
 const eventRouter = express.Router();
 
 eventRouter.get("/", getEvents);
 
-eventRouter.post("/", addEvent);
+eventRouter.post("/", validateEvent, handleValidation, addEvent);
 
+<<<<<<< HEAD
 eventRouter.get("/activities", getActivities);
 
 eventRouter.get("/concerts", getConcerts);
 
 eventRouter.put("/:id", updateEvent);
+=======
+// eventRouter.put("/:id", updateEvent);
+>>>>>>> events-page
 
 export default eventRouter; 
