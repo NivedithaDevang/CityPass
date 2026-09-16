@@ -57,17 +57,9 @@ const categoryImages: Record<string, string> = {
         <p>Curated entertainment, live gigs & dining experiences</p>
       </div>
 
-      <div className="category-grid" 
-      onClick={() => navigate('/events')} style={{ cursor: 'pointer' }}>
+      <div className="category-grid">
         {categories
           .filter((category) => category.is_active)
-<<<<<<< HEAD
-          .map((category) => (
-            <div className="category-card" key={category.id}>
-              <img
-                src={categoryImages[category.name]}
-                alt={category.name} />
-=======
           .map((category) => {
             const CategoryIcon = categoryIcons[category.name];
 
@@ -80,9 +72,7 @@ const categoryImages: Record<string, string> = {
               <div className="category-icon" aria-label={category.name}>
                 {CategoryIcon ? <CategoryIcon /> : null}
               </div>
->>>>>>> events-page
-
-              <h2 >
+              <h2>
                 {category.name}
               </h2>
             </div>

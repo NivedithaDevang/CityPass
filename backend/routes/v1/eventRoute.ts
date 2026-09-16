@@ -15,14 +15,11 @@ eventRouter.get("/", getEvents);
 
 eventRouter.post("/", validateEvent, handleValidation, addEvent);
 
-<<<<<<< HEAD
 eventRouter.get("/activities", getActivities);
 
 eventRouter.get("/concerts", getConcerts);
 
 eventRouter.put("/:id", updateEvent);
-=======
 // eventRouter.put("/:id", updateEvent);
->>>>>>> events-page
 
 export default eventRouter; 
