@@ -5,17 +5,12 @@ import "./Events.css";
 import { type Events } from "../../types/auth";
 import Navbar from "../../components/Navbar/Navbar";
 import { Footer } from "../../components/Footer/Footer";
-<<<<<<< HEAD
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
-=======
-import { FaMapPin } from "react-icons/fa";
-import { FaMicrophone } from "react-icons/fa";
+import { FaMapPin ,FaMicrophone, FaLaughSquint } from "react-icons/fa";
 import { MdSportsFootball, MdTheaterComedy} from "react-icons/md";
 import { IoFastFoodSharp } from "react-icons/io5";
 import { FaPaintbrush, FaMountain } from "react-icons/fa6";
-import { FaLaughSquint } from "react-icons/fa";
 import type { IconType } from "react-icons";
->>>>>>> events-page
 
 function EventSection() {
 

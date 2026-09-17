@@ -1,10 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { AuthPayLoad } from "../types/auth.js";
+import db from "../config/database.js";
 import { JWT_SECRET } from "../config/env.js";
-import { validationResult } from "express-validator";
-import dbConfig from "../config/database.js";
-import { doesNotMatch } from "node:assert";
+import { AuthPayLoad } from "../types/auth.js";
 
 declare global {
     namespace Express {
@@ -14,17 +12,6 @@ declare global {
     }
 }
 
-
-export const handleValidation = (req: Request, res: Response, next: NextFunction) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      success: false,
-      errors: errors.array(),
-    });
-  }
-  next();
-};
 
 export const authenticate = async (
     req: Request,
@@ -47,7 +34,7 @@ export const authenticate = async (
             process.env.JWT_SECRET as string
         ) as AuthPayLoad;
 
-        const [rows] = await dbConfig.query<any[]>(
+        const [rows] = await db.query<any[]>(
             "SELECT token_version from users where id = ?",
             [decoded.id]
         );

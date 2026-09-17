@@ -1,4 +1,4 @@
-import { dbConfig } from "../config/database.js";
+import { db } from "../config/database.js";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { AuthPayLoad } from "../types/auth.js";
 
@@ -28,13 +28,13 @@ type UserRow = RowDataPacket & {
 
 //getting all users
 export const getAllUsers = async () => {
-    const [results] = await dbConfig.query<UserRow[]>("SELECT id, name, email, role FROM users");
+    const [results] = await db.query<UserRow[]>("SELECT id, name, email, role FROM users");
     return results;
 };
 
 //get user by id
 export const getUserById = async (id: number) => {
-    const [results] = await dbConfig.query<UserRow[]>(
+    const [results] = await db.query<UserRow[]>(
         `SELECT id, name, email, role, phone, dob, gender, status, token_version
          FROM users WHERE id = ?`,
         [id]
@@ -49,7 +49,7 @@ export const createUser = async (user: User) => {
         VALUES (?, ?, ?, ?)
     `;
 
-    const [results] = await dbConfig.query<ResultSetHeader>(
+    const [results] = await db.query<ResultSetHeader>(
         sql,
         [user.name, user.email, user.password, user.role]
     );
@@ -64,7 +64,7 @@ export const updateUser = async (id: number, user: User) => {
         WHERE id = ?
     `;
 
-    const [results] = await dbConfig.query<ResultSetHeader>(
+    const [results] = await db.query<ResultSetHeader>(
         sql,
         [user.name, user.email, user.password, user.role, id]
     );
@@ -77,7 +77,7 @@ export const updateUser = async (id: number, user: User) => {
 export const updatePassword = async(id: number, hashedPassword: string) => {
     const sql = `
     update users set password = ? where id = ?`;
-    const [results] = await dbConfig.query<ResultSetHeader>(
+    const [results] = await db.query<ResultSetHeader>(
         sql, [hashedPassword, id]
     );
 

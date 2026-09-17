@@ -2,7 +2,6 @@ import { body } from "express-validator";
 
 export const validateRegister = [
     body("name")
-    .trim()
     .notEmpty()
     .withMessage("Name is required"),
 
@@ -14,7 +13,6 @@ export const validateRegister = [
 
 
     body("password")
-  .trim()
   .notEmpty()
   .withMessage("Password is required")
   .isLength({ min: 8 })
@@ -29,10 +27,10 @@ export const validateRegister = [
   .withMessage("Password must contain at least one special character"),
 
 
-    body("role")
-        .trim()
-        .isIn(["USER", "ORGANIZER", "ADMIN"])
-        .withMessage("Role must be USER, ORGANIZER, or ADMIN")
+    // body("role")
+    //     .trim()
+    //     .isIn(["USER", "ORGANIZER", "ADMIN"])
+    //     .withMessage("Role must be USER, ORGANIZER, or ADMIN")
 ];
 
 export const validateLogin = [
@@ -43,7 +41,6 @@ export const validateLogin = [
 
     
     body("password")
-    .trim()
     .notEmpty()
     .withMessage("Password is required")
 ];
@@ -51,7 +48,6 @@ export const validateLogin = [
 
 export const validatePassword = [
     body("newPassword")
-    .trim()
     .isStrongPassword({
       minLength: 8,
       minLowercase: 1,
@@ -70,7 +66,6 @@ export const validatePassword = [
     }),
 
     body("confirmPassword")
-    .trim()
     .notEmpty()
     .withMessage("Please confirm your password")
 

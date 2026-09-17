@@ -5,13 +5,13 @@ import {
     updateRequest
 } from "../../controllers/orgRequestController.js";
 
-const orgReqRouter = express.Router();
+const orgRequestRouter = express.Router();
 
-orgReqRouter.get("/", getRequests);
+orgRequestRouter.get("/", getRequests);
 
-orgReqRouter.post("/", addRequest);
+orgRequestRouter.post("/", addRequest);
 
-orgReqRouter.put("/:id", updateRequest);
+orgRequestRouter.put("/:id", updateRequest);
 
 
-export default orgReqRouter; 
+export default orgRequestRouter; 

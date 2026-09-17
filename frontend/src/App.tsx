@@ -6,6 +6,7 @@ import Settings from "./pages/Settings/Settings";
 import Events from "./pages/Events/Events";
 import { Activities } from "./pages/Activities/Activities";
 import { Concerts } from "./pages/Concerts/Concerts";
+import { Bookings } from "./components/Booking/Booking";
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Route path="/events" element={<Events />} />
         <Route path="/activities" element={<Activities />} />
         <Route path="/concerts" element={<Concerts />} />
+        <Route path="/bookings" element={<Bookings />} />
       </Routes>
     </BrowserRouter>
     </CityProvider>

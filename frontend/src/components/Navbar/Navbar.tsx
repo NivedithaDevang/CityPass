@@ -7,11 +7,8 @@ import { useState, useEffect, useRef } from "react";
 import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../config/config";
 import { type City } from "../../types/auth";
-<<<<<<< HEAD
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
-=======
 import { FaUserAlt } from "react-icons/fa";
->>>>>>> events-page
 import { useNavigate, useSearchParams, NavLink } from "react-router-dom";
 function Navbar() {
   const navigate = useNavigate();
@@ -192,7 +189,9 @@ clearUser();
             className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
           >
             Concerts
-          </NavLink>        </div>
+          </NavLink>
+          
+        </div>
 
         <div className="profile-area">
           {/* User Role Badge */}
@@ -207,6 +206,7 @@ clearUser();
           </button>
           
         </div>
+        
 
         {/* Auth Modal */}
         {showAuth && (
@@ -217,6 +217,7 @@ clearUser();
               setUser(loggedInUser);
               setShowAuth(false);
               setIsSidebarOpen(true);
+             
             }}
           />
         )}

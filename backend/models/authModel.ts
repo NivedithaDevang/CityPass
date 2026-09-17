@@ -1,4 +1,4 @@
-import { dbConfig } from "../config/database.js";
+import { db } from "../config/database.js";
 import { RowDataPacket } from "mysql2/promise";
 import { AuthPayLoad } from "../types/auth.js";
 export type AuthUser = RowDataPacket & AuthPayLoad & {
@@ -21,7 +21,7 @@ export const findUserByEmail = async (
         WHERE email = ?
     `;
 
-    const [results] = await dbConfig.query<AuthUser[]>(sql, [email]);
+    const [results] = await db.query<AuthUser[]>(sql, [email]);
     return results[0];
 };
 
@@ -37,7 +37,7 @@ export const createUser = async (user: {
         VALUES (?, ?, ?, ?)
     `;
 
-    const [result] = await dbConfig.query<any>(sql, [
+    const [result] = await db.query<any>(sql, [
         user.name,
         user.email,
         user.password,
