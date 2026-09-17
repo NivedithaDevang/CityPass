@@ -112,13 +112,19 @@ const [isSettingsOpen, setIsSettingsOpen] = useState(false)
                 isBookingsOpen ? "expanded" : ""
               }`} >
             
-              <a onClick={onClose}>
+              <a onClick={() => {onClose();
+                navigate("/bookings");
+              }}>
                 Events
               </a>
-              <a onClick={onClose}>
+              <a onClick={() => {onClose();
+                navigate("/bookings");
+              }}>
                 Activities
               </a>
-              <a onClick={onClose}>
+              <a onClick={() => {onClose();
+                navigate("/bookings");
+              }}>
                 Concerts
               </a>
             </div>

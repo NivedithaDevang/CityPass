@@ -189,7 +189,9 @@ clearUser();
             className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
           >
             Concerts
-          </NavLink>        </div>
+          </NavLink>
+          
+        </div>
 
         <div className="profile-area">
           {/* User Role Badge */}
@@ -204,6 +206,7 @@ clearUser();
           </button>
           
         </div>
+        
 
         {/* Auth Modal */}
         {showAuth && (
@@ -214,6 +217,7 @@ clearUser();
               setUser(loggedInUser);
               setShowAuth(false);
               setIsSidebarOpen(true);
+             
             }}
           />
         )}
