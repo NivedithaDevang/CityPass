@@ -61,4 +61,15 @@ export interface Events {
 
 }
 
+
+export type Bookings = {
+id: number;
+user_id?: number;
+booking_date: string;
+pass_id?: number;
+number_of_tickets?: number;
+total_amount?: string;
+status?: "CONFIRMED" | "CANCELLED"
+}
+
 export type BookingCategory = 'events' | 'activities' | 'concerts';
