@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-export const db = {
+export const database = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -9,6 +9,7 @@ export const db = {
   port: Number(process.env.DB_PORT || 3306),
 };
 
+export const REACT_PORT = process.env.PORT;
 
 export const saltRounds = 10;
 

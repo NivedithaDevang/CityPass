@@ -10,7 +10,7 @@ import { ResultSetHeader } from "mysql2";
 import bcrypt from "bcrypt";
 import { saltRounds } from "../config/env.js";
 import { generateUserToken } from "../middleware/tokenMiddleware.js";
-import { dbConfig } from "../config/database.js";
+import { db } from "../config/database.js";
 
 //getting all users only if role is admin
 
@@ -57,53 +57,6 @@ export const getUser = async (req: Request, res: Response, next: NextFunction) =
         });
     } catch (err) {
         console.log(err);
-        next(err);
-    }
-};
-
-    
-
-
-//for posting new user
-export const addUser = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const { name, email, password, role } = req.body;
-        if (!name || !email || !password || !role) {
-            return res.status(400).json({
-                message: "Name, email, password, and role are required"
-            });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-
-         //register user and return token
-        const result = await createUser({
-            name,
-            email,
-            password: hashedPassword,
-            role,
-        } as Parameters<typeof createUser>[0]);
-
-        const userId = Number(result?.insertId ?? 0);
-        const token = generateUserToken(userId, role, "1h");
-
-        res.status(201).json({
-            message: "User created successfully",
-            token,
-            user: {
-                id: userId,
-                name,
-                email,
-                role
-            }
-        });
-    } catch (err: any) {
-        if (err.code === "ER_DUP_ENTRY") {
-            return res.status(409).json({
-                message: "Email already exists"
-            });
-        }
         next(err);
     }
 };
@@ -183,7 +136,7 @@ export const updateProfile = async (
             WHERE id = ?
         `;
 
-        await dbConfig.query<ResultSetHeader>(
+        await db.query<ResultSetHeader>(
             sql,
             [
                 name,
@@ -278,7 +231,7 @@ export const reactivateAccount = async (
 
         const sql = ` UPDATE users SET status = 'ACTIVE'  WHERE id = ? `;
 
-        const [result] = await dbConfig.query<ResultSetHeader>(
+        const [result] = await db.query<ResultSetHeader>(
             sql,
             [userId]
         );
@@ -316,7 +269,7 @@ export const deactivateAccount = async (
 
         const sql = `UPDATE users SET status = 'INACTIVE' WHERE id = ? `;
 
-        const [result] = await dbConfig.query<ResultSetHeader>(
+        const [result] = await db.query<ResultSetHeader>(
             sql,
             [userId]
         );

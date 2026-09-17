@@ -1,10 +1,9 @@
-import { get } from "node:http";
 import { getOrganizers } from "../../controllers/organiserController.js";
 import express from "express";
 
-const organizerRouter = express.Router();
+const organiserRouter = express.Router();
 
-organizerRouter.get("/", getOrganizers);
+organiserRouter.get("/", getOrganizers);
 
 
-export default organizerRouter; 
+export default organiserRouter; 

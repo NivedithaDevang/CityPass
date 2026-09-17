@@ -6,7 +6,7 @@ import {
     addEvent,
     updateEvent
 } from "../../controllers/eventController.js";
-import { handleValidation } from "../../middleware/authMiddleware.js";
+import { handleValidation } from "../../middleware/validate.js";
 import { validateEvent } from "../../validators/eventValidator.js";
 
 const eventRouter = express.Router();
@@ -20,6 +20,5 @@ eventRouter.get("/activities", getActivities);
 eventRouter.get("/concerts", getConcerts);
 
 eventRouter.put("/:id", updateEvent);
-// eventRouter.put("/:id", updateEvent);
 
 export default eventRouter; 

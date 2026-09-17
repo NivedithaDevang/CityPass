@@ -1,52 +1,57 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import bcrypt from "bcrypt";
-import { createUser, findUserByEmail } from "../models/authModel.js";
+import db from "../config/database.js";
 import { saltRounds } from "../config/env.js";
+import { createUser, findUserByEmail } from "../models/authModel.js";
 import { generateUserToken } from "../middleware/tokenMiddleware.js";
-import dbConfig from "../config/database.js";
 
 
 //registering a new user
-export const registerUser = async (req: Request, res: Response) => {
+export const registerUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { name, email, password, role } = req.body;
-        console.log(req.body);
-
-        const existingUser = await findUserByEmail(email);
-        if (existingUser) {
+        if (!name || !email || !password || !role) {
             return res.status(400).json({
-                message: "User with this email already exists"
+                message: "Name, email, password, and role are required"
             });
         }
 
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
+
+         //register user and return token
         const result = await createUser({
             name,
             email,
             password: hashedPassword,
-            role
+            role,
+        } as Parameters<typeof createUser>[0]);
+
+        const userId = Number(result?.insertId ?? 0);
+        const token = generateUserToken(userId, res, {
+            id: userId,
+            email,
+            role,
+            token_version: 0
         });
 
-        if(result){
-
-            res.status(201).json({
-            message: "User registered successfully"
+        res.status(201).json({
+            message: "User created successfully",
+            token,
+            user: {
+                id: userId,
+                name,
+                email,
+                role
+            }
         });
-
-        }
-        else{
-            res.status(400).json({
-                message: "User registration failed"
+    } catch (err: any) {
+        if (err.code === "ER_DUP_ENTRY") {
+            return res.status(409).json({
+                message: "Email already exists"
             });
         }
-
-        
-    } catch (err) {
-        console.log("register error: ", err);
-        res.status(500).json({
-            message: "Unable to register user"
-        });
+        next(err);
     }
 };
 
@@ -78,7 +83,7 @@ export const loginUser = async (
     });
 }
 
-        generateUserToken(res, user);
+        generateUserToken(user.id, res, "1hr");
 
         //"token" means the cookie name and given the same in the middleware also
         //token means the jwt value name
@@ -111,7 +116,7 @@ export const logoutUser = async (req: Request, res: Response) => {
         const userId = req.user?.id;
 
         if (userId) {
-            await dbConfig.query(
+            await db.query(
                 `update users set token_version = token_version + 1 where id = ?`,
                 [userId]
             );

@@ -1,4 +1,4 @@
-import { dbConfig } from "../config/database.js";
+import { db } from "../config/database.js";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 
@@ -35,7 +35,7 @@ export const getAllEvents = async () => {
         WHERE events.status = 'APPROVED'
         ORDER BY events.event_date ASC
     `;
-    const [results] = await dbConfig.query<EventWithCategory[]>(sql);
+    const [results] = await db.query<EventWithCategory[]>(sql);
     return results;
 };
 
@@ -49,7 +49,7 @@ WHERE events.status = 'APPROVED'
   AND categories.id IN (2, 5, 6)
 ORDER BY events.event_date ASC
  `;
-        const [results] = await dbConfig.query<EventWithCategory[]>(sql);
+        const [results] = await db.query<EventWithCategory[]>(sql);
         return results;
 }
 
@@ -63,7 +63,7 @@ WHERE events.status = 'APPROVED'
   AND categories.id IN (1)
 ORDER BY events.event_date ASC;
 `;
-const [results] = await dbConfig.query<ConcertWithCategory[]>(sql);
+const [results] = await db.query<ConcertWithCategory[]>(sql);
 return results;
 }
 
@@ -75,7 +75,7 @@ export const createEvent = async (event: Event) => {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    const [results] = await dbConfig.query<ResultSetHeader>(
+    const [results] = await db.query<ResultSetHeader>(
         sql,
         [ event.organizer_id, event.city_id, event.category_id, event.name, event.description, event.location, event.event_date, event.price, event.capacity, event.status]
     );
@@ -90,7 +90,7 @@ export const updateEvent = async (id: number, event: Event) => {
         WHERE id = ?
     `;
 
-    const [results] = await dbConfig.query<ResultSetHeader>(
+    const [results] = await db.query<ResultSetHeader>(
         sql,
         [event.name, event.description, event.city_id, event.category_id, event.location, event.event_date, event.price, event.capacity, event.status, id]
     );

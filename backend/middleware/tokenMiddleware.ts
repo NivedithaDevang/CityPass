@@ -3,7 +3,7 @@ import { Response } from "express";
 
 
 //generate token for user
-export const generateUserToken = (res: Response, user: any) => {
+export const generateUserToken = (userId: number, res: Response, user: any) => {
 
     const token = jwt.sign(
         {
@@ -22,7 +22,7 @@ export const generateUserToken = (res: Response, user: any) => {
         httpOnly: true,
         secure: false,
         sameSite: "lax",
-        maxAge: 24 * 60 * 60 * 1000
+        maxAge:  1 * 60 * 60 * 1000
     });
 
     return token;
@@ -44,7 +44,7 @@ export const generateEventToken = (res: Response, event: any) => {
         httpOnly: true,
         secure: false,
         sameSite: "lax",
-        maxAge: 24 * 60 * 60 * 1000
+        maxAge: 1 * 60 * 60 * 1000
     });
 
     return token;

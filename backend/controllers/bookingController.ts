@@ -1,8 +1,8 @@
+import { Request, Response, NextFunction } from "express";
 import {
     getAllBookings,
     createBooking
 } from "../models/bookingModel.js"
-import { Request, Response, NextFunction } from "express";
 
 
 //for getting all bookings

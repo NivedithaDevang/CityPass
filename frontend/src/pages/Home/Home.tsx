@@ -1,6 +1,6 @@
 import Navbar from "../../components/Navbar/Navbar";
-import Hero from "../../components/Hero/Hero";
 import CategorySection from "../../components/CategorySection/CategorySection";
+import Hero from "../../components/Hero/Hero";
 import EventSection from "../../components/EventSection/EventSection";
 import CitySection from "../../components/CitySection/CitySection";
 import { Footer } from "../../components/Footer/Footer";

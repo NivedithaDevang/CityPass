@@ -53,7 +53,7 @@ const categoryImages: Record<string, string> = {
   return (
     <section className="category-section">
       <div className="section-heading">
-        <h2>EXPLORE BY CATEGORIES</h2>
+        <h2>Explore by categories</h2>
         <p>Curated entertainment, live gigs & dining experiences</p>
       </div>
 

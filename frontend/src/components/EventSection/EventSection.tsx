@@ -7,7 +7,6 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
 
-
 function EventSection() {
   const [events, setEvents] = useState<Events[]>([]);
   const { selectedCity } = useCity();
@@ -48,7 +47,7 @@ function EventSection() {
   return (
     <section className="event-section">
       <div className="section-heading">
-        <h2>Popular Events</h2>
+        <h2>Events happening in your area</h2>
         <p>Top-rated concerts, masterclasses, and weekend pop-ups selling fast</p>
 
           <span
