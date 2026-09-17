@@ -5,11 +5,14 @@ import "./EventSection.css";
 import { type Events } from "../../types/auth";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
+import { createEventSlug } from "../../config/slug";
 
 
 function EventSection() {
   const [events, setEvents] = useState<Events[]>([]);
 const navigate = useNavigate();
+  const getEventPath = (event: Events) =>
+    `/events/${createEventSlug(event.name)}`;
   const formatEventDate = (eventDate?: string) => {
     if (!eventDate) return "Date to be announced";
 
@@ -50,7 +53,12 @@ setEvents(response.data.events);
 
       <div className="event-grid">
         {events.slice(0, 6).map((event) => (
-          <article className="event-card" key={event.id}>
+          <article
+            className="event-card"
+            key={event.id}
+            onClick={() => navigate(getEventPath(event))}
+            style={{ cursor: "pointer" }}
+          >
             <span className="event-badge">{event.category_name || "Event"}</span>
             <h3>{event.name || "Untitled event"}</h3>
             <p className="event-location">{event.location || "Location to be announced"}</p>

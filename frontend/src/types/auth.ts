@@ -37,6 +37,7 @@ export interface Events {
   category_id?: number;
   category_name?: string | null;
   name?: string;
+  slug?: string;
   description?: string;
   location?: string;
   event_date?: string;
@@ -48,3 +49,10 @@ export interface Events {
 }
 
 export type BookingCategory = 'events' | 'activities' | 'concerts';
+
+export interface Organizer {
+  organization_name: string;
+  name?: string;
+  profile_image?: string | null;
+  totalEvents?: number;
+}
