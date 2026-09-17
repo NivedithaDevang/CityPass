@@ -8,15 +8,24 @@ type Event = {
     city_id: number;
     category_id: number;
     name: string;
+    slug: string;
     description?: string;
     location?: string;
     event_date: Date;
+    time: string;
     price: number;
     capacity: number;
     status: string;
 };
 
 type EventRow = RowDataPacket & Event & { id: number };
+
+const createEventSlug = (title: string): string => title
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
 
 export type EventWithCategory = EventRow & {
     category_name: string | null;
@@ -39,6 +48,7 @@ export const getAllEvents = async () => {
     return results;
 };
 
+<<<<<<< HEAD
 //get only activities
 export const getAllActivities = async() => {
     const sql = `
@@ -66,19 +76,56 @@ ORDER BY events.event_date ASC;
 const [results] = await db.query<ConcertWithCategory[]>(sql);
 return results;
 }
+=======
+//get event by slug
+export const getEventBySlug = async (slug: string) => {
+    const sql = `
+        SELECT events.*, categories.name AS category_name
+        FROM events
+        LEFT JOIN categories ON categories.id = events.category_id
+        WHERE (
+            events.slug = ?
+            OR LOWER(events.name) = REPLACE(?, '-', ' ')
+        )
+        AND events.status = 'APPROVED'
+    `;
+
+    const [results] = await dbConfig.query<EventWithCategory[]>(
+        sql,
+        [slug, slug]
+    );
+
+    return results.filter((event) => event.slug === slug || createEventSlug(event.name) === slug);
+};
+>>>>>>> events-page
 
 
 //posting a new event
 export const createEvent = async (event: Event) => {
     const sql = `
-        INSERT INTO events (organizer_id, city_id, category_id, name, description, location, event_date, price, capacity, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO events
+        (organizer_id, city_id, category_id, name, slug, description, location, event_date, time, price, capacity, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [results] = await db.query<ResultSetHeader>(
         sql,
-        [ event.organizer_id, event.city_id, event.category_id, event.name, event.description, event.location, event.event_date, event.price, event.capacity, event.status]
+        [
+            event.organizer_id,
+            event.city_id,
+            event.category_id,
+            event.name,
+            event.slug,
+            event.description,
+            event.location,
+            event.event_date,
+            event.time,
+            event.price,
+            event.capacity,
+            event.status
+        ]
     );
+
     return results;
 };
 
@@ -86,14 +133,28 @@ export const createEvent = async (event: Event) => {
 export const updateEvent = async (id: number, event: Event) => {
     const sql = `
         UPDATE events
-        SET name = ?, description = ?, city_id = ?, category_id = ?, location = ?, event_date = ?, price = ?, capacity = ?, status = ?
+        SET name = ?, slug = ?, description = ?, city_id = ?, category_id = ?, location = ?, event_date = ?, time = ?, price = ?, capacity = ?, status = ?
         WHERE id = ?
     `;
 
     const [results] = await db.query<ResultSetHeader>(
         sql,
-        [event.name, event.description, event.city_id, event.category_id, event.location, event.event_date, event.price, event.capacity, event.status, id]
+        [
+            event.name,
+            event.slug,
+            event.description,
+            event.city_id,
+            event.category_id,
+            event.location,
+            event.event_date,
+            event.time,
+            event.price,
+            event.capacity,
+            event.status,
+            id
+        ]
     );
+
     return results;
 };
 

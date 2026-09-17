@@ -2,7 +2,12 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import db from "../config/database.js";
 import { JWT_SECRET } from "../config/env.js";
+<<<<<<< HEAD
 import { AuthPayLoad } from "../types/auth.js";
+=======
+import { validationResult } from "express-validator";
+import dbConfig from "../config/database.js";
+>>>>>>> events-page
 
 declare global {
     namespace Express {
