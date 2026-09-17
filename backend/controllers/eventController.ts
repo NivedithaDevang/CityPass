@@ -1,10 +1,57 @@
 import {
     getAllEvents,
+    getEventBySlug,
     createEvent,
     updateEvent as updateEventModel
 } from "../models/eventModel.js";
 import { Request, Response, NextFunction } from "express";
 import { generateEventToken } from "../middleware/tokenMiddleware.js";
+
+
+
+//generating a slug
+const generateSlug = (name: string): string => {
+    return name
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-");
+};
+
+//getting event by slug
+export const getEventDetailsBySlug = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const { slug } = req.params;
+
+        if (typeof slug !== "string") {
+            return res.status(400).json({
+                message: "A valid event slug is required"
+            });
+        }
+
+        const results = await getEventBySlug(slug);
+
+        if (results.length === 0) {
+            return res.status(404).json({
+                message: "Event not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "Event fetched successfully",
+            event: results[0]
+        });
+
+    } catch (err) {
+        next(err);
+    }
+};
+
 
 //for getting all events
 export const getEvents = async (req: Request, res: Response, next: NextFunction) => {
@@ -23,17 +70,30 @@ export const getEvents = async (req: Request, res: Response, next: NextFunction)
 //for posting new event
 export const addEvent = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { organizer_id, city_id, category_id, name, description, location, event_date, price, capacity, status = "PENDING" } = req.body;
-        if (organizer_id === undefined || city_id === undefined || category_id === undefined || !name || !event_date || price === undefined || capacity === undefined) {
+        const { organizer_id, city_id, category_id, name, description, location, event_date, time, price, capacity, status = "PENDING" } = req.body;
+        if (organizer_id === undefined || city_id === undefined || category_id === undefined || !name || !event_date || !time || price === undefined || capacity === undefined) {
             return res.status(400).json({
                 message: "city_id, category_id, name, event_date, price and capacity are required"
             });
         }
+const slug = generateSlug(name);
 
         const result = await createEvent(
-            { organizer_id, city_id, category_id, name, description, location, event_date, price, capacity, status }
-        );
-
+    {
+        organizer_id,
+        city_id,
+        category_id,
+        name,
+        slug,
+        description,
+        location,
+        event_date,
+        time,
+        price,
+        capacity,
+        status
+    }
+);
         const eventId = Number(result?.insertId ?? 0);
 const token = generateEventToken(res, eventId);
         res.status(201).json({
@@ -51,7 +111,7 @@ const token = generateEventToken(res, eventId);
 export const updateEvent = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const eventId = Number(req.params.id);
-        const { organizer_id, name, description, city_id, category_id, location, event_date, price, capacity, status } = req.body;
+        const { organizer_id, name, description, city_id, category_id, location, event_date, time, price, capacity, status } = req.body;
 
         if (!Number.isInteger(eventId) || eventId <= 0) {
             return res.status(400).json({
@@ -59,14 +119,15 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
             });
         }
 
-        if (!name || city_id === undefined || category_id === undefined || !event_date || price === undefined || capacity === undefined || !status) {
+        if (!name || city_id === undefined || category_id === undefined || !event_date || !time || price === undefined || capacity === undefined || !status) {
             return res.status(400).json({
                 message: "Name, city_id, category_id, event_date, price, capacity and status are required"
             });
         }
+const slug = generateSlug(name);
 
         const result = await updateEventModel(eventId, {
-            name, description, city_id, category_id, location, event_date, price, capacity, status,
+            name, slug, description, city_id, category_id, location, event_date, time, price, capacity, status,
             organizer_id: organizer_id || 0
         });
 

@@ -1,8 +1,8 @@
 import express from "express";
 import {
     getEvents,
-    addEvent,
-    updateEvent
+    getEventDetailsBySlug,
+    addEvent
 } from "../../controllers/eventController.js";
 import { handleValidation } from "../../middleware/authMiddleware.js";
 import { validateEvent } from "../../validators/eventValidator.js";
@@ -13,6 +13,6 @@ eventRouter.get("/", getEvents);
 
 eventRouter.post("/", validateEvent, handleValidation, addEvent);
 
-// eventRouter.put("/:id", updateEvent);
+eventRouter.get("/:slug", getEventDetailsBySlug);
 
 export default eventRouter; 

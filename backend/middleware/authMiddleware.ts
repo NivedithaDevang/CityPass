@@ -4,7 +4,6 @@ import { AuthPayLoad } from "../types/auth.js";
 import { JWT_SECRET } from "../config/env.js";
 import { validationResult } from "express-validator";
 import dbConfig from "../config/database.js";
-import { doesNotMatch } from "node:assert";
 
 declare global {
     namespace Express {
