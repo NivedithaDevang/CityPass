@@ -4,10 +4,9 @@ import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 //creating a type
 type OrgReq = {
-    user_id: number;
     organization_name: string;
     description: string;
-    status: string;
+    status?: string;
 };
 
 type OrgReqRow = RowDataPacket & OrgReq & { id: number };
@@ -21,13 +20,13 @@ export const getAllRequests = async () => {
 //posting a new organizer request
 export const createRequest = async (request: OrgReq) => {
     const sql = `
-        INSERT INTO organizer_requests (user_id, organization_name, description, status)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO organizer_requests (organization_name, description, status)
+        VALUES (?, ?, ?)
     `;
 
     const [results] = await db.query<ResultSetHeader>(
         sql,
-        [request.user_id, request.organization_name, request.description, request.status]
+        [request.organization_name, request.description, request.status ?? "PENDING"]
     );
     return results;
 };

@@ -2,17 +2,14 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import db from "../config/database.js";
 import { JWT_SECRET } from "../config/env.js";
-<<<<<<< HEAD
 import { AuthPayLoad } from "../types/auth.js";
-=======
-import { validationResult } from "express-validator";
-import dbConfig from "../config/database.js";
->>>>>>> events-page
 
 declare global {
     namespace Express {
         interface Request {
-            user?: AuthPayLoad         
+            user?: AuthPayLoad;
+            token?: string;
+            user_id?: AuthPayLoad["id"];
         }
     }
 }
@@ -36,7 +33,7 @@ export const authenticate = async (
 
         const decoded = jwt.verify(
             token,
-            process.env.JWT_SECRET as string
+            JWT_SECRET as string
         ) as AuthPayLoad;
 
         const [rows] = await db.query<any[]>(
@@ -95,14 +92,24 @@ export const validateToken = (
     res: Response,
     next: NextFunction
 ) => {
-jwt.verify(req.token, JWT_SECRET, (err, authorizedData) => {
-            if(err){
+    if (!req.token) {
+        return res.sendStatus(403);
+    }
+
+    const token = req.token;
+    if (!JWT_SECRET) {
+        return res.sendStatus(500);
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, authorizedData) => {
+            if(err || !authorizedData || typeof authorizedData === "string"){
                 //If error send Forbidden (403)
                 console.log('ERROR: Could not connect to the protected route');
                 res.sendStatus(403);
             } 
             else {
-                req.user_id = authorizedData.id;
+                const payload = authorizedData as AuthPayLoad;
+                req.user_id = payload.id;
                   console.log(authorizedData);
                 console.log('SUCCESS: Connected to protected route');
                 next();

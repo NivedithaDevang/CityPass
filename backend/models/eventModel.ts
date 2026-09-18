@@ -48,7 +48,6 @@ export const getAllEvents = async () => {
     return results;
 };
 
-<<<<<<< HEAD
 //get only activities
 export const getAllActivities = async() => {
     const sql = `
@@ -76,7 +75,6 @@ ORDER BY events.event_date ASC;
 const [results] = await db.query<ConcertWithCategory[]>(sql);
 return results;
 }
-=======
 //get event by slug
 export const getEventBySlug = async (slug: string) => {
     const sql = `
@@ -90,14 +88,13 @@ export const getEventBySlug = async (slug: string) => {
         AND events.status = 'APPROVED'
     `;
 
-    const [results] = await dbConfig.query<EventWithCategory[]>(
+    const [results] = await db.query<EventWithCategory[]>(
         sql,
         [slug, slug]
     );
 
     return results.filter((event) => event.slug === slug || createEventSlug(event.name) === slug);
 };
->>>>>>> events-page
 
 
 //posting a new event

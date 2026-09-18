@@ -23,10 +23,22 @@ export const getRequests = async (req: Request, res: Response, next: NextFunctio
 //for posting new request
 export const addRequest = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const result = await createRequest(req.body);
+        const { organization_name, description } = req.body;
+
+        if (!organization_name?.trim() || !description?.trim()) {
+            return res.status(400).json({
+                message: "organization_name and description are required"
+            });
+        }
+
+        const result = await createRequest({
+            organization_name: organization_name.trim(),
+            description: description.trim(),
+            status: "PENDING"
+        });
 
         res.status(201).json({
-            message: "Request created successfully",
+            message: "Request submitted successfully",
             requestId: result.insertId
         });
     } catch (err) {
@@ -39,7 +51,7 @@ export const addRequest = async (req: Request, res: Response, next: NextFunction
 export const updateRequest = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const reqId = Number(req.params.id);
-        const { user_id, organization_name, description, status } = req.body;
+        const { organization_name, description, status } = req.body;
 
         if (!Number.isInteger(reqId) || reqId <= 0) {
             return res.status(400).json({
@@ -47,13 +59,14 @@ export const updateRequest = async (req: Request, res: Response, next: NextFunct
             });
         }
 
-        if (!user_id || !organization_name || !description || !status) {
+        if (!organization_name || !description || !status) {
             return res.status(400).json({
-                message: "organization_name, user_id, description, and status are required"
+                message: "organization_name, description, and status are required"
             });
         }
 
-        const result = await updateOrgReq(reqId, { user_id, organization_name, description, status });
+        const result = await updateOrgReq(reqId, {
+            organization_name, description, status        });
 
         if (result.affectedRows === 0) {
             return res.status(404).json({

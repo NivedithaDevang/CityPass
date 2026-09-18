@@ -1,12 +1,8 @@
-import { Result } from "express-validator";
 import {
     getAllEvents,
-<<<<<<< HEAD
     getAllActivities,
     getAllConcerts,
-=======
     getEventBySlug,
->>>>>>> events-page
     createEvent,
     updateEvent as updateEventModel
 } from "../models/eventModel.js";

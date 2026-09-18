@@ -9,7 +9,6 @@ import { NextFunction, Request, Response } from "express";
 import { ResultSetHeader } from "mysql2";
 import bcrypt from "bcrypt";
 import { saltRounds } from "../config/env.js";
-import { generateUserToken } from "../middleware/tokenMiddleware.js";
 import { db } from "../config/database.js";
 
 //getting all users only if role is admin
@@ -32,6 +31,12 @@ export const getUser = async (req: Request, res: Response, next: NextFunction) =
     try {
         const userId = req.user?.id;
         console.log(userId); 
+
+        if (userId === undefined) {
+            return res.status(401).json({
+                message: "User authentication is required"
+            });
+        }
         
         // Number(req.params.id);
 
