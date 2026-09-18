@@ -1,0 +1,125 @@
+.bookings-container {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 0 20px;
+  font-family: inherit;
+}
+
+.bookings-header {
+  margin-bottom: 28px;
+}
+
+.bookings-header h2 {
+  font-size: 26px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 6px 0;
+}
+
+.bookings-header p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
+}
+
+.bookings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.booking-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.booking-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.booking-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+.status-badge.cancelled {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.booking-date {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.event-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 10px 0;
+}
+
+.event-venue,
+.event-tickets {
+  font-size: 13px;
+  color: #4b5563;
+  margin: 4px 0;
+}
+
+.event-price {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 10px;
+}
+
+.booking-card-footer {
+  border-top: 1px dashed #e5e7eb;
+  padding-top: 12px;
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ticket-code {
+  font-size: 12px;
+  font-family: monospace;
+  color: #6b7280;
+}
+
+.bookings-status,
+.bookings-empty,
+.bookings-error {
+  padding: 48px;
+  text-align: center;
+  border-radius: 12px;
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 15px;
+}
+
+.bookings-error {
+  color: #dc2626;
+  background: #fef2f2;
+}

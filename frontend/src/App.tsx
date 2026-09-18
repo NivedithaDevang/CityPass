@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-<<<<<<< HEAD
 import { UserProvider } from "./context/UserContext";
 import { CityProvider } from "./context/CityContext";
 import Home from "./pages/Home/Home";
@@ -8,13 +7,8 @@ import Events from "./pages/Events/Events";
 import { Activities } from "./pages/Activities/Activities";
 import { Concerts } from "./pages/Concerts/Concerts";
 import { Bookings } from "./components/Booking/Booking";
-=======
-import Home from "./pages/Home/Home";
-import Settings from "./pages/Settings/Settings";
-import Events from "./pages/Events/Events";
 import EventDetails from "./components/EventDetails/EventDetails";
->>>>>>> events-page
-
+import { BookingPage } from "./pages/BookingPage/BookingPage";
 function App() {
   return (
     <UserProvider>
@@ -24,13 +18,11 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/events" element={<Events />} />
-<<<<<<< HEAD
         <Route path="/activities" element={<Activities />} />
         <Route path="/concerts" element={<Concerts />} />
         <Route path="/bookings" element={<Bookings />} />
-=======
         <Route path="/events/:slug" element={<EventDetails />} />
->>>>>>> events-page
+        <Route path="/events/:slug/book" element={<BookingPage />} />
       </Routes>
     </BrowserRouter>
     </CityProvider>

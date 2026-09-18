@@ -1,17 +1,16 @@
 import "./SettingsView.css";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import Navbar from "../Navbar/Navbar";
-import { IoPerson } from "react-icons/io5";
-import { IoAdd } from "react-icons/io5";
+import { IoPerson, IoAdd } from "react-icons/io5";
 import { IoIosArrowForward } from "react-icons/io";
 import { FaLock } from "react-icons/fa";
-import { MdDeleteForever } from "react-icons/md";
+import { MdDeleteForever, MdOutlineBusinessCenter } from "react-icons/md";
 import axios from "axios";
 import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../config/config";
 import { getNumberErrors } from "../../config/numberCheck";
 
-type ActiveTab = "profile" | "password" | "location" | "delete";
+type ActiveTab = "profile" | "password" | "location" | "organiser_request" | "delete";
 
 function SettingsView() {
   const { user, setUser, profileImage, setProfileImage } = useUser();
@@ -19,25 +18,35 @@ function SettingsView() {
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("profile");
 
-const [profile, setProfile] = useState({
-    name : user?.name || "",
-    email : user?.email || "",
-    phone : "",
-    dob : "",
-    gender : ""
-});
-const [newPassword, setNewPassword] = useState("");
-const [confirmPassword, setConfirmPassword] = useState("");
+  const [profile, setProfile] = useState({
+    name: user?.name || "",
+    email: user?.email || "",
+    phone: "",
+    dob: "",
+    gender: "",
+  });
 
-const [passwordMessage, setPasswordMessage] = useState("");
-const [passwordSaving, setPasswordSaving] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  
+  const [org, setOrg] = useState({
+    organization_name: "",
+    description: "",
+  });
+  const [orgSubmitting, setOrgSubmitting] = useState(false);
+  const [orgMessage, setOrgMessage] = useState("");
+  const [showOrgSuccessPopup, setShowOrgSuccessPopup] = useState(false);
+
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [showReloginPopup, setShowReloginPopup] = useState(false);
   const [reloginLoading, setReloginLoading] = useState(false);
   const [showDeactivatePopup, setShowDeactivatePopup] = useState(false);
-const [deactivating, setDeactivating] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
+
   const phoneErrors = profile.phone ? getNumberErrors(profile.phone) : [];
 
   const handleProfileImageChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -60,8 +69,48 @@ const [deactivating, setDeactivating] = useState(false);
     event.target.value = "";
   };
 
+  const handleOrgChange = (
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = event.target;
+    setOrg((currentOrg) => ({ ...currentOrg, [name]: value }));
+  };
 
-  // Fetching logged-in user's complete details
+  const handleOrgSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!org.organization_name.trim() || !org.description.trim()) {
+      setOrgMessage("Please fill in all required fields.");
+      return;
+    }
+
+    try {
+      setOrgSubmitting(true);
+      setOrgMessage("");
+
+      await axios.post(
+        `${API_BASE_URL}/v1/orgrequest`,
+        {
+          organization_name: org.organization_name,
+          description: org.description,
+        },
+        {
+          withCredentials: true,
+        }
+      );
+
+      setOrgMessage("");
+      setShowOrgSuccessPopup(true);
+      setOrg({ organization_name: "", description: "" });
+    } catch (error: any) {
+      console.error("Error submitting organiser request:", error);
+      setOrgMessage(
+        error.response?.data?.message || "Failed to submit application. Please try again."
+      );
+    } finally {
+      setOrgSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -73,18 +122,15 @@ const [deactivating, setDeactivating] = useState(false);
         );
 
         const fetchedUser = response.data.user;
-
         setUser(fetchedUser);
 
-
-setProfile({
-        name : (fetchedUser.name || ""),
-        email : (fetchedUser.email || ""),
-        phone : (fetchedUser.phone || ""),
-        dob : (fetchedUser.dob || ""),
-        gender : (fetchedUser.gender || "")
-});
-
+        setProfile({
+          name: fetchedUser.name || "",
+          email: fetchedUser.email || "",
+          phone: fetchedUser.phone || "",
+          dob: fetchedUser.dob || "",
+          gender: fetchedUser.gender || "",
+        });
       } catch (error) {
         console.error("Error fetching profile:", error);
       } finally {
@@ -120,11 +166,8 @@ setProfile({
       );
 
       const updatedUser = response.data.user;
-
       setUser(updatedUser);
-
       setMessage("Profile updated successfully!");
-
     } catch (error: any) {
       console.error("Error updating profile:", error);
 
@@ -134,7 +177,6 @@ setProfile({
         setMessage("Unable to update profile.");
       }
       setShowReloginPopup(true);
-
     } finally {
       setSaving(false);
     }
@@ -154,8 +196,6 @@ setProfile({
     }
   };
 
-
-  //render code for showing profile
   const showProfile = () => {
     if (loading) {
       return <p>Loading profile...</p>;
@@ -175,7 +215,9 @@ setProfile({
             ) : (
               <span>{(user?.name || "U").charAt(0).toUpperCase()}</span>
             )}
-            <span className="profile-photo-plus"><IoAdd /></span>
+            <span className="profile-photo-plus">
+              <IoAdd />
+            </span>
           </button>
           <input
             ref={profileImageInputRef}
@@ -187,26 +229,28 @@ setProfile({
           />
         </div>
 
-        <p className="panel-subtitle">
-          Manage your personal information
-        </p>
+        <p className="panel-subtitle">Manage your personal information</p>
 
         <div className="form-group">
-          <label>Name <span className="text-red-500">*</span></label>
+          <label>
+            Name <span className="text-red-500">*</span>
+          </label>
           <input
             type="text"
             value={profile.name}
-            onChange={(e) => setProfile({...profile, name: e.target.value})}
+            onChange={(e) => setProfile({ ...profile, name: e.target.value })}
             placeholder="Enter your name"
           />
         </div>
 
         <div className="form-group">
-          <label>Email <span className="text-red-500">*</span></label>
+          <label>
+            Email <span className="text-red-500">*</span>
+          </label>
           <input
             type="email"
             value={profile.email}
-            onChange={(e) => setProfile({...profile, email: e.target.value})}
+            onChange={(e) => setProfile({ ...profile, email: e.target.value })}
             placeholder="Enter your email"
           />
         </div>
@@ -216,7 +260,7 @@ setProfile({
           <input
             type="tel"
             value={profile.phone}
-            onChange={(e) => setProfile({...profile, phone: e.target.value})}
+            onChange={(e) => setProfile({ ...profile, phone: e.target.value})}
             placeholder="Enter your phone number"
           />
           {phoneErrors.length > 0 && (
@@ -231,7 +275,7 @@ setProfile({
           <input
             type="date"
             value={profile.dob}
-            onChange={(e) => setProfile({...profile, dob: e.target.value})}
+            onChange={(e) => setProfile({ ...profile, dob: e.target.value })}
           />
         </div>
 
@@ -239,7 +283,7 @@ setProfile({
           <label>Gender</label>
           <select
             value={profile.gender}
-            onChange={(e) => setProfile({...profile, gender: e.target.value})}
+            onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
           >
             <option value="">Select gender</option>
             <option value="MALE">Male</option>
@@ -248,11 +292,7 @@ setProfile({
           </select>
         </div>
 
-        {message && (
-          <p className="profile-message">
-            {message}
-          </p>
-        )}
+        {message && <p className="profile-message">{message}</p>}
 
         {showReloginPopup && (
           <div className="relogin-overlay">
@@ -293,206 +333,228 @@ setProfile({
   };
 
   const handleChangePassword = async () => {
-  if (!newPassword || !confirmPassword) {
-    setPasswordMessage("Please enter both password fields.");
-    return;
-  }
+    if (!newPassword || !confirmPassword) {
+      setPasswordMessage("Please enter both password fields.");
+      return;
+    }
 
-  if (newPassword !== confirmPassword) {
-    setPasswordMessage("Passwords do not match.");
-    return;
-  }
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage("Passwords do not match.");
+      return;
+    }
 
-  try {
-    setPasswordSaving(true);
-    setPasswordMessage("");
+    try {
+      setPasswordSaving(true);
+      setPasswordMessage("");
 
-    await axios.patch(
-      `${API_BASE_URL}/v1/users/password`,
-      {
-        newPassword,
-        confirmPassword,
-      },
-      {
-        withCredentials: true,
-      }
-    );
+      await axios.patch(
+        `${API_BASE_URL}/v1/users/password`,
+        {
+          newPassword,
+          confirmPassword,
+        },
+        {
+          withCredentials: true,
+        }
+      );
 
-    setPasswordMessage("Password updated successfully!");
+      setPasswordMessage("Password updated successfully!");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      console.error("Error updating password:", error);
+      setPasswordMessage(
+        error.response?.data?.message || "Unable to update password."
+      );
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
 
-    setNewPassword("");
-    setConfirmPassword("");
-
-  } catch (error: any) {
-    console.error("Error updating password:", error);
-
-    setPasswordMessage(
-      error.response?.data?.message ||
-      "Unable to update password."
-    );
-  } finally {
-    setPasswordSaving(false);
-  }
-};
-
-  //render for updating password
   const changePassword = () => {
-  return (
-    <div className="panel-content">
-      <h2>Change Password</h2>
+    return (
+      <div className="panel-content">
+        <h2>Change Password</h2>
+        <p className="panel-subtitle">Update your account password</p>
 
-      <p className="panel-subtitle">
-        Update your account password
-      </p>
-
-      <div className="form-group">
-        <label>New Password</label>
-
-        <input
-          type="password"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          placeholder="Enter new password"
-        />
-      </div>
-
-      <div className="form-group">
-        <label>Confirm Password</label>
-
-        <input
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          placeholder="Confirm new password"
-        />
-      </div>
-
-      {passwordMessage && (
-        <p className="profile-message">
-          {passwordMessage}
-        </p>
-      )}
-
-      <button
-        className="save-btn"
-        onClick={handleChangePassword}
-        disabled={passwordSaving}
-      >
-        {passwordSaving ? "Updating..." : "Update Password"}
-      </button>
-    </div>
-  );
-};
-
-
-const handleDeactivateAccount = async () => {
-  try {
-    setDeactivating(true);
-
-    await axios.put(
-      `${API_BASE_URL}/v1/users/deactivate`,
-      {},
-      {
-        withCredentials: true,
-      }
-    );
-
-    // Remove logged-in user from context
-    setUser(null);
-
-    // Close popup
-    setShowDeactivatePopup(false);
-
-    // Go back to login page
-    window.location.href = "/";
-
-  } catch (error: any) {
-    console.error("Error deactivating account:", error);
-
-    alert(
-      error.response?.data?.message ||
-      "Unable to deactivate account."
-    );
-  } finally {
-    setDeactivating(false);
-  }
-};
-
-
-  //inactivating the account
-const accountDelete = () => {
-  return (
-    <div className="panel-content">
-      <h2>Deactivate Account</h2>
-
-      <p className="panel-subtitle">
-Take a temporary break from CityPass    
- </p>
-
-
-      <button
-        className="deactivate-btn"
-        onClick={() => setShowDeactivatePopup(true)}
-      >
-        Deactivate Account
-      </button>
-
-      {showDeactivatePopup && (
-        <div className="deactivate-overlay">
-          <div className="deactivate-popup">
-
-            <h2>Deactivate Account?</h2>
-
-            <p>
-              Are you sure you want to deactivate your account?
-              You can reactivate it later by logging in again.
-            </p>
-
-            <div className="deactivate-actions">
-
-              <button
-                className="cancel-deactivate-btn"
-                onClick={() => setShowDeactivatePopup(false)}
-                disabled={deactivating}
-              >
-                Cancel
-              </button>
-
-              <button
-                className="confirm-deactivate-btn"
-                onClick={handleDeactivateAccount}
-                disabled={deactivating}
-              >
-                {deactivating
-                  ? "Deactivating..."
-                  : "Deactivate"}
-              </button>
-
-            </div>
-
-          </div>
+        <div className="form-group">
+          <label>New Password</label>
+          <input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Enter new password"
+          />
         </div>
-      )}
-    </div>
-  );
-};
+
+        <div className="form-group">
+          <label>Confirm Password</label>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm new password"
+          />
+        </div>
+
+        {passwordMessage && <p className="profile-message">{passwordMessage}</p>}
+
+        <button
+          className="save-btn"
+          onClick={handleChangePassword}
+          disabled={passwordSaving}
+        >
+          {passwordSaving ? "Updating..." : "Update Password"}
+        </button>
+      </div>
+    );
+  };
+
+  const showOrganiserRequest = () => {
+    return (
+      <div className="panel-content">
+        <h2>Become an Organiser</h2>
+        <p className="panel-subtitle">
+          Host and manage your events on CityPass
+        </p>
+
+        <form onSubmit={handleOrgSubmit}>
+          <div className="form-group">
+            <label>
+              Organisation Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="organization_name"
+              value={org.organization_name}
+              onChange={handleOrgChange}
+              placeholder="Enter your organisation name"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>
+              Description <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              name="description"
+              value={org.description}
+              onChange={handleOrgChange}
+              placeholder="Tell us about the types of events and activities you organise..."
+              rows={4}
+              required
+              style={{
+                width: "100%",
+                padding: "10px 14px",
+                borderRadius: "8px",
+                border: "1px solid #e2e8f0",
+                fontSize: "14px",
+                fontFamily: "inherit",
+                resize: "vertical",
+              }}
+            />
+          </div>
+
+          {orgMessage && <p className="profile-message">{orgMessage}</p>}
+
+          <button
+            type="submit"
+            className="save-btn"
+            disabled={orgSubmitting}
+            style={{ marginTop: "12px" }}
+          >
+            {orgSubmitting ? "Submitting..." : "Submit Request"}
+          </button>
+        </form>
+      </div>
+    );
+  };
+
+  const handleDeactivateAccount = async () => {
+    try {
+      setDeactivating(true);
+
+      await axios.put(
+        `${API_BASE_URL}/v1/users/deactivate`,
+        {},
+        {
+          withCredentials: true,
+        }
+      );
+
+      setUser(null);
+      setShowDeactivatePopup(false);
+      window.location.href = "/";
+    } catch (error: any) {
+      console.error("Error deactivating account:", error);
+      alert(
+        error.response?.data?.message || "Unable to deactivate account."
+      );
+    } finally {
+      setDeactivating(false);
+    }
+  };
+
+  const accountDelete = () => {
+    return (
+      <div className="panel-content">
+        <h2>Deactivate Account</h2>
+        <p className="panel-subtitle">Take a temporary break from CityPass</p>
+
+        <button
+          className="deactivate-btn"
+          onClick={() => setShowDeactivatePopup(true)}
+        >
+          Deactivate Account
+        </button>
+
+        {showDeactivatePopup && (
+          <div className="deactivate-overlay">
+            <div className="deactivate-popup">
+              <h2>Deactivate Account?</h2>
+              <p>
+                Are you sure you want to deactivate your account? You can
+                reactivate it later by logging in again.
+              </p>
+
+              <div className="deactivate-actions">
+                <button
+                  className="cancel-deactivate-btn"
+                  onClick={() => setShowDeactivatePopup(false)}
+                  disabled={deactivating}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  className="confirm-deactivate-btn"
+                  onClick={handleDeactivateAccount}
+                  disabled={deactivating}
+                >
+                  {deactivating ? "Deactivating..." : "Deactivate"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
       <Navbar />
 
       <div className="settings-page">
-
         <div className="settings-header">
           <h1>Settings</h1>
           <p>Manage your account preferences</p>
         </div>
 
         <div className="settings-layout">
-
-          {/* LEFT MENU of the settings*/}
+          {/* LEFT MENU */}
           <div className="settings-container">
-
             <button
               className={`settings-item ${
                 activeTab === "profile" ? "active" : ""
@@ -534,6 +596,26 @@ Take a temporary break from CityPass
             </button>
 
             <button
+              className={`settings-item ${
+                activeTab === "organiser_request" ? "active" : ""
+              }`}
+              onClick={() => setActiveTab("organiser_request")}
+            >
+              <div className="settings-icon">
+                <MdOutlineBusinessCenter />
+              </div>
+
+              <div className="settings-info">
+                <h3>Become an Organiser</h3>
+                <p>Host events and experiences</p>
+              </div>
+
+              <span className="settings-arrow">
+                <IoIosArrowForward />
+              </span>
+            </button>
+
+            <button
               className={`settings-item delete-item ${
                 activeTab === "delete" ? "active" : ""
               }`}
@@ -552,22 +634,38 @@ Take a temporary break from CityPass
                 <IoIosArrowForward />
               </span>
             </button>
-
           </div>
 
           {/* RIGHT PANEL */}
           <div className="settings-panel">
-
             {activeTab === "profile" && showProfile()}
-
             {activeTab === "password" && changePassword()}
-
+            {activeTab === "organiser_request" && showOrganiserRequest()}
             {activeTab === "delete" && accountDelete()}
-
           </div>
-
         </div>
       </div>
+
+      {showOrgSuccessPopup && (
+        <div className="org-success-overlay" role="dialog" aria-modal="true">
+          <div className="org-success-popup">
+            <h3>Application Submitted!</h3>
+            <p>
+              Thank you for applying. Platform administrators review all
+              organizer applications.
+            </p>
+            <button
+              className="org-success-done-btn"
+              onClick={() => {
+                setShowOrgSuccessPopup(false);
+                setActiveTab("profile");
+              }}
+            >
+              DONE
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

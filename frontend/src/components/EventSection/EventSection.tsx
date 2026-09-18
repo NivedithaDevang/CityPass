@@ -5,35 +5,21 @@ import "./EventSection.css";
 import { type Events } from "../../types/auth";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-<<<<<<< HEAD
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
-
-function EventSection() {
-  const [events, setEvents] = useState<Events[]>([]);
-  const { selectedCity } = useCity();
-
-  const filteredEvents = useMemo(() => {
-    if (!selectedCity || selectedCity === ALL_LOCATIONS) {
-      return events;
-    }
-
-    const normalizedCity = selectedCity.trim().toLowerCase();
-    return events.filter(
-      (event) => event.location?.trim().toLowerCase() === normalizedCity
-    );
-  }, [events, selectedCity]);
-
-  const navigate = useNavigate();
-=======
 import { createEventSlug } from "../../config/slug";
 
 
 function EventSection() {
   const [events, setEvents] = useState<Events[]>([]);
-const navigate = useNavigate();
+  const { selectedCity } = useCity();
+  const navigate = useNavigate();
+  const filteredEvents = useMemo(() => {
+    if (!selectedCity || selectedCity === ALL_LOCATIONS) return events;
+    const normalizedCity = selectedCity.trim().toLowerCase();
+    return events.filter((event) => event.location?.trim().toLowerCase() === normalizedCity);
+  }, [events, selectedCity]);
   const getEventPath = (event: Events) =>
     `/events/${createEventSlug(event.name)}`;
->>>>>>> events-page
   const formatEventDate = (eventDate?: string) => {
     if (!eventDate) return "Date to be announced";
 
@@ -72,18 +58,13 @@ const navigate = useNavigate();
       </div>
 
       <div className="event-grid">
-<<<<<<< HEAD
         {filteredEvents.slice(0, 6).map((event) => (
-          <article className="event-card" key={event.id}>
-=======
-        {events.slice(0, 6).map((event) => (
           <article
             className="event-card"
             key={event.id}
             onClick={() => navigate(getEventPath(event))}
             style={{ cursor: "pointer" }}
           >
->>>>>>> events-page
             <span className="event-badge">{event.category_name || "Event"}</span>
             <h3>{event.name || "Untitled event"}</h3>
             <p className="event-location">{event.location || "Location to be announced"}</p>

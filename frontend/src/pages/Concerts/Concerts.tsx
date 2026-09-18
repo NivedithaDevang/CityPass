@@ -1,6 +1,7 @@
 
 import Navbar from "../../components/Navbar/Navbar";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../config/config";
 import { type Activities } from "../../types/auth";
 import axios from "axios";
@@ -13,6 +14,7 @@ import { MdSportsFootball, MdTheaterComedy } from "react-icons/md";
 import { IoFastFoodSharp } from "react-icons/io5";
 import { FaPaintbrush, FaMountain } from "react-icons/fa6";
 import type { IconType } from "react-icons";
+import { createEventSlug } from "../../config/slug";
 
 export function Concerts() {
     const categoryIcons: Record<string, IconType> = {
@@ -79,7 +81,10 @@ export function Concerts() {
         };
         fetchConcerts();
     }, []);
-
+const navigate = useNavigate();
+const handleCardClick = (event: Activities) => {
+    navigate(`/events/${createEventSlug(event.name)}`);
+}
     return (
         <>
             <Navbar />
@@ -104,7 +109,9 @@ export function Concerts() {
             <div className="event-grid">
                 {!error && filteredConcerts.map((concert) => {
                     return (
-                        <article className="event-card" key={concert.id}>
+                        <article className="event-card" key={concert.id}
+                        onClick={() => handleCardClick(concert)}
+                        style={{cursor: "pointer"}}>
                             <div className="event-card-media">
                                 <span className="event-badge">
                                     {(() => {

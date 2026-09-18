@@ -5,7 +5,7 @@ import { API_BASE_URL } from "../../config/config";
 import { type Events } from "../../types/auth";
 import Navbar from "../../components/Navbar/Navbar";
 import { Footer } from "../../components/Footer/Footer";
-import { FaMapPin, FaCalendarAlt, FaArrowLeft, FaArrowRight } from "react-icons/fa";
+import { FaMapPin, FaCalendarAlt, FaArrowLeft, FaShieldAlt, FaChevronRight } from "react-icons/fa";
 import { FaTicketAlt } from "react-icons/fa";
 import { createEventSlug } from "../../config/slug";
 import { TermsModal } from "../Terms/Terms";
@@ -13,20 +13,19 @@ import { OrganiserDetails } from "../OrganiserCard/OrganiserCard";
 import "./EventDetails.css";
 
 function EventDetails() {
-const { slug } = useParams<{ slug: string }>();  
-const navigate = useNavigate();
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
 
   const [event, setEvent] = useState<Events | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-const [showTerms, setShowTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+
   useEffect(() => {
     const fetchEventDetails = async () => {
       try {
         setLoading(true);
-const response = await axios.get(
-    `${API_BASE_URL}/v1/events/${slug}`
-);        // Adjust according to your API payload shape (e.g., response.data.event or response.data)
+        const response = await axios.get(`${API_BASE_URL}/v1/events/${slug}`);
         const loadedEvent = response.data.event || response.data;
         setEvent(loadedEvent);
 
@@ -59,6 +58,7 @@ const response = await axios.get(
       <>
         <Navbar />
         <div className="details-container details-state">
+          <div className="details-loading-spinner" />
           <p className="status-text">Loading event details...</p>
         </div>
         <Footer />
@@ -73,7 +73,7 @@ const response = await axios.get(
         <div className="details-container details-state">
           <p className="status-text">{error || "Event not found."}</p>
           <button className="back-button" onClick={() => navigate(-1)}>
-            <FaArrowLeft /> Go Back
+            <FaArrowLeft /> Back to Events
           </button>
         </div>
         <Footer />
@@ -84,74 +84,118 @@ const response = await axios.get(
   return (
     <>
       <Navbar />
-      <main className="details-wrapper">
-        <button className="back-button" onClick={() => navigate(-1)}>
-          <FaArrowLeft /> Back to Events
-        </button>
+      <div className="details-page-bg">
+        <main className="details-wrapper">
+          <button className="back-button" onClick={() => navigate(-1)}>
+            <FaArrowLeft /> <span>Back to Events</span>
+          </button>
 
-        {/* Hero Section */}
-        <header className="details-hero">
-          <p className="details-eyebrow">Discover your next experience</p>
-          <span className="details-badge">{event.category_name || "Event"}</span>
-          <h1>{event.name || "Untitled event"}</h1>
-          <div className="details-meta">
-            <span><FaCalendarAlt /> {formatEventDate(event.event_date)}</span>
-            <span><FaMapPin /> {event.location || "Venue TBA"}</span>
-          </div>
-        </header>
-
-        {/* Main Content Layout */}
-        <div className="details-body">
-          <section className="details-left">
-            <div className="details-section">
-              <h2>About</h2>
-              <p className="details-description">
-                {event.description || "No description provided for this event."}
-              </p>
-                            <h2>Terms & Conditions
-                              <FaArrowRight size = {14} className="terms-link" onClick={() => setShowTerms(true)} />
-
-                            </h2>
-
+          {/* Hero Section */}
+          <header className="details-hero">
+            <div className="hero-top-row">
+              <span className="details-badge">{event.category_name || "Event"}</span>
+              <span className="hero-city-tag">📍 {event.location || "CityPass Experience"}</span>
             </div>
 
-<TermsModal
-  isOpen={showTerms}
-  onClose={() => setShowTerms(false)} />
+            <h1 className="details-title">{event.name || "Untitled event"}</h1>
 
-
-  <div className="organiser-details">
-<h2>Organised by</h2>
-
-<OrganiserDetails />
-
-
-
-  </div>
-          </section>
-
-
-          {/* Sticky Booking Card */}
-          <aside className="details-sidebar">
-            <div className="booking-card">
-              <div className="booking-card-heading">
-                <FaTicketAlt aria-hidden="true" />
-                <span>Reserve your spot</span>
+            <div className="details-meta-cards">
+              <div className="meta-card">
+                <div className="meta-icon-wrapper">
+                  <FaCalendarAlt />
+                </div>
+                <div>
+                  <span className="meta-label">Date & Time</span>
+                  <p className="meta-value">{formatEventDate(event.event_date)}</p>
+                </div>
               </div>
-              <span className="price-tag-label">Tickets from</span>
-              <p className="price-tag-amount">₹ {event.price || "TBA"}</p>
-              <button 
-                type="button" 
-                className="book-now-button"
-onClick={() => {
-              navigate("/bookings");
-            }}>
-                Book tickets
-              </button>
+
+              <div className="meta-card">
+                <div className="meta-icon-wrapper">
+                  <FaMapPin />
+                </div>
+                <div>
+                  <span className="meta-label">Location</span>
+                  <p className="meta-value">{event.location || "Venue TBA"}</p>
+                </div>
+              </div>
             </div>
-          </aside>
-        </div>
-      </main>
+          </header>
+
+          {/* Main Content Layout */}
+          <div className="details-body">
+            <section className="details-left">
+              <div className="content-card">
+                <h2 className="section-title">About the Event</h2>
+                <p className="details-description">
+                  {event.description || "No description provided for this event."}
+                </p>
+              </div>
+
+              {/* Clickable Terms & Policy Banner */}
+              <div
+                className="terms-action-card"
+                onClick={() => setShowTerms(true)}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="terms-action-left">
+                  <FaShieldAlt className="terms-shield-icon" />
+                  <div>
+                    <h4>Terms & Conditions</h4>
+                    <p>Cancellation policies, venue rules, and entry guidelines</p>
+                  </div>
+                </div>
+                <FaChevronRight className="terms-chevron" />
+              </div>
+
+              {/* Organiser Section */}
+              <div className="content-card organiser-section">
+                <h2 className="section-title">Organised By</h2>
+                <OrganiserDetails />
+              </div>
+            </section>
+
+            {/* Sticky Booking Card */}
+            <aside className="details-sidebar">
+              <div className="booking-card">
+                <div className="booking-card-header">
+                  <div className="booking-icon-circle">
+                    <FaTicketAlt />
+                  </div>
+                  <div>
+                    <span className="booking-card-title">Reserve Spot</span>
+                    <span className="booking-card-sub">Instant confirmation</span>
+                  </div>
+                </div>
+
+                <div className="booking-price-container">
+                  <span className="price-tag-label">Tickets starting from</span>
+                  <p className="price-tag-amount">
+                    ₹ {Number(event.price || 0).toLocaleString()}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="book-now-button"
+                  onClick={() => {
+                    navigate(`/events/${slug}/book`, { state: { event } });
+                  }}
+                >
+                  Book Tickets
+                </button>
+
+                <p className="booking-guarantee">
+                  Official verified ticket - 100% Secure Checkout
+                </p>
+              </div>
+            </aside>
+          </div>
+        </main>
+      </div>
+
+      <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
       <Footer />
     </>
   );

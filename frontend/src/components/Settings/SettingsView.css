@@ -376,3 +376,87 @@
 .confirm-relogin-btn:hover {
   background: #333;
 }
+
+/* Organiser Form & General Textarea Styling */
+.form-group textarea {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #111827;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  outline: none;
+  resize: vertical;
+  min-height: 110px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.form-group textarea:focus {
+  border-color: #111827;
+  box-shadow: 0 0 0 1px #111827;
+}
+
+.form-group textarea::placeholder {
+  color: #9ca3af;
+}
+
+/* Ensure consistent button spacing and submit state */
+.save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.org-success-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.org-success-popup {
+  width: 460px;
+  max-width: 100%;
+  padding: 30px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.2);
+}
+
+
+.org-success-popup h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  text-align: center;
+}
+
+.org-success-popup p {
+  margin: 0 0 24px;
+  color: #666;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.org-success-done-btn {
+  display: block;
+  margin: 20px auto 0 auto;
+  padding: 10px 24px;
+  border: none;
+  border-radius: 7px;
+  background: #111;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.org-success-done-btn:hover {
+  background: #333;
+}

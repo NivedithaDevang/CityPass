@@ -1,5 +1,6 @@
 import Navbar from "../../components/Navbar/Navbar";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../config/config";
 import { type Activities } from "../../types/auth";
 import axios from "axios";
@@ -12,6 +13,7 @@ import { MdSportsFootball, MdTheaterComedy} from "react-icons/md";
 import { IoFastFoodSharp } from "react-icons/io5";
 import { FaPaintbrush, FaMountain } from "react-icons/fa6";
 import type { IconType } from "react-icons";
+import { createEventSlug } from "../../config/slug";
 
 export function Activities() {
 
@@ -79,6 +81,11 @@ const categoryIcons: Record<string, IconType> = {
         };
         fetchActivities();
     }, []);
+const navigate = useNavigate();
+    const handleCardClick = (event: Activities) => {
+        navigate(`/events/${createEventSlug(event.name)}`);
+
+    }
 
     return (
         <>
@@ -104,7 +111,9 @@ const categoryIcons: Record<string, IconType> = {
             <div className="event-grid">
                 {!error && filteredActivities.map((activity) => {
                     return (
-                                                <article className="event-card" key={activity.id}>
+                                                <article className="event-card" key={activity.id}
+                                                onClick={() => handleCardClick(activity)}
+                                                style={{cursor: "pointer"}}>
                                                         <div className="event-card-media">
                                                             <span className="event-badge">
                                                                 {(() => {

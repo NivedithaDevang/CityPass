@@ -62,7 +62,6 @@ export interface Events {
 
 }
 
-<<<<<<< HEAD
 
 export type Bookings = {
 id: number;
@@ -75,8 +74,6 @@ status?: "CONFIRMED" | "CANCELLED"
 }
 
 export type BookingCategory = 'events' | 'activities' | 'concerts';
-=======
-export type BookingCategory = 'events' | 'activities' | 'concerts';
 
 export interface Organizer {
   organization_name: string;
@@ -84,4 +81,3 @@ export interface Organizer {
   profile_image?: string | null;
   totalEvents?: number;
 }
->>>>>>> events-page
