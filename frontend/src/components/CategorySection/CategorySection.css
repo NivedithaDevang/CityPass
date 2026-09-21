@@ -4,21 +4,33 @@
 
 .category-section .section-heading {
   width: 100%;
-  margin: 0 0 30px;
+  margin: 0 0 28px;
 }
 
 .category-section .section-heading p {
-  margin: 0 0 6px;
-  font-size: 18px;
-  letter-spacing: 0.5px;
-  color: #777;
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #64748b;
+  letter-spacing: normal;
 }
 
 .category-section .section-heading h2 {
-  margin: 0;
-  font-size: 40px;
+  margin: 0 0 8px;
+  font-size: 32px;
   font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   color: #111;
+}
+
+.category-section .section-heading span {
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 400;
+  color: #64748b;
 }
 
 .category-grid {

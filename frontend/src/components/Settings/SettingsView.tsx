@@ -1,22 +1,51 @@
 import "./SettingsView.css";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useParams, useNavigate } from "react-router-dom"; // Added useParams & useNavigate
 import Navbar from "../Navbar/Navbar";
 import { IoPerson, IoAdd } from "react-icons/io5";
+import { FaBullhorn } from "react-icons/fa6";
 import { IoIosArrowForward } from "react-icons/io";
 import { FaLock } from "react-icons/fa";
-import { MdDeleteForever, MdOutlineBusinessCenter } from "react-icons/md";
+import { FaUserAltSlash } from "react-icons/fa";
 import axios from "axios";
 import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../config/config";
 import { getNumberErrors } from "../../config/numberCheck";
 
-type ActiveTab = "profile" | "password" | "location" | "organiser_request" | "delete";
+// Map friendly URL slugs to tab IDs
+const TAB_SLUGS = {
+  profile: "profile",
+  password: "password",
+  "host-an-event": "organiser_request",
+  deactivate: "delete",
+} as const;
+
+type SlugKey = keyof typeof TAB_SLUGS;
+type ActiveTab = (typeof TAB_SLUGS)[SlugKey];
 
 function SettingsView() {
+  const { tabSlug } = useParams<{ tabSlug: string }>();
+  const navigate = useNavigate();
+
+  // Resolve current active tab from the URL slug
+  const activeTab: ActiveTab =
+    tabSlug && tabSlug in TAB_SLUGS
+      ? TAB_SLUGS[tabSlug as SlugKey]
+      : "profile";
+
+  // Redirect to canonical /settings/profile if the slug is missing or invalid
+  useEffect(() => {
+    if (!tabSlug || !(tabSlug in TAB_SLUGS)) {
+      navigate("/settings/profile", { replace: true });
+    }
+  }, [tabSlug, navigate]);
+
+  const handleTabChange = (slug: SlugKey) => {
+    navigate(`/settings/${slug}`);
+  };
+
   const { user, setUser, profileImage, setProfileImage } = useUser();
   const profileImageInputRef = useRef<HTMLInputElement>(null);
-
-  const [activeTab, setActiveTab] = useState<ActiveTab>("profile");
 
   const [profile, setProfile] = useState({
     name: user?.name || "",
@@ -28,7 +57,7 @@ function SettingsView() {
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  
+
   const [org, setOrg] = useState({
     organization_name: "",
     description: "",
@@ -260,7 +289,7 @@ function SettingsView() {
           <input
             type="tel"
             value={profile.phone}
-            onChange={(e) => setProfile({ ...profile, phone: e.target.value})}
+            onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
             placeholder="Enter your phone number"
           />
           {phoneErrors.length > 0 && (
@@ -559,7 +588,7 @@ function SettingsView() {
               className={`settings-item ${
                 activeTab === "profile" ? "active" : ""
               }`}
-              onClick={() => setActiveTab("profile")}
+              onClick={() => handleTabChange("profile")}
             >
               <div className="settings-icon">
                 <IoPerson />
@@ -579,7 +608,7 @@ function SettingsView() {
               className={`settings-item ${
                 activeTab === "password" ? "active" : ""
               }`}
-              onClick={() => setActiveTab("password")}
+              onClick={() => handleTabChange("password")}
             >
               <div className="settings-icon">
                 <FaLock />
@@ -599,15 +628,15 @@ function SettingsView() {
               className={`settings-item ${
                 activeTab === "organiser_request" ? "active" : ""
               }`}
-              onClick={() => setActiveTab("organiser_request")}
+              onClick={() => handleTabChange("host-an-event")}
             >
               <div className="settings-icon">
-                <MdOutlineBusinessCenter />
+                <FaBullhorn />
               </div>
 
               <div className="settings-info">
-                <h3>Become an Organiser</h3>
-                <p>Host events and experiences</p>
+                <h3>Host an Event</h3>
+                <p>Request to become organiser to host</p>
               </div>
 
               <span className="settings-arrow">
@@ -619,10 +648,10 @@ function SettingsView() {
               className={`settings-item delete-item ${
                 activeTab === "delete" ? "active" : ""
               }`}
-              onClick={() => setActiveTab("delete")}
+              onClick={() => handleTabChange("deactivate")}
             >
               <div className="settings-icon">
-                <MdDeleteForever />
+                <FaUserAltSlash />
               </div>
 
               <div className="settings-info">
@@ -658,7 +687,7 @@ function SettingsView() {
               className="org-success-done-btn"
               onClick={() => {
                 setShowOrgSuccessPopup(false);
-                setActiveTab("profile");
+                handleTabChange("profile");
               }}
             >
               DONE

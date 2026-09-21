@@ -94,7 +94,6 @@ function EventDetails() {
           <header className="details-hero">
             <div className="hero-top-row">
               <span className="details-badge">{event.category_name || "Event"}</span>
-              <span className="hero-city-tag">📍 {event.location || "CityPass Experience"}</span>
             </div>
 
             <h1 className="details-title">{event.name || "Untitled event"}</h1>
@@ -160,10 +159,11 @@ function EventDetails() {
             <aside className="details-sidebar">
               <div className="booking-card">
                 <div className="booking-card-header">
-                  <div className="booking-icon-circle">
+                  
+                  <div>
+                    <div className="booking-icon-circle">
                     <FaTicketAlt />
                   </div>
-                  <div>
                     <span className="booking-card-title">Reserve Spot</span>
                     <span className="booking-card-sub">Instant confirmation</span>
                   </div>
