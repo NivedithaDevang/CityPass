@@ -30,18 +30,17 @@ export const createUser = async (user: {
     name: string;
     email: string;
     password: string;
-    role: "USER" | "ORGANIZER" | "ADMIN";
+    role?: "USER" | "ORGANIZER" | "ADMIN";
 }): Promise<{ insertId: number }> => {
     const sql = `
-        INSERT INTO users (name, email, password, role)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO users (name, email, password)
+        VALUES (?, ?, ?)
     `;
 
     const [result] = await db.query<any>(sql, [
         user.name,
         user.email,
         user.password,
-        user.role
     ]);
 
     return { insertId: (result as any).insertId };

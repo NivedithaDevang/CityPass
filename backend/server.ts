@@ -8,7 +8,7 @@ import categoryRouter from "./routes/v1/categoryRoute.js";
 import cityRouter from "./routes/v1/cityRoute.js";
 import eventRouter from "./routes/v1/eventRoute.js";
 import organiserRouter from "./routes/v1/organiserRoute.js";
-import orgRequestRouter from "./routes/v1/orgRequestRoute.js";
+import orgRequestRouter from "./routes/v1/organiserRequestRoute.js";
 import ticketRouter from "./routes/v1/ticketRoute.js";
 import userRouter from "./routes/v1/userRoutes.js"; 
 import errorHandler from "./middleware/errorHandler.js";

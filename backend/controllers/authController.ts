@@ -9,10 +9,10 @@ import { generateUserToken } from "../middleware/tokenMiddleware.js";
 //registering a new user
 export const registerUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { name, email, password, role } = req.body;
-        if (!name || !email || !password || !role) {
+        const { name, email, password } = req.body;
+        if (!name || !email || !password) {
             return res.status(400).json({
-                message: "Name, email, password, and role are required"
+                message: "Name, email and password are required"
             });
         }
 
@@ -24,14 +24,14 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
             name,
             email,
             password: hashedPassword,
-            role,
+            role: "USER",
         } as Parameters<typeof createUser>[0]);
 
         const userId = Number(result?.insertId ?? 0);
         const token = generateUserToken(userId, res, {
             id: userId,
             email,
-            role,
+            role: "USER",
             token_version: 0
         });
 
@@ -42,7 +42,7 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
                 id: userId,
                 name,
                 email,
-                role
+                role: "USER"
             }
         });
     } catch (err: any) {
@@ -68,7 +68,7 @@ export const loginUser = async (
 
         if (!user) {
             return res.status(401).json({
-                message: "Invalid email or password"
+                message: "Email id does not exist"
             });
         }
 
@@ -79,7 +79,7 @@ export const loginUser = async (
 
       if (!isPasswordValid) {
     return res.status(401).json({
-        message: "Invalid password"
+        message: "Entered password is incorrect"
     });
 }
 
