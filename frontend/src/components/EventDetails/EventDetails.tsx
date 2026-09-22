@@ -2,24 +2,36 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
-import { type Events } from "../../types/auth";
+import { type Events, type User } from "../../types/auth";
+import { useUser } from "../../context/UserContext"; // Uses your existing UserContext
 import Navbar from "../../components/Navbar/Navbar";
 import { Footer } from "../../components/Footer/Footer";
-import { FaMapPin, FaCalendarAlt, FaArrowLeft, FaShieldAlt, FaChevronRight } from "react-icons/fa";
-import { FaTicketAlt } from "react-icons/fa";
+import {
+  FaMapPin,
+  FaCalendarAlt,
+  FaArrowLeft,
+  FaShieldAlt,
+  FaChevronRight,
+  FaTicketAlt,
+} from "react-icons/fa";
 import { createEventSlug } from "../../config/slug";
 import { TermsModal } from "../Terms/Terms";
 import { OrganiserDetails } from "../OrganiserCard/OrganiserCard";
+import { Booking } from "../Booking/Booking";
+import Auth from "../Auth/Auth"; // Imports your existing Auth component
 import "./EventDetails.css";
 
 function EventDetails() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const { user } = useUser(); // Reads user directly from context
 
   const [event, setEvent] = useState<Events | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showTerms, setShowTerms] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
     const fetchEventDetails = async () => {
@@ -53,6 +65,22 @@ function EventDetails() {
     }).format(new Date(eventDate));
   };
 
+  const handleBookTicketsClick = () => {
+    // If not logged in, trigger your existing Auth modal
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    // If logged in, open the slide-out booking drawer
+    setIsDrawerOpen(true);
+  };
+
+  const handleAuthSuccess = (_authenticatedUser: User) => {
+    // Closes Auth modal and opens booking drawer
+    setShowAuthModal(false);
+    setIsDrawerOpen(true);
+  };
+
   if (loading) {
     return (
       <>
@@ -82,8 +110,9 @@ function EventDetails() {
   }
 
   return (
-    <>
+    <div className={`details-outer-container ${isDrawerOpen ? "drawer-active" : ""}`}>
       <Navbar />
+
       <div className="details-page-bg">
         <main className="details-wrapper">
           <button className="back-button" onClick={() => navigate(-1)}>
@@ -131,7 +160,6 @@ function EventDetails() {
                 </p>
               </div>
 
-              {/* Clickable Terms & Policy Banner */}
               <div
                 className="terms-action-card"
                 onClick={() => setShowTerms(true)}
@@ -148,7 +176,6 @@ function EventDetails() {
                 <FaChevronRight className="terms-chevron" />
               </div>
 
-              {/* Organiser Section */}
               <div className="content-card organiser-section">
                 <h2 className="section-title">Organised By</h2>
                 <OrganiserDetails />
@@ -159,11 +186,10 @@ function EventDetails() {
             <aside className="details-sidebar">
               <div className="booking-card">
                 <div className="booking-card-header">
-                  
                   <div>
                     <div className="booking-icon-circle">
-                    <FaTicketAlt />
-                  </div>
+                      <FaTicketAlt />
+                    </div>
                     <span className="booking-card-title">Reserve Spot</span>
                     <span className="booking-card-sub">Instant confirmation</span>
                   </div>
@@ -179,9 +205,7 @@ function EventDetails() {
                 <button
                   type="button"
                   className="book-now-button"
-                  onClick={() => {
-                    navigate(`/events/${slug}/book`, { state: { event } });
-                  }}
+                  onClick={handleBookTicketsClick}
                 >
                   Book Tickets
                 </button>
@@ -195,9 +219,25 @@ function EventDetails() {
         </main>
       </div>
 
+      {/* Slide-out Booking Drawer */}
+      <Booking
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        event={event}
+      />
+
+      {/* Your Existing Auth Component */}
+      {showAuthModal && (
+        <Auth
+          initialLogin={false}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={handleAuthSuccess}
+        />
+      )}
+
       <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
       <Footer />
-    </>
+    </div>
   );
 }
 

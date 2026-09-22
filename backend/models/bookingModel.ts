@@ -1,37 +1,62 @@
-import  { db } from "../config/database.js";
+import { db } from "../config/database.js";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
-
-//creating a type
 type Booking = {
-    id?: number;
-    user_id: number;
-    pass_id: number;
-    booking_date: Date;
-    number_of_tickets: number;
-    total_amount: number;
-    status: string
+  id?: number;
+  user_id: number;
+  pass_id: number;
+  booking_date: string | Date;
+  number_of_tickets: number;
+  total_amount: number;
+  status?: string;
 };
 
 type BookingRow = RowDataPacket & Booking;
 
-
-//getting all bookings
 export const getAllBookings = async () => {
-    const [results] = await db.query<BookingRow[]>("SELECT * FROM bookings");
-    return results;
+  const sql = `
+    SELECT 
+      b.id,
+      b.user_id,
+      u.name AS user_name,
+      u.email AS user_email,
+      b.pass_id,
+      e.name AS event_title,
+      e.location AS venue,
+      e.event_date,
+      c.name AS category_name,
+      b.number_of_tickets,
+      b.total_amount,
+      b.booking_date,
+      b.status
+    FROM bookings b
+    LEFT JOIN users u ON b.user_id = u.id
+    LEFT JOIN events e ON b.pass_id = e.id
+    LEFT JOIN categories c ON e.category_id = c.id
+    ORDER BY b.id DESC
+  `;
+
+  const [results] = await db.query<RowDataPacket[]>(sql);
+  return results;
 };
 
-//posting a new booking
 export const createBooking = async (book: Booking) => {
-    const sql = `
-        INSERT INTO bookings (user_id, pass_id, booking_date, number_of_tickets, total_amount, status)
-        VALUES (?, ?, ?, ?, ?, ?)
-    `;
+  const sql = `
+    INSERT INTO bookings (user_id, pass_id, booking_date, number_of_tickets, total_amount, status)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
 
-    const [results] = await db.query<ResultSetHeader>(
-        sql,
-        [book.user_id, book.pass_id, book.booking_date, book.number_of_tickets, book.total_amount, book.status]
-    );
-    return results;
+  // Format to YYYY-MM-DD
+  const formattedDate = new Date(book.booking_date).toISOString().split("T")[0];
+
+  const [results] = await db.query<ResultSetHeader>(sql, [
+    book.user_id,
+    book.pass_id,
+    formattedDate,
+    book.number_of_tickets,
+    book.total_amount,
+    book.status || "CONFIRMED",
+  ]);
+
+  return results;
 };
