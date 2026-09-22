@@ -8,16 +8,29 @@
 }
 
 .event-section .section-heading p {
-    margin: 0 0 6px;
-    letter-spacing: 0.5px;
-    font-size: 18px;
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #64748b;
+  letter-spacing: normal;
 }
 
 .event-section .section-heading h2 {
-    margin: 0;
-    font-size: 40px;
-    font-weight: 800;
-    color: #111;
+    margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #111;
+}
+
+.event-section .section-heading span {
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 400;
+  color: #64748b;
 }
 
 .event-grid {
@@ -35,7 +48,7 @@
     cursor: pointer;
     text-decoration: underline;
     text-underline-offset: 3px;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     transition: color 0.2s ease;
 }
@@ -89,8 +102,9 @@
 
 .event-card h3 {
     margin: 0 0 8px;
-    font-size: 28px;
-    line-height: 1.2;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.25;
 }
 
 .event-card p,

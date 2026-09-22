@@ -1,10 +1,14 @@
 import "./CitySection.css";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import { type City } from "../../types/auth";
+import { useCity } from "../../context/CityContext";
 
 function CitySection() {
+  const navigate = useNavigate();
+  const { setSelectedCity } = useCity();
   const [cities, setCities] = useState<City[]>([]);
 
   const cityImages: Record<string, string> = {
@@ -31,24 +35,35 @@ function CitySection() {
     fetchCities();
   }, []);
 
+  const handleCityClick = (cityName: string) => {
+    if (setSelectedCity) {
+      setSelectedCity(cityName);
+    }
+    navigate(`/events?city=${encodeURIComponent(cityName)}`);
+  };
+
   return (
     <section className="city-section">
       <div className="section-heading">
-        <p>EXPLORE</p>
-        <h2>Popular Cities</h2>
-        <span>Discover what's happening across India.</span>
+        <p>THE SCENE</p>
+        <h2>Hit The Map</h2>
+        <span>Pick a city to unlock local gigs, secret pop-ups, and nightlife.</span>
       </div>
 
       <div className="city-grid">
         {cities
           .filter((city) => city.is_active)
           .map((city) => (
-            <div className="city-card" key={city.id}>
+            <div
+              className="city-card"
+              key={city.id}
+              onClick={() => handleCityClick(city.name)}
+              style={{ cursor: "pointer" }}
+            >
               <img
                 src={cityImages[city.name]}
                 alt={city.name}
               />
-
               <h2>{city.name}</h2>
             </div>
           ))}

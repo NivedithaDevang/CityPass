@@ -53,8 +53,10 @@ const categoryImages: Record<string, string> = {
   return (
     <section className="category-section">
       <div className="section-heading">
-        <h2>Explore by categories</h2>
-        <p>Curated entertainment, live gigs & dining experiences</p>
+                <p>YOUR MOOD</p>
+
+        <h2>Curate Your Vibe</h2>
+        <span>Live music, underground comedy, street food, and late-night sets.</span>
       </div>
 
       <div className="category-grid">

@@ -3,7 +3,7 @@ import {
     getRequests,
     addRequest,
     updateRequest
-} from "../../controllers/orgRequestController.js";
+} from "../../controllers/organiserRequestController.js";
 
 const orgRequestRouter = express.Router();
 

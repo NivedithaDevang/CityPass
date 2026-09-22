@@ -6,7 +6,6 @@ import { type Bookings } from "../../types/auth";
 import "./Booking.css";
 import { FaMapPin, FaTicket } from "react-icons/fa6";
 
-
 export function Bookings() {
   const [bookings, setBookings] = useState<Bookings[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -65,9 +64,12 @@ export function Bookings() {
 
                 <div className="booking-card-body">
                   <h3 className="event-title">{item.event_title || item.title || "Event Ticket"}</h3>
-                  <p className="event-venue"><FaMapPin />
- {item.venue || item.location || "Venue TBA"}</p>
-                  <p className="event-tickets"><FaTicket />Tickets: {item.quantity || item.tickets_count || 1}</p>
+                  <p className="event-venue">
+                    <FaMapPin /> {item.venue || item.location || "Venue TBA"}
+                  </p>
+                  <p className="event-tickets">
+                    <FaTicket /> Tickets: {item.quantity || item.tickets_count || 1}
+                  </p>
                   {item.total_amount && (
                     <p className="event-price">₹ {Number(item.total_amount).toLocaleString()}</p>
                   )}
@@ -75,6 +77,7 @@ export function Bookings() {
 
                 <div className="booking-card-footer">
                   <span className="ticket-code">ID: #{item.id || item.booking_id || "---"}</span>
+                  <span className="view-ticket-link">View Details &rarr;</span>
                 </div>
               </div>
             ))}

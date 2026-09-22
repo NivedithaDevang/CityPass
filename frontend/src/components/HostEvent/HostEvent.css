@@ -1,0 +1,137 @@
+/* --- Host Event Banner Section --- */
+.host-banner-section {
+  padding: 40px 8% 70px;
+  box-sizing: border-box;
+}
+
+.host-banner-card {
+  position: relative;
+  overflow: hidden;
+  max-width: 1600px;
+  margin: 0 auto;
+  border-radius: 24px;
+  padding: 56px 60px;
+  /* Soft, light surface with a gentle purple/indigo gradient bleed */
+  background: linear-gradient(135deg, #ffffff 0%, #f7f6ff 50%, #f0eeff 100%);
+  border: 1px solid #e0dbfe;
+  box-shadow: 0 16px 40px -12px rgba(81, 68, 237, 0.1);
+  box-sizing: border-box;
+}
+
+/* Subtle brand gradient aura in the corner */
+.host-banner-card::before {
+  position: absolute;
+  top: -80px;
+  right: -60px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Hide or reset old glow layers */
+.host-banner-glow {
+  display: none;
+}
+
+.host-banner-content {
+  position: relative;
+  z-index: 2;
+  max-width: 760px;
+}
+
+/* Themed Brand Badge */
+.host-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #eff0fe;
+  border: 1px solid #dce0fe;
+  color: #5144ed;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+
+.host-badge-icon {
+  color: #5144ed;
+  font-size: 13px;
+}
+
+/* Typography matching site hierarchy */
+.host-banner-card h2 {
+  margin: 0 0 14px;
+  color: #17131a;
+  font-size: clamp(2rem, 3.4vw, 2.75rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.host-banner-card p {
+  margin: 0 0 26px;
+  color: #555e70;
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+/* Feature bullets */
+.host-highlights {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 34px;
+  flex-wrap: wrap;
+}
+
+.host-highlight-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.host-highlight-item svg {
+  color: #5144ed;
+  font-size: 15px;
+}
+
+/* Primary purple button matching CityPass "Get Tickets" buttons */
+.host-banner-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 28px;
+  border-radius: 12px;
+  border: none;
+  background: #5144ed;
+  color: #ffffff;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(81, 68, 237, 0.28);
+  transition: all 0.2s ease-in-out;
+}
+
+.host-banner-btn:hover {
+  background: #3f35c8;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(81, 68, 237, 0.38);
+}
+
+.host-btn-arrow {
+  font-size: 13px;
+  transition: transform 0.2s ease;
+}
+
+.host-banner-btn:hover .host-btn-arrow {
+  transform: translateX(4px);
+}

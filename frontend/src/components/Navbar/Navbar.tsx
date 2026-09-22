@@ -2,7 +2,6 @@ import { ChevronDown, MapPin } from "lucide-react";
 import Auth from "../Auth/Auth";
 import { Sidebar } from "../Sidebar/Sidebar";
 import "./Navbar.css";
-import { TiThMenu } from "react-icons/ti";
 import { useState, useEffect, useRef } from "react";
 import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../config/config";
@@ -194,15 +193,9 @@ clearUser();
         </div>
 
         <div className="profile-area">
-          {/* User Role Badge */}
-          {user && (
-            <span className={`user-role ${(user.role || "user").toLowerCase()}`}>
-              <FaUserAlt className="user-icon" aria-hidden="true" />
-              {user.role || "USER"}
-            </span>
-          )}
+          
           <button className="profile" onClick={handleProfileClick} aria-label="Open profile">
-            <TiThMenu size={24} />
+            <FaUserAlt size={20} />
           </button>
           
         </div>

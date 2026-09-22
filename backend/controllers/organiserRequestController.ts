@@ -2,7 +2,7 @@ import { getAllRequests,
     createRequest, 
     updateRequest as updateOrgReq
      } 
-    from "../models/orgRequestModel.js";
+    from "../models/organiserRequestModel.js";
 import { Request, Response, NextFunction } from "express";
 
 

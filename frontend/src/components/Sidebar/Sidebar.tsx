@@ -5,23 +5,17 @@ import "./Sidebar.css";
 import { IoSettings, IoLogOut, IoTicket, IoPersonCircle } from "react-icons/io5";
 import { IoIosArrowForward, IoMdCloseCircle } from "react-icons/io";
 
-
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onLogout: () => void;
 }
 
-export function Sidebar({ isOpen, onClose, onLogout} : SidebarProps)
-   {
-    console.log("Sidebar compoonent loaded");
-    console.log("Sidebar open: ", isOpen);
-    
-    const { user, profileImage } = useUser();
-    const navigate = useNavigate();
+export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
+  const { user, profileImage } = useUser();
+  const navigate = useNavigate();
   const [isBookingsOpen, setIsBookingsOpen] = useState(false);
-const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const getInitial = () => {
     if (user?.name) {
@@ -29,9 +23,6 @@ const [isSettingsOpen, setIsSettingsOpen] = useState(false)
     }
     return "U";
   };
-    
-  
-
 
   return (
     <>
@@ -47,7 +38,6 @@ const [isSettingsOpen, setIsSettingsOpen] = useState(false)
         <div className="sidebar-top">
           <button className="close-btn" onClick={onClose}>
             <IoMdCloseCircle />
-
           </button>
         </div>
 
@@ -58,13 +48,14 @@ const [isSettingsOpen, setIsSettingsOpen] = useState(false)
           </div>
 
           <div className="profile-details">
-            <h2>
-              {user?.name || "User"}
-            </h2>
-            <span className={`status ${user?.status === "INACTIVE" ? "status-inactive" : ""}`}>
-                {user?.status || "ACTIVE"}
-               
-              </span>
+            <h2>{user?.name || "User"}</h2>
+            <span
+              className={`status ${
+                user?.status === "INACTIVE" ? "status-inactive" : ""
+              }`}
+            >
+              {user?.status || "ACTIVE"}
+            </span>
           </div>
         </div>
 
@@ -73,16 +64,16 @@ const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
         {/* Menu */}
         <div className="sidebar-content">
+          {/* My Account -> /settings/profile */}
           <button
             className="sidebar-menu-item"
             onClick={() => {
               onClose();
-              navigate("/settings");
+              navigate("/settings/profile");
             }}
           >
             <span className="profile-icon">
               <IoPersonCircle />
-
             </span>
             <span>My Account</span>
           </button>
@@ -96,87 +87,113 @@ const [isSettingsOpen, setIsSettingsOpen] = useState(false)
               <div className="menu-left">
                 <span className="ticket-icon">
                   <IoTicket />
-
                 </span>
                 <span>My Bookings</span>
               </div>
 
-              <span className={`booking-arrow ${isBookingsOpen ? "rotate" : ""}`}>
+              <span
+                className={`booking-arrow ${isBookingsOpen ? "rotate" : ""}`}
+              >
                 <IoIosArrowForward />
-
               </span>
             </button>
 
             <div
               className={`booking-categories ${
                 isBookingsOpen ? "expanded" : ""
-              }`} >
-            
-              <a onClick={() => {onClose();
-                navigate("/bookings");
-              }}>
+              }`}
+            >
+              <a
+                onClick={() => {
+                  onClose();
+                  navigate("/bookings");
+                }}
+              >
                 Events
               </a>
-              <a onClick={() => {onClose();
-                navigate("/bookings");
-              }}>
+              <a
+                onClick={() => {
+                  onClose();
+                  navigate("/bookings");
+                }}
+              >
                 Activities
               </a>
-              <a onClick={() => {onClose();
-                navigate("/bookings");
-              }}>
+              <a
+                onClick={() => {
+                  onClose();
+                  navigate("/bookings");
+                }}
+              >
                 Concerts
               </a>
             </div>
           </div>
-<div className="settings-section">
-          <button
-  className="sidebar-menu-item settings-button"
-  onClick={() => setIsSettingsOpen ((prev) => !prev)}>
-    
-  <div className="menu-left">
 
-  <span className="menu-icon">
-    <IoSettings />
+          {/* Settings Submenu */}
+          <div className="settings-section">
+            <button
+              className="sidebar-menu-item settings-button"
+              onClick={() => setIsSettingsOpen((prev) => !prev)}
+            >
+              <div className="menu-left">
+                <span className="menu-icon">
+                  <IoSettings />
+                </span>
+                <span>Settings</span>
+              </div>
+              <span
+                className={`settings-arrow ${isSettingsOpen ? "rotate" : ""}`}
+              >
+                <IoIosArrowForward />
+              </span>
+            </button>
 
-  </span>
-  <span>Settings</span>
-  </div>
-  <span className= {`settings-arrow ${isSettingsOpen ? "rotate" : ""}`}>
-    <IoIosArrowForward /> </span>
-</button>
-<div className={`booking-categories ${isSettingsOpen ? "expanded" : ""}`}  >
+            <div
+              className={`booking-categories ${
+                isSettingsOpen ? "expanded" : ""
+              }`}
+            >
+              <a
+                onClick={() => {
+                  onClose();
+                  navigate("/settings/password");
+                }}
+              >
+                Change Password
+              </a>
 
-<a
-  onClick={() => {
-    onClose();
-    navigate("/settings");
-  }}
->
-  Update Password
-</a>
-<a
-  onClick={() => {
-    onClose();
-    navigate("/settings");
-  }}
->
-  Deactivate account
-</a>
+              <a
+                onClick={() => {
+                  onClose();
+                  navigate("/settings/host-an-event");
+                }}
+              >
+                Host an event
+              </a>
 
-  </div>     
-   </div>
+              <a
+                onClick={() => {
+                  onClose();
+                  navigate("/settings/deactivate");
+                }}
+              >
+                Deactivate account
+              </a>
+            </div>
+          </div>
         </div>
-        
+
         {/* Bottom */}
         <div className="sidebar-bottom">
           <button className="logout-btn" onClick={onLogout}>
-            <span><IoLogOut /></span>
+            <span>
+              <IoLogOut />
+            </span>
             Log Out
           </button>
         </div>
       </aside>
-      
     </>
   );
 }
