@@ -6,10 +6,8 @@ import Settings from "./pages/Settings/Settings";
 import Events from "./pages/Events/Events";
 import { Activities } from "./pages/Activities/Activities";
 import { Concerts } from "./pages/Concerts/Concerts";
-import { Bookings } from "./components/Booking/Booking";
 import EventDetails from "./components/EventDetails/EventDetails";
-import { BookingPage } from "./pages/BookingPage/BookingPage";
-
+import BookingPage from "./pages/BookingPage/BookingPage";
 function App() {
   return (
     <UserProvider>
@@ -25,9 +23,9 @@ function App() {
             <Route path="/events" element={<Events />} />
             <Route path="/activities" element={<Activities />} />
             <Route path="/concerts" element={<Concerts />} />
-            <Route path="/bookings" element={<Bookings />} />
             <Route path="/events/:slug" element={<EventDetails />} />
-            <Route path="/events/:slug/book" element={<BookingPage />} />
+            {/* <Route path="/events/:slug/book" element={<Booking />} /> */}
+            <Route path="/bookings" element={<BookingPage />} />
           </Routes>
         </BrowserRouter>
       </CityProvider>

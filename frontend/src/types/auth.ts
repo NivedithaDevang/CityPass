@@ -19,15 +19,15 @@ export interface SidebarProps {
 export interface City {
   id: number;
   name: string;
-  description: string;
-  is_active: boolean
+  description?: string;
+  is_active: boolean;
 }
 
 export interface Category {
   id: number;
   name: string;
-  description: string;
-  is_active: boolean
+  description?: string;
+  is_active: boolean;
 }
 
 export interface Activities {
@@ -36,12 +36,11 @@ export interface Activities {
   description?: string;
   location?: string;
   event_date?: string;
-    category_name?: string | null;
-
+  category_name?: string | null;
   price?: string;
   capacity?: number;
   is_active: boolean;
-  status?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"
+  status?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 }
 
 export interface Concerts {
@@ -50,17 +49,15 @@ export interface Concerts {
   description?: string;
   location?: string;
   event_date?: string;
-    category_name?: string | null;
-
+  category_name?: string | null;
   price?: string;
   capacity?: number;
   is_active: boolean;
-  status?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"
+  status?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 }
 
-
 export interface Events {
-  id : number;
+  id: number;
   organizer_id?: number;
   city_id?: number;
   category_id?: number;
@@ -73,22 +70,26 @@ export interface Events {
   price?: string;
   capacity?: number;
   status?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | "COMPLETED";
-  is_active: boolean
-
+  is_active: boolean;
 }
-
 
 export type Bookings = {
-id: number;
-user_id?: number;
-booking_date: string;
-pass_id?: number;
-number_of_tickets?: number;
-total_amount?: string;
-status?: "CONFIRMED" | "CANCELLED"
-}
+  id: number;
+  user_id?: number;
+  event_id?: number;
+  event_title?: string;
+  name?: string;
+  location?: string;
+  venue?: string;
+  booking_date: string;
+  pass_id?: number;
+  number_of_tickets?: number;
+  total_amount?: string;
+  status?: "CONFIRMED" | "CANCELLED";
+  created_at?: string;
+};
 
-export type BookingCategory = 'events' | 'activities' | 'concerts';
+export type BookingCategory = "events" | "activities" | "concerts";
 
 export interface Organizer {
   organization_name: string;
