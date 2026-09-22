@@ -1,23 +1,46 @@
 import Navbar from "../../components/Navbar/Navbar";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../config/config";
 import { type Activities } from "../../types/auth";
 import axios from "axios";
 import "./Activities.css";
-import "../Events/Events.css";
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
 import { Footer } from "../../components/Footer/Footer";
 import { FaMapPin, FaMicrophone, FaLaughSquint } from "react-icons/fa";
-import { MdSportsFootball, MdTheaterComedy} from "react-icons/md";
+import { MdSportsFootball, MdTheaterComedy } from "react-icons/md";
 import { IoFastFoodSharp } from "react-icons/io5";
 import { FaPaintbrush, FaMountain } from "react-icons/fa6";
 import type { IconType } from "react-icons";
 import { createEventSlug } from "../../config/slug";
 
-export function Activities() {
+interface Category {
+  id?: number | string;
+  name: string;
+}
 
-const categoryIcons: Record<string, IconType> = {
+interface City {
+  id?: number | string;
+  name: string;
+}
+
+export function Activities() {
+  const navigate = useNavigate();
+  const { selectedCity } = useCity();
+
+  // Data
+  const [activities, setActivities] = useState<Activities[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [locations, setLocations] = useState<string[]>([]);
+  const [error, setError] = useState(false);
+
+  // Filters & Sorting
+  const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [selectedLocation, setSelectedLocation] = useState<string>("ALL");
+  const [sortBy, setSortBy] = useState<string>("date_asc");
+
+  const categoryIcons: Record<string, IconType> = {
     Music: FaMicrophone,
     Sports: MdSportsFootball,
     Comedy: MdTheaterComedy,
@@ -28,135 +51,267 @@ const categoryIcons: Record<string, IconType> = {
   };
 
   const getCategoryIcon = (categoryName?: string | null) => {
-    const normalizedCategory = categoryName?.toLowerCase() || "";
-
-    if (normalizedCategory.includes("music")) return categoryIcons.Music;
-    if (normalizedCategory.includes("sport")) return categoryIcons.Sports;
-    if (normalizedCategory.includes("comedy")) return categoryIcons.Comedy;
-    if (normalizedCategory.includes("food")) return categoryIcons.Food;
-    if (normalizedCategory.includes("art")) return categoryIcons.Art;
-    if (normalizedCategory.includes("adventure")) return categoryIcons.Adventure;
-    if (normalizedCategory.includes("entertainment")) return categoryIcons.Entertainment;
-
+    const normalized = categoryName?.toLowerCase() || "";
+    if (normalized.includes("music")) return categoryIcons.Music;
+    if (normalized.includes("sport")) return categoryIcons.Sports;
+    if (normalized.includes("comedy")) return categoryIcons.Comedy;
+    if (normalized.includes("food")) return categoryIcons.Food;
+    if (normalized.includes("art")) return categoryIcons.Art;
+    if (normalized.includes("adventure")) return categoryIcons.Adventure;
+    if (normalized.includes("entertainment")) return categoryIcons.Entertainment;
     return null;
   };
 
-    const [activities, setActivities] = useState<Activities[]>([]);
-    const [error, setError] = useState(false);
-    const [search, setSearch] = useState("");
-    const { selectedCity } = useCity();
-    const normalizedSearch = search.trim().toLowerCase();
-    const filteredActivities = activities.filter((activity) => {
-        const matchesCity =
-            !selectedCity ||
-            selectedCity === ALL_LOCATIONS ||
-            activity.location?.trim().toLowerCase() === selectedCity.trim().toLowerCase();
+  const formatActivityDate = (eventDate?: string) => {
+    if (!eventDate) return "Date to be announced";
+    return new Intl.DateTimeFormat("en-US", {
+      dateStyle: "medium",
+    }).format(new Date(eventDate));
+  };
 
-        if (!matchesCity) return false;
-        if (!normalizedSearch) return true;
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [activitiesRes, catRes, locRes] = await Promise.all([
+          axios.get(`${API_BASE_URL}/v1/events/activities`),
+          axios.get(`${API_BASE_URL}/v1/categories`).catch(() => ({ data: { categories: [] } })),
+          axios.get(`${API_BASE_URL}/v1/cities`).catch(() => ({ data: { cities: [] } })),
+        ]);
 
-        return [activity.name, activity.category_name, activity.location]
-            .filter(Boolean)
-            .some((value) => value!.toLowerCase().includes(normalizedSearch));
-    });
+        const rawActivities: Activities[] = activitiesRes.data.activities || [];
+        setActivities(rawActivities);
 
-    const formatActivityDate = (eventDate?: string) => {
-        if (!eventDate) return "Date to be announced";
+        // Fetch categories or derive from activities
+        const fetchedCats: string[] = (catRes.data.categories as Category[])
+          ?.map((c) => c.name?.trim())
+          .filter(Boolean);
+        if (fetchedCats?.length) {
+          setCategories([...new Set(fetchedCats)]);
+        } else {
+          const fallbackCats = rawActivities
+            .map((a) => a.category_name?.trim())
+            .filter((c): c is string => Boolean(c));
+          setCategories([...new Set(fallbackCats)]);
+        }
 
-        return new Intl.DateTimeFormat("en-US", {
-            dateStyle: "medium",
-        }).format(new Date(eventDate));
+        // Fetch cities or derive from activities
+        const fetchedCities: string[] = (locRes.data.cities as City[])
+          ?.map((c) => c.name?.trim())
+          .filter(Boolean);
+        if (fetchedCities?.length) {
+          setLocations([...new Set(fetchedCities)]);
+        } else {
+          const fallbackLocs = rawActivities
+            .map((a) => a.location?.trim())
+            .filter((l): l is string => Boolean(l));
+          setLocations([...new Set(fallbackLocs)]);
+        }
+      } catch (err) {
+        console.error("Error fetching activities and options: ", err);
+        setError(true);
+      }
     };
 
-    useEffect(() => {
-        const fetchActivities = async() => {
-            try { 
-                const response = await axios.get(`${API_BASE_URL}/v1/events/activities`);
-                setActivities(response.data.activities);
+    fetchData();
+  }, []);
 
-            }catch(error){
-                console.error("Error fetching activities: ", error);
-                setError(true);
-            } 
-        };
-        fetchActivities();
-    }, []);
-const navigate = useNavigate();
-    const handleCardClick = (event: Activities) => {
-        navigate(`/events/${createEventSlug(event.name)}`);
+  const hasActiveFilters =
+    search.trim() !== "" ||
+    selectedCategory !== "ALL" ||
+    selectedLocation !== "ALL" ||
+    sortBy !== "date_asc";
 
-    }
+  const handleResetFilters = () => {
+    setSearch("");
+    setSelectedCategory("ALL");
+    setSelectedLocation("ALL");
+    setSortBy("date_asc");
+  };
 
-    return (
-        <>
-            <Navbar />
-            <div className="section-heading">
-                <h2>Explore activities happening in the city</h2>
-                <p>Find activities and experiences happening in the city.</p>
-            </div>
+  const processedActivities = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
 
-            <main className="event-section">
-            <form className="event-search" onSubmit={(event) => event.preventDefault()}>
-                <input
-                    id="activity-search-input"
-                    type="search"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search by category, activity name, or location"
-                />
-            </form>
+    const filtered = activities.filter((activity) => {
+      // 1. Navbar location context
+      const matchesGlobalCity =
+        !selectedCity ||
+        selectedCity === ALL_LOCATIONS ||
+        activity.location?.trim().toLowerCase() === selectedCity.trim().toLowerCase();
 
-            {error && <p className="event-empty">Activities are unavailable right now.</p>}
+      if (!matchesGlobalCity) return false;
 
-            <div className="event-grid">
-                {!error && filteredActivities.map((activity) => {
-                    return (
-                                                <article className="event-card" key={activity.id}
-                                                onClick={() => handleCardClick(activity)}
-                                                style={{cursor: "pointer"}}>
-                                                        <div className="event-card-media">
-                                                            <span className="event-badge">
-                                                                {(() => {
-                  const CategoryIcon = getCategoryIcon(activity.category_name);
+      // 2. Location dropdown
+      if (
+        selectedLocation !== "ALL" &&
+        activity.location?.trim().toLowerCase() !== selectedLocation.trim().toLowerCase()
+      ) {
+        return false;
+      }
 
-                  return CategoryIcon ? <CategoryIcon className="event-category-icon" /> : null;
-                })()}
-                                {activity.category_name || "Activity"}
-                                                            </span>
-                                                            <p className="event-location">
-                                                                <FaMapPin className="event-location-pin" />
-                                                                {activity.location || "Location to be announced"}
-                                                            </p>
-                                                        </div>
-                                                        <div className="event-card-content">
-                                                            <span className="event-date">{formatActivityDate(activity.event_date)}</span>
-                                                            <h3>{activity.name || "Untitled activity"}</h3>
-                                                            <p className="event-description">
-                                                                {activity.description || "Description yet to be set"}
-                                                            </p>
-                                                            <div className="event-card-footer">
-                                                                <div>
-                                                                    <span className="event-price-label">Starting from</span>
-                                                                    <p className="event-price">
-                                                                        ₹ {activity.price || "Price yet to be announced"}
-                                                                    </p>
-                                                                </div>
-                                                                <button type="button" className="event-pass-button">Get Tickets</button>
-                                                            </div>
-                                                        </div>
-                        </article>
-                    );
-                })}
-                {!error && !filteredActivities.length && (
-                    <p className="event-empty">
-                        {selectedCity && selectedCity !== ALL_LOCATIONS
-                            ? "Currently no activities in this place."
-                            : "No upcoming activities are available right now."}
+      // 3. Category dropdown
+      if (
+        selectedCategory !== "ALL" &&
+        activity.category_name?.trim().toLowerCase() !== selectedCategory.trim().toLowerCase()
+      ) {
+        return false;
+      }
+
+      // 4. Text input search
+      if (!normalizedSearch) return true;
+      return [activity.name, activity.category_name, activity.location]
+        .filter(Boolean)
+        .some((val) => val!.toLowerCase().includes(normalizedSearch));
+    });
+
+    return [...filtered].sort((a, b) => {
+      const priceA = Number(a.price) || 0;
+      const priceB = Number(b.price) || 0;
+      const timeA = a.event_date ? new Date(a.event_date).getTime() : Infinity;
+      const timeB = b.event_date ? new Date(b.event_date).getTime() : Infinity;
+
+      switch (sortBy) {
+        case "date_asc":
+          return timeA - timeB;
+        case "date_desc":
+          return timeB - timeA;
+        case "price_asc":
+          return priceA - priceB;
+        case "price_desc":
+          return priceB - priceA;
+        default:
+          return 0;
+      }
+    });
+  }, [activities, selectedCity, selectedLocation, selectedCategory, search, sortBy]);
+
+  const handleCardClick = (activity: Activities) => {
+    navigate(`/events/${createEventSlug(activity.name)}`);
+  };
+
+  return (
+    <>
+      <Navbar />
+      <div className="section-heading">
+        <h2>Explore activities happening in the city</h2>
+        <p>Find activities and experiences happening in the city.</p>
+      </div>
+
+      <main className="act-section">
+        {/* Search, Filter & Sort Controls */}
+        <div className="act-filter-toolbar">
+          <form className="act-search" onSubmit={(e) => e.preventDefault()}>
+            <input
+              id="act-search-input"
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by category, activity name, or location"
+            />
+          </form>
+<div className = "act-controls">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="act-filter-select"
+          >
+            <option value="ALL">All Categories</option>
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedLocation}
+            onChange={(e) => setSelectedLocation(e.target.value)}
+            className="act-filter-select"
+          >
+            <option value="ALL">All Locations</option>
+            {locations.map((loc) => (
+              <option key={loc} value={loc}>
+                {loc}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="act-filter-select sort-select"
+          >
+            <option value="date_asc">Date: Earliest first</option>
+            <option value="date_desc">Date: Latest first</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+          </select>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="act-reset-button"
+            >
+              Reset Filters
+            </button>
+          )}
+        </div></div>
+
+        {error && <p className="act-empty">Activities are unavailable right now.</p>}
+
+        <div className="act-grid">
+          {!error &&
+            processedActivities.map((activity) => {
+              const CategoryIcon = getCategoryIcon(activity.category_name);
+
+              return (
+                <article
+                  className="act-card"
+                  key={activity.id}
+                  onClick={() => handleCardClick(activity)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <div className="act-card-media">
+                    <span className="act-badge">
+                      {CategoryIcon && <CategoryIcon className="act-category-icon" />}
+                      {activity.category_name || "Activity"}
+                    </span>
+                    <p className="act-location">
+                      <FaMapPin className="act-location-pin" />
+                      {activity.location || "Location to be announced"}
                     </p>
-                )}
-            </div>
-            </main>
-            <Footer />
-        </>
-    );
+                  </div>
+                  <div className="act-card-content">
+                    <span className="act-date">{formatActivityDate(activity.event_date)}</span>
+                    <h3>{activity.name || "Untitled activity"}</h3>
+                    <div className="act-card-footer">
+                      <div>
+                        <span className="act-price-label">Starting from</span>
+                        <p className="act-price">
+                          ₹ {activity.price || "Price yet to be announced"}
+                        </p>
+                      </div>
+                      <button type="button" className="act-pass-button">
+                        Get Tickets
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+
+          {!error && !processedActivities.length && (
+            <p className="act-empty">
+              {hasActiveFilters
+                ? "No activities match your current filters."
+                : selectedCity && selectedCity !== ALL_LOCATIONS
+                ? "Currently no activities in this place."
+                : "No upcoming activities are available right now."}
+            </p>
+          )}
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
 }
