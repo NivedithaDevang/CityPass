@@ -161,7 +161,7 @@
 .event-card {
   overflow: hidden;
   width: 100%;
-  min-height: 410px;
+  min-height: 10px;
   box-sizing: border-box;
   border: 1px solid #e4e7ef;
   border-radius: 18px;

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../config/config";
 import { type Activities } from "../../types/auth";
 import axios from "axios";
-import "./Activities.css";
+import "../Events/Events.css"
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
 import { Footer } from "../../components/Footer/Footer";
 import { FaMapPin, FaMicrophone, FaLaughSquint } from "react-icons/fa";
@@ -196,23 +196,23 @@ export function Activities() {
         <p>Find activities and experiences happening in the city.</p>
       </div>
 
-      <main className="act-section">
+      <main className="event-section">
         {/* Search, Filter & Sort Controls */}
-        <div className="act-filter-toolbar">
-          <form className="act-search" onSubmit={(e) => e.preventDefault()}>
+        <div className="event-filter-toolbar">
+          <form className="event-search" onSubmit={(e) => e.preventDefault()}>
             <input
-              id="act-search-input"
+              id="event-search-input"
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by category, activity name, or location"
             />
           </form>
-<div className = "act-controls">
+<div className = "event-controls">
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="act-filter-select"
+            className="event-filter-select"
           >
             <option value="ALL">All Categories</option>
             {categories.map((cat) => (
@@ -225,7 +225,7 @@ export function Activities() {
           <select
             value={selectedLocation}
             onChange={(e) => setSelectedLocation(e.target.value)}
-            className="act-filter-select"
+            className="event-filter-select"
           >
             <option value="ALL">All Locations</option>
             {locations.map((loc) => (
@@ -238,7 +238,7 @@ export function Activities() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="act-filter-select sort-select"
+            className="event-filter-select sort-select"
           >
             <option value="date_asc">Date: Earliest first</option>
             <option value="date_desc">Date: Latest first</option>
@@ -250,48 +250,48 @@ export function Activities() {
             <button
               type="button"
               onClick={handleResetFilters}
-              className="act-reset-button"
+              className="event-reset-button"
             >
               Reset Filters
             </button>
           )}
         </div></div>
 
-        {error && <p className="act-empty">Activities are unavailable right now.</p>}
+        {error && <p className="event-empty">Activities are unavailable right now.</p>}
 
-        <div className="act-grid">
+        <div className="event-grid">
           {!error &&
             processedActivities.map((activity) => {
               const CategoryIcon = getCategoryIcon(activity.category_name);
 
               return (
                 <article
-                  className="act-card"
+                  className="event-card"
                   key={activity.id}
                   onClick={() => handleCardClick(activity)}
                   style={{ cursor: "pointer" }}
                 >
-                  <div className="act-card-media">
-                    <span className="act-badge">
-                      {CategoryIcon && <CategoryIcon className="act-category-icon" />}
+                  <div className="event-card-media">
+                    <span className="event-badge">
+                      {CategoryIcon && <CategoryIcon className="event-category-icon" />}
                       {activity.category_name || "Activity"}
                     </span>
-                    <p className="act-location">
-                      <FaMapPin className="act-location-pin" />
+                    <p className="event-location">
+                      <FaMapPin className="event-location-pin" />
                       {activity.location || "Location to be announced"}
                     </p>
                   </div>
-                  <div className="act-card-content">
-                    <span className="act-date">{formatActivityDate(activity.event_date)}</span>
+                  <div className="event-card-content">
+                    <span className="event-date">{formatActivityDate(activity.event_date)}</span>
                     <h3>{activity.name || "Untitled activity"}</h3>
-                    <div className="act-card-footer">
+                    <div className="event-card-footer">
                       <div>
-                        <span className="act-price-label">Starting from</span>
-                        <p className="act-price">
+                        <span className="event-price-label">Starting from</span>
+                        <p className="event-price">
                           ₹ {activity.price || "Price yet to be announced"}
                         </p>
                       </div>
-                      <button type="button" className="act-pass-button">
+                      <button type="button" className="event-pass-button">
                         Get Tickets
                       </button>
                     </div>
@@ -301,7 +301,7 @@ export function Activities() {
             })}
 
           {!error && !processedActivities.length && (
-            <p className="act-empty">
+            <p className="event-empty">
               {hasActiveFilters
                 ? "No activities match your current filters."
                 : selectedCity && selectedCity !== ALL_LOCATIONS
