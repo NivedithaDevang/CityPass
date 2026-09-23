@@ -28,24 +28,3 @@ export const generateUserToken = (userId: number, res: Response, user: any) => {
     return token;
 };
 
-//generate token for events
-export const generateEventToken = (res: Response, event: any) => {
-    const token = jwt.sign(
-        {
-            eventId: event.id
-        },
-        process.env.JWT_SECRET as string,
-        {
-            expiresIn: "1h"
-        }
-    );
-
-    res.cookie("eventToken", token, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "lax",
-        maxAge: 1 * 60 * 60 * 1000
-    });
-
-    return token;
-};

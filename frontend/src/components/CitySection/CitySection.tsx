@@ -9,6 +9,7 @@ import { useCity } from "../../context/CityContext";
 function CitySection() {
   const navigate = useNavigate();
   const { setSelectedCity } = useCity();
+
   const [cities, setCities] = useState<City[]>([]);
 
   const cityImages: Record<string, string> = {
@@ -22,23 +23,39 @@ function CitySection() {
     Trivandrum: "/cities/Trivandrum.jpeg",
   };
 
+  // Fetch cities from backend
   useEffect(() => {
     const fetchCities = async () => {
       try {
         const response = await axios.get(`${API_BASE_URL}/v1/cities`);
-        setCities(response.data.cities);
+
+        console.log("Raw API Response:", response.data);
+        console.log("Response Status:", response.status);
+
+        // Cities are returned inside the "city" property
+        const list = response.data?.city || [];
+
+        console.log("Cities:", list);
+
+        if (Array.isArray(list)) {
+          setCities(list);
+        } else {
+          console.error("Cities response is not an array");
+          setCities([]);
+        }
       } catch (error) {
         console.error("Error fetching cities:", error);
+        setCities([]);
       }
     };
 
     fetchCities();
   }, []);
 
+  // Handle city card click
   const handleCityClick = (cityName: string) => {
-    if (setSelectedCity) {
-      setSelectedCity(cityName);
-    }
+    setSelectedCity(cityName);
+
     navigate(`/events?city=${encodeURIComponent(cityName)}`);
   };
 
@@ -46,13 +63,17 @@ function CitySection() {
     <section className="city-section">
       <div className="section-heading">
         <p>THE SCENE</p>
+
         <h2>Hit The Map</h2>
-        <span>Pick a city to unlock local gigs, secret pop-ups, and nightlife.</span>
+
+        <span>
+          Pick a city to unlock local gigs, secret pop-ups, and nightlife.
+        </span>
       </div>
 
       <div className="city-grid">
         {cities
-          .filter((city) => city.is_active)
+          .filter((city) => Boolean(city.is_active ?? true))
           .map((city) => (
             <div
               className="city-card"
@@ -61,9 +82,10 @@ function CitySection() {
               style={{ cursor: "pointer" }}
             >
               <img
-                src={cityImages[city.name]}
+                src={cityImages[city.name] || "/cities/default.jpeg"}
                 alt={city.name}
               />
+
               <h2>{city.name}</h2>
             </div>
           ))}

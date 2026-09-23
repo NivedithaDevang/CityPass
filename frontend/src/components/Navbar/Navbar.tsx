@@ -21,42 +21,38 @@ function Navbar() {
   const cityDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (searchParams.get("login") === "true") {
-      setShowAuth(true);
-    }
-  }, [searchParams]);
+  const fetchCities = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/v1/cities`);
 
-    // Fetch cities
-  useEffect(() => {
-    const fetchCities = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/v1/cities`);
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch cities");
-        }
-
-        const data = await response.json();
-
-        console.log("Cities:", data);
-
-        setCities(data.cities);
-
-        // Set first active city as default
-        const firstActiveCity = data.cities.find(
-          (city: City) => city.is_active
-        );
-
-        if (firstActiveCity && !selectedCity) {
-          setSelectedCity(firstActiveCity.name);
-        }
-      } catch (error) {
-        console.error("Error fetching cities:", error);
+      if (!response.ok) {
+        throw new Error("Failed to fetch cities");
       }
-    };
 
-    fetchCities();
-  }, [selectedCity, setSelectedCity]);
+      const data = await response.json();
+
+      console.log("Cities:", data);
+
+      const cityList = data.city || [];
+
+      setCities(cityList);
+
+      // Set first active city as default
+      const firstActiveCity = cityList.find(
+        (city: City) => city.is_active
+      );
+
+      if (firstActiveCity && !selectedCity) {
+        setSelectedCity(firstActiveCity.name);
+      }
+    } catch (error) {
+      console.error("Error fetching cities:", error);
+      setCities([]);
+    }
+  };
+
+  fetchCities();
+}, [selectedCity, setSelectedCity]);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {

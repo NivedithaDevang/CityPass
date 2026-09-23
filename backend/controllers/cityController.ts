@@ -13,7 +13,7 @@ export const getCities = async(
     try {
         const cities = await getAllCities();
         res.status(200).json({
-     message : "unable to fetch cities",
+     message : "Cities fetched succesfully",
 city: cities
         });
 

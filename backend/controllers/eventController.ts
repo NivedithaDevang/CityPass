@@ -7,7 +7,6 @@ import {
     updateEvent as updateEventModel
 } from "../models/eventModel.js";
 import { Request, Response, NextFunction } from "express";
-import { generateEventToken } from "../middleware/tokenMiddleware.js";
 
 
 
@@ -129,13 +128,6 @@ const slug = generateSlug(name);
         status
     }
 );
-        const eventId = Number(result?.insertId ?? 0);
-const token = generateEventToken(res, eventId);
-        res.status(201).json({
-            message: "Event created successfully",
-            token,
-            event_id: result?.insertId
-        });
     } catch (err) {
         next(err);
     }

@@ -69,32 +69,52 @@ function EventSection() {
 
   // Fetch events, categories, and locations from backend
   useEffect(() => {
-    const fetchFilterData = async () => {
-      try {
-        const [eventsRes, catRes, locRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/v1/events`),
-          axios.get(`${API_BASE_URL}/v1/categories`),
-          axios.get(`${API_BASE_URL}/v1/cities`),
-        ]);
+  const fetchFilterData = async () => {
+    try {
+      const [eventsRes, catRes, locRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/v1/events`),
+        axios.get(`${API_BASE_URL}/v1/categories`),
+        axios.get(`${API_BASE_URL}/v1/cities`),
+      ]);
 
-        setEvents(eventsRes.data.events || []);
+      // -----------------------------
+      // EVENTS
+      // -----------------------------
+      setEvents(eventsRes.data?.events || []);
 
-        const categoryNames = (catRes.data.categories as Category[])
-          .map((category) => category.name?.trim())
-          .filter((name): name is string => Boolean(name));
-        setCategories([...new Set(categoryNames)]);
+      // -----------------------------
+      // CATEGORIES
+      // -----------------------------
+      const categoryList = catRes.data?.categories || [];
 
-        const cityNames = (locRes.data.cities as City[])
-          .map((city) => city.name?.trim())
-          .filter((name): name is string => Boolean(name));
-        setLocations([...new Set(cityNames)]);
-      } catch (error) {
-        console.error("Error fetching event and filter data: ", error);
-      }
-    };
+      const categoryNames = (categoryList as Category[])
+        .map((category) => category.name?.trim())
+        .filter((name): name is string => Boolean(name));
 
-    fetchFilterData();
-  }, []);
+      setCategories([...new Set(categoryNames)]);
+
+      // -----------------------------
+      // CITIES
+      // -----------------------------
+      const cityList = locRes.data?.city || [];
+
+      const cityNames = (cityList as City[])
+        .map((city) => city.name?.trim())
+        .filter((name): name is string => Boolean(name));
+
+      setLocations([...new Set(cityNames)]);
+
+    } catch (error) {
+      console.error("Error fetching event and filter data:", error);
+
+      setEvents([]);
+      setCategories([]);
+      setLocations([]);
+    }
+  };
+
+  fetchFilterData();
+}, []);
 
   // Combined Filtering and Sorting
   const processedEvents = useMemo(() => {
