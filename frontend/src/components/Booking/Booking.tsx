@@ -38,8 +38,9 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
   const unitPrice = Number(event.price || 0);
   const totalAmount = unitPrice * ticketQuantity;
 
-  // Step 1: Open the Review Dialog when "Pay" is pressed
+  //Open the Review Dialog when "Pay" is pressed
   const handleOpenReview = () => {
+    //checks whether the user is logged in
     if (!user) {
       if (onRequireAuth) {
         onClose();
@@ -51,12 +52,12 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
     setShowReviewModal(true);
   };
 
-  // Step 2: User clicked "Not Yet"
+  //User clicked "Not Yet", close the review modal
   const handleCancelReview = () => {
     setShowReviewModal(false);
   };
 
-  // Step 3: User clicked "Yes, Confirm" -> Call API & Show Confirmed Modal
+  //User clicked "Yes, Confirm" -> Call API & Show Confirmed Modal
   const handleFinalBookingSubmit = async () => {
     try {
       setIsSubmitting(true);
@@ -74,7 +75,7 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
       const res = await axios.post(`${API_BASE_URL}/v1/bookings`, payload, {
         withCredentials: true,
       });
-
+console.log("Booking data: ", res);
       // Save ID, close the review modal, and open the confirmed popup
       setConfirmedBookingId(res.data?.bookingId || null);
       setShowReviewModal(false);
@@ -97,6 +98,7 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
     }
   };
 
+  //when user clicks on View my bookings
   const handleRedirectToBookings = () => {
     setShowSuccessModal(false);
     onClose();
@@ -106,6 +108,8 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
   return (
     <>
       <div
+      //if isOpen is true then drawer-backdrop-visible
+      //if not drawer-backdrop
         className={`drawer-backdrop ${isOpen ? "visible" : ""}`}
         onClick={() => {
           if (!showReviewModal && !showSuccessModal) onClose();
@@ -124,6 +128,7 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
         </div>
 
         <div className="drawer-body">
+          {/* Show booking error only when bookingError contains a message */}
           {bookingError && <div className="drawer-error">{bookingError}</div>}
 
           <div className="drawer-section">
@@ -144,6 +149,8 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
             </div>
 
             <div className="counter-btn-group">
+ {/* Makes sure the ticket quantity doesnt go below 1 */}
+
               <button
                 type="button"
                 className="counter-btn"
@@ -153,6 +160,8 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
                 <FaMinus />
               </button>
               <span className="counter-val">{ticketQuantity}</span>
+                {/* Makes sure the ticket quantity doesnt go above 10 */}
+
               <button
                 type="button"
                 className="counter-btn"

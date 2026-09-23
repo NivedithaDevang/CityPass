@@ -17,6 +17,7 @@ export const getBookings = async (req: Request, res: Response, next: NextFunctio
 
 export const addBooking = async (req: Request, res: Response, next: NextFunction) => {
   try {
+        //destructuring in stead of declaring one by one
     const {
       user_id,
       pass_id,
@@ -27,8 +28,12 @@ export const addBooking = async (req: Request, res: Response, next: NextFunction
       status = "CONFIRMED",
     } = req.body;
 
-    // Check token user from middleware, fallback to body
-    const activeUserId = (req as any).user?.id ?? user_id;
+//If req.user exists, get its id. Otherwise return undefined instead of throwing an error.
+// Get the logged-in user's ID from the JWT authentication middleware.
+    const activeUserId = req.user?.id;
+    
+    // Use pass_id when provided.
+// If pass_id is not available, use event_id as a fallback.
     const activePassId = pass_id ?? event_id;
 
     if (!activeUserId) {

@@ -13,7 +13,8 @@ export const getCategories = async(
     try {
         const categories = await getAllCategory();
         res.status(200).json({
-            categories
+            message: "Categories fetched succesfully",
+            categories: categories
         });
 
     }
@@ -40,7 +41,9 @@ export const getCategory = async(
             });
         }
         res.status(200).json({
-            category
+    message : "Categories fetched succesfully",
+    categories: category
+
         });
     }
     catch(error){

@@ -22,14 +22,19 @@ const generateSlug = (name: string): string => {
 };
 
 //getting event by slug
+// Controller to fetch a single event using its slug.
 export const getEventDetailsBySlug = async (
     req: Request,
     res: Response,
     next: NextFunction
 ) => {
     try {
+        // Get the event slug from the URL parameters.
         const { slug } = req.params;
 
+
+// Validate that the slug is a string.
+// Stop execution if an invalid slug is provided.
         if (typeof slug !== "string") {
             return res.status(400).json({
                 message: "A valid event slug is required"

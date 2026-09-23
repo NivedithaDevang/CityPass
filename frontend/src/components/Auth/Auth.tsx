@@ -5,11 +5,13 @@ import { API_BASE_URL } from "../../config/config";
 import type { User } from "../../types/auth";
 import { useUser } from "../../context/UserContext";
 import { getPasswordErrors } from "../../config/passwordCheck";
+//This tells TypeScript what your successful API response looks like.
 interface ApiResponse {
   message: string;
   user?: User;
 }
 
+//This describes possible error responses from your backend.
 interface ApiErrorResponse {
   message?: string;
   error?: string;
@@ -31,6 +33,8 @@ function Auth({ onClose, onSuccess, initialLogin = false }: AuthProps) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRegisteredSuccess, setIsRegisteredSuccess] = useState(false);
+
+  //Only validate the password when we're in registration mode.
   const passwordErrors = !isLogin ? getPasswordErrors(password) : [];
 
 

@@ -66,7 +66,7 @@ function EventDetails() {
   };
 
   const handleBookTicketsClick = () => {
-    // If not logged in, trigger your existing Auth modal
+    // If not logged in, trigger existing Auth modal
     if (!user) {
       setShowAuthModal(true);
       return;
@@ -75,6 +75,7 @@ function EventDetails() {
     setIsDrawerOpen(true);
   };
 
+  // "_" means the User parameter is received but not used in this function.
   const handleAuthSuccess = (_authenticatedUser: User) => {
     // Closes Auth modal and opens booking drawer
     setShowAuthModal(false);
@@ -159,7 +160,10 @@ function EventDetails() {
                   {event.description || "No description provided for this event."}
                 </p>
               </div>
-
+              
+              {/* This card opens the Terms & Conditions modal when clicked.
+                  role="button" makes the div accessible as a button.
+                  tabIndex={0} allows the div to receive keyboard focus. */}
               <div
                 className="terms-action-card"
                 onClick={() => setShowTerms(true)}
