@@ -19,7 +19,7 @@ const TAB_SLUGS = {
   "host-an-event": "organiser_request",
   deactivate: "delete",
 } as const;
-
+// Get only the valid keys from TAB_SLUGS.
 type SlugKey = keyof typeof TAB_SLUGS;
 type ActiveTab = (typeof TAB_SLUGS)[SlugKey];
 
@@ -28,12 +28,18 @@ function SettingsView() {
   const navigate = useNavigate();
 
   // Resolve current active tab from the URL slug
+  // Check whether the URL slug exists in TAB_SLUGS.
+  // If valid:
+  //     use the corresponding tab ID.
+  // If invalid/missing:
+  //     default to "profile".
   const activeTab: ActiveTab =
     tabSlug && tabSlug in TAB_SLUGS
       ? TAB_SLUGS[tabSlug as SlugKey]
       : "profile";
 
   // Redirect to canonical /settings/profile if the slug is missing or invalid
+  //if someone types settings/hi, it redirects to settings/profile
   useEffect(() => {
     if (!tabSlug || !(tabSlug in TAB_SLUGS)) {
       navigate("/settings/profile", { replace: true });
@@ -102,6 +108,8 @@ function SettingsView() {
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = event.target;
+    // Keep all existing organisation values,
+  // but update only the field that changed.
     setOrg((currentOrg) => ({ ...currentOrg, [name]: value }));
   };
 

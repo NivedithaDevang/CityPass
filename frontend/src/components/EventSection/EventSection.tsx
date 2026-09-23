@@ -15,7 +15,7 @@ import { createEventSlug } from "../../config/slug";
 
 function EventSection() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams(); //useSearchParams() is used to read the parameters
   const { selectedCity, setSelectedCity } = useCity();
 
   const categoryIcons: Record<string, IconType> = {
@@ -46,6 +46,7 @@ function EventSection() {
   const [events, setEvents] = useState<Events[]>([]);
 
   // Filter & Sort States
+    // "ALL" means no category filter is applied.
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [selectedLocation, setSelectedLocation] = useState<string>("ALL");
   const [sortBy, setSortBy] = useState<string>("date_asc");
@@ -54,16 +55,20 @@ function EventSection() {
   const [categories, setCategories] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
 
-  // 1. Sync city from URL search params into dropdown and context
+  // Sync city from URL search params into dropdown and context
+  // Ex: /events?city=Bangalore
+    // cityParam = "Bangalore"
   useEffect(() => {
     const cityParam = searchParams.get("city");
     if (cityParam) {
+    // Update the location dropdown
       setSelectedLocation(cityParam);
       if (setSelectedCity) {
         setSelectedCity(cityParam);
       }
     }
-  }, [searchParams, setSelectedCity]);
+  }, [searchParams, setSelectedCity]);   // Run this effect when searchParams or setSelectedCity changes.
+
 
   const hasActiveFilters =
     search.trim() !== "" ||
@@ -74,7 +79,7 @@ function EventSection() {
   const handleLocationChange = (loc: string) => {
     setSelectedLocation(loc);
     if (loc === "ALL") {
-      searchParams.delete("city");
+      searchParams.delete("city"); //delete city from the url
       setSearchParams(searchParams);
     } else {
       setSearchParams({ city: loc });
@@ -95,6 +100,7 @@ function EventSection() {
     const fetchFilterData = async () => {
       try {
         const [eventsRes, catRes, locRes] = await Promise.all([
+        // Promise.all() waits until ALL three requests finish.
           axios.get(`${API_BASE_URL}/v1/events`),
           axios.get(`${API_BASE_URL}/v1/categories`),
           axios.get(`${API_BASE_URL}/v1/cities`),
@@ -105,6 +111,8 @@ function EventSection() {
         const categoryNames = (catRes.data.categories as Category[])
           .map((category) => category.name?.trim())
           .filter((name): name is string => Boolean(name));
+          // Remove duplicate city names
+        // and store them in the locations state.
         setCategories([...new Set(categoryNames)]);
 
         const cityNames = (locRes.data.cities as City[])
@@ -120,11 +128,18 @@ function EventSection() {
   }, []);
 
   // Combined Filtering and Sorting
+  // useMemo calculates the final list of events to display.
   const processedEvents = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
     const filtered = events.filter((event) => {
       // 1. Global Navbar City
+        // An event matches the global city when:
+      // 1. No city is selected
+      // OR
+      // 2. "All Locations" is selected
+      // OR
+      // 3. Event location matches selected city
       const matchesGlobalCity =
         !selectedCity ||
         selectedCity === ALL_LOCATIONS ||
@@ -132,7 +147,7 @@ function EventSection() {
 
       if (!matchesGlobalCity) return false;
 
-      // 2. Specific Location Filter
+      // Specific Location Filter
       if (
         selectedLocation !== "ALL" &&
         event.location?.trim().toLowerCase() !== selectedLocation.trim().toLowerCase()
@@ -140,7 +155,7 @@ function EventSection() {
         return false;
       }
 
-      // 3. Category Filter
+      // Category Filter
       if (
         selectedCategory !== "ALL" &&
         event.category_name?.trim().toLowerCase() !== selectedCategory.trim().toLowerCase()
@@ -148,28 +163,30 @@ function EventSection() {
         return false;
       }
 
-      // 4. Text Search
+      // Text Search
       if (!normalizedSearch) return true;
       return [event.name, event.category_name, event.location]
         .filter(Boolean)
+        // some() returns true if at least one value matches.
         .some((value) => value!.toLowerCase().includes(normalizedSearch));
     });
 
     return filtered.sort((a, b) => {
       const priceA = Number(a.price) || 0;
       const priceB = Number(b.price) || 0;
+      // If an event has no date,use Infinity so it goes to the end when sorting ascending.
       const timeA = a.event_date ? new Date(a.event_date).getTime() : Infinity;
       const timeB = b.event_date ? new Date(b.event_date).getTime() : Infinity;
 
       switch (sortBy) {
         case "date_asc":
-          return timeA - timeB;
+          return timeA - timeB;   // Earlier timestamp comes first.
         case "date_desc":
-          return timeB - timeA;
+          return timeB - timeA;             // Later timestamp comes first.
         case "price_asc":
-          return priceA - priceB;
+          return priceA - priceB;             // Smaller price comes first.
         case "price_desc":
-          return priceB - priceA;
+          return priceB - priceA;            // Higher price comes first.
         default:
           return 0;
       }
@@ -182,7 +199,7 @@ function EventSection() {
     return new Intl.DateTimeFormat("en-US", {
       dateStyle: "medium",
     }).format(new Date(eventDate));
-  };
+  };       // Example: "Sep 25, 2026"
 
   const handleCardClick = (event: Events) => {
     navigate(`/events/${createEventSlug(event.name)}`);
@@ -195,7 +212,7 @@ function EventSection() {
 
       <div className="section-heading">
         <p>THE LINEUP</p>
-        <h2>The City’s Best Plans</h2>
+        <h2>The City's Best Plans</h2>
         <span>Limited passes, standing pits, and reserved seats up for grabs.</span>
       </div>
 
@@ -216,7 +233,9 @@ function EventSection() {
             <select
               className="event-filter-select"
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={(e) => setSelectedCategory(e.target.value)} 
+              // Update category when user selects an option.
+
             >
               <option value="ALL">All Categories</option>
               {categories.map((cat) => (

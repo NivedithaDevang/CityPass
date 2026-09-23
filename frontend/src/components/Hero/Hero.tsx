@@ -79,7 +79,7 @@ function Hero() {
           </div>
 
           <h1>
-            Discover what’s <br />
+            Discover what's <br />
             <span className="hero-gradient-text">happening around you.</span>
           </h1>
 
