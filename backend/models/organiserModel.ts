@@ -1,7 +1,10 @@
 import { db } from "../config/database.js";
 
-//getting all organizers
+// Getting all organizers
+export const getAllOrganizers = async () => {
+    const [results] = await db.query(
+        "SELECT * FROM organizers"
+    );
 
-export const getAllOrganizers = (callback: any) => {
-    db.query("SELECT * from organizers", callback);
+    return results;
 };
