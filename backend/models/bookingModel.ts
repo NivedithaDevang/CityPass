@@ -60,3 +60,24 @@ export const createBooking = async (book: Booking) => {
 
   return results;
 };
+
+
+export const updateBookingStatus = async (
+  bookingId: number,
+  userId: number,
+  status: string
+) => {
+  const query = `
+    UPDATE bookings 
+    SET status = ? 
+    WHERE id = ? AND user_id = ?
+  `;
+
+  const [result]: any = await db.query(query, [status, bookingId, userId]);
+
+  if (result.affectedRows === 0) {
+    throw new Error("Booking not found or you are not authorized to modify it.");
+  }
+
+  return result;
+};

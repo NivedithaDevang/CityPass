@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { getAllBookings, createBooking } from "../models/bookingModel.js";
+import { getAllBookings, createBooking, updateBookingStatus } from "../models/bookingModel.js";
 
 export const getBookings = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -17,7 +17,6 @@ export const getBookings = async (req: Request, res: Response, next: NextFunctio
 
 export const addBooking = async (req: Request, res: Response, next: NextFunction) => {
   try {
-        //destructuring in stead of declaring one by one
     const {
       user_id,
       pass_id,
@@ -28,12 +27,9 @@ export const addBooking = async (req: Request, res: Response, next: NextFunction
       status = "CONFIRMED",
     } = req.body;
 
-//If req.user exists, get its id. Otherwise return undefined instead of throwing an error.
-// Get the logged-in user's ID from the JWT authentication middleware.
-    const activeUserId = req.user?.id;
-    
-    // Use pass_id when provided.
-// If pass_id is not available, use event_id as a fallback.
+    // Check all potential sources for the user's ID:
+    const activeUserId = req.body.user_id;
+
     const activePassId = pass_id ?? event_id;
 
     if (!activeUserId) {
@@ -66,5 +62,30 @@ export const addBooking = async (req: Request, res: Response, next: NextFunction
     res.status(500).json({
       message: err.sqlMessage || err.message || "Failed to create booking",
     });
+  }
+};
+
+
+export const cancelBooking = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const activeUserId = 
+    req.body.user_id;
+
+    if (!activeUserId) {
+      return res.status(401).json({ message: "Please log in to manage your bookings." });
+    }
+
+    
+    await updateBookingStatus(Number(id), Number(activeUserId), "CANCELLED");
+
+    res.status(200).json({
+      message: "Booking cancelled successfully",
+      bookingId: Number(id),
+      status: "CANCELLED",
+    });
+  } catch (err: any) {
+    console.error("Error cancelling booking:", err);
+    res.status(500).json({ message: err.sqlMessage || err.message || "Failed to cancel booking" });
   }
 };

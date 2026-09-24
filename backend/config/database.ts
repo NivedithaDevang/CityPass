@@ -3,14 +3,12 @@ import { database } from "./env.js";
 
 export const db = mysql.createPool(database);
 
-db.getConnection()
-  .then((connection) => {
+export async function connectDB() {
+  try {
+    const connection = await db.getConnection();
     console.log("Database connection established");
-    //added connection.release()
     connection.release();
-  })
-  .catch((error) => {
+  } catch (error) {
     console.error("Failed to establish database connection:", error);
-  });
-
-export default db;
+  }
+}

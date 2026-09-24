@@ -1,15 +1,15 @@
 import {
     getAllUsers,
     getUserById,
-    createUser,
     updateUser as updateUserModel,
     updatePassword
 } from "../models/userModel.js";
 import { NextFunction, Request, Response } from "express";
-import { ResultSetHeader } from "mysql2";
+import { ResultSetHeader, RowDataPacket } from "mysql2";
 import bcrypt from "bcrypt";
 import { saltRounds } from "../config/env.js";
 import { db } from "../config/database.js";
+import { generateUserToken } from "../middleware/tokenMiddleware.js";
 
 //getting all users only if role is admin
 
@@ -99,7 +99,7 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
 
         res.status(200).json({
             message: "User updated successfully",
-            userId
+            user: result
         });
     } catch (err) {
         next(err);
@@ -135,23 +135,46 @@ export const updateProfile = async (
             });
         }
 
-        const sql = `
-            UPDATE users
-            SET name = ?, email = ?, phone = ?, dob = ?, gender = ?
-            WHERE id = ?
-        `;
+// Check if a profile image was uploaded and create its relative URL
+        const profileImage = req.file ? `/uploads/avatars/${req.file.filename}` : undefined;
 
-        await db.query<ResultSetHeader>(
-            sql,
-            [
+// Build the UPDATE query based on whether a new profile image was uploaded
+        let sql: string;
+        let params: any[];
+
+// If a new profile image is uploaded, update the profile image along with other details
+        if (profileImage) {
+            sql = `
+                UPDATE users
+                SET name = ?, email = ?, phone = ?, dob = ?, gender = ?, profile_image = ?
+                WHERE id = ?
+            `;
+            params = [
+                name,
+                email,
+                phone || null,
+                dob || null,
+                gender || null,
+                profileImage,
+                userId
+            ];
+        } else {
+            sql = `
+                UPDATE users
+                SET name = ?, email = ?, phone = ?, dob = ?, gender = ?
+                WHERE id = ?
+            `;
+            params = [
                 name,
                 email,
                 phone || null,
                 dob || null,
                 gender || null,
                 userId
-            ]
-        );
+            ];
+        }
+
+        await db.query<ResultSetHeader>(sql, params);
 
         // Fetch the user after updating
         const updatedUser = await getUserById(userId);
@@ -167,9 +190,10 @@ export const updateProfile = async (
             user: updatedUser
         });
 
-    } catch (err: any) {
-
-        if (err.code === "ER_DUP_ENTRY") {
+    } catch (err: unknown) {
+        if (typeof err === "object" && err !== null && 
+            "code" in err &&
+            err.code === "ER_DUP_ENTRY") {
             return res.status(409).json({
                 message: "Email already exists"
             });
@@ -178,6 +202,8 @@ export const updateProfile = async (
         next(err);
     }
 };
+
+
 //updating password
 export const changePassword = async(req: Request, res: Response, next: NextFunction) => {
     try{
@@ -219,7 +245,7 @@ export const changePassword = async(req: Request, res: Response, next: NextFunct
     }
 }
 
-// Reactivate logged-in user's account
+// Reactivate user's account
 export const reactivateAccount = async (
     req: Request,
     res: Response,
@@ -234,7 +260,12 @@ export const reactivateAccount = async (
             });
         }
 
-        const sql = ` UPDATE users SET status = 'ACTIVE'  WHERE id = ? `;
+        const sql = `
+            UPDATE users 
+            SET status = 'ACTIVE', 
+                deactivated_at = NULL 
+            WHERE id = ?
+        `;
 
         const [result] = await db.query<ResultSetHeader>(
             sql,
@@ -247,7 +278,7 @@ export const reactivateAccount = async (
             });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Account reactivated successfully"
         });
 
@@ -265,6 +296,7 @@ export const deactivateAccount = async (
 ) => {
     try {
         const userId = Number(req.user?.id);
+        const { reason } = req.body;
 
         if (!Number.isInteger(userId) || userId <= 0) {
             return res.status(401).json({
@@ -272,11 +304,27 @@ export const deactivateAccount = async (
             });
         }
 
-        const sql = `UPDATE users SET status = 'INACTIVE' WHERE id = ? `;
+        if (!reason || typeof reason !== "string" || !reason.trim()) {
+            return res.status(400).json({
+                message: "A deactivation reason is required"
+            });
+        }
+
+        const Reason = reason.trim().slice(0, 500);
+
+        // Update status, timestamp, reason, and increment token_version to invalidate tokens
+        const sql = `
+            UPDATE users 
+            SET status = 'INACTIVE', 
+                deactivated_at = NOW(), 
+                deactivation_reason = ?,
+                token_version = token_version + 1
+            WHERE id = ?
+        `;
 
         const [result] = await db.query<ResultSetHeader>(
             sql,
-            [userId]
+            [Reason, userId]
         );
 
         if (result.affectedRows === 0) {
@@ -285,7 +333,18 @@ export const deactivateAccount = async (
             });
         }
 
-        res.status(200).json({
+        // Clear auth cookies immediately
+        const cookieOptions = {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax" as const,
+            path: "/"
+        };
+
+        res.clearCookie("userToken", cookieOptions);
+        res.clearCookie("token", cookieOptions);
+
+        return res.status(200).json({
             message: "Account deactivated successfully"
         });
 
@@ -326,4 +385,90 @@ export const getProfile = async (req: Request, res: Response) => {
             message: "Unable to fetch profile"
         });
     }
+};
+
+export const reactivateAndLogin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { userId } = req.body;
+    const parsedId = Number(userId);
+
+    if (!Number.isInteger(parsedId) || parsedId <= 0) {
+      return res.status(400).json({
+        message: "A valid user id is required",
+      });
+    }
+
+    // Fetch user details
+    const [rows]: any = await db.query(
+      `SELECT id, email, role, token_version FROM users WHERE id = ?`,
+      [parsedId]
+    );
+
+    const user = rows[0];
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+// Reactivation should only happen for an inactive account.
+        if (user.status !== "INACTIVE") {
+            return res.status(400).json({
+                message: "Account is already active"
+            });
+        }
+
+    // Set status to ACTIVE, clear deactivated_at, and update token_version
+    await db.query(
+      `UPDATE users 
+       SET status = 'ACTIVE', 
+           deactivated_at = NULL, 
+           token_version = token_version + 1 
+       WHERE id = ?`,
+      [parsedId]
+    );
+
+    // Fetch the latest token_version after the update.
+const [updatedRows] = await db.query<
+    (RowDataPacket & {
+        token_version: number;
+    })[]
+>(
+    `
+        SELECT token_version
+        FROM users
+        WHERE id = ?
+    `,
+    [parsedId]
+);
+
+const updatedTokenVersion = updatedRows[0]?.token_version;
+
+if (updatedTokenVersion === undefined) {
+    return res.status(404).json({
+        message: "Unable to reactivate account"
+    });
+}
+
+    // Generate cookie
+    generateUserToken(user.id, res, {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      token_version: (user.token_version ?? 0) + 1,
+    });
+
+    return res.status(200).json({
+      message: "Account reactivated and logged in successfully",
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        status: "ACTIVE",
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
 };
