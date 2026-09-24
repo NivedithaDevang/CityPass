@@ -105,14 +105,10 @@ function EventSection() {
         axios.get(`${API_BASE_URL}/v1/cities`),
       ]);
 
-      // -----------------------------
       // EVENTS
-      // -----------------------------
       setEvents(eventsRes.data?.events || []);
 
-      // -----------------------------
       // CATEGORIES
-      // -----------------------------
       const categoryList = catRes.data?.categories || [];
 
       const categoryNames = (categoryList as Category[])
@@ -121,9 +117,7 @@ function EventSection() {
 
       setCategories([...new Set(categoryNames)]);
 
-      // -----------------------------
       // CITIES
-      // -----------------------------
       const cityList = locRes.data?.city || [];
 
       const cityNames = (cityList as City[])

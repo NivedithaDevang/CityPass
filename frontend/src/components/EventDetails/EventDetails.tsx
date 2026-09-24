@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import { type Events, type User } from "../../types/auth";
-import { useUser } from "../../context/UserContext"; // Uses your existing UserContext
+import { useUser } from "../../context/UserContext";
 import Navbar from "../../components/Navbar/Navbar";
 import { Footer } from "../../components/Footer/Footer";
 import {
@@ -15,16 +15,16 @@ import {
   FaTicketAlt,
 } from "react-icons/fa";
 import { createEventSlug } from "../../config/slug";
-import { TermsModal } from "../Terms/Terms";
+import { TermsModal } from "../Terms/EventTerms";
 import { OrganiserDetails } from "../OrganiserCard/OrganiserCard";
 import { Booking } from "../Booking/Booking";
-import Auth from "../Auth/Auth"; // Imports your existing Auth component
+import Auth from "../Auth/Auth";
 import "./EventDetails.css";
 
 function EventDetails() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { user } = useUser(); // Reads user directly from context
+  const { user } = useUser();
 
   const [event, setEvent] = useState<Events | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -66,18 +66,14 @@ function EventDetails() {
   };
 
   const handleBookTicketsClick = () => {
-    // If not logged in, trigger existing Auth modal
     if (!user) {
       setShowAuthModal(true);
       return;
     }
-    // If logged in, open the slide-out booking drawer
-    setIsDrawerOpen(true);
+    setIsDrawerOpen((prev) => !prev);
   };
 
-  // "_" means the User parameter is received but not used in this function.
   const handleAuthSuccess = (_authenticatedUser: User) => {
-    // Closes Auth modal and opens booking drawer
     setShowAuthModal(false);
     setIsDrawerOpen(true);
   };
@@ -111,7 +107,7 @@ function EventDetails() {
   }
 
   return (
-    <div className={`details-outer-container ${isDrawerOpen ? "drawer-active" : ""}`}>
+    <div className="details-outer-container">
       <Navbar />
 
       <div className="details-page-bg">
@@ -160,10 +156,7 @@ function EventDetails() {
                   {event.description || "No description provided for this event."}
                 </p>
               </div>
-              
-              {/* This card opens the Terms & Conditions modal when clicked.
-                  role="button" makes the div accessible as a button.
-                  tabIndex={0} allows the div to receive keyboard focus. */}
+
               <div
                 className="terms-action-card"
                 onClick={() => setShowTerms(true)}
@@ -186,7 +179,7 @@ function EventDetails() {
               </div>
             </section>
 
-            {/* Sticky Booking Card */}
+            {/* Sticky Booking Card with Inline Checkout Form */}
             <aside className="details-sidebar">
               <div className="booking-card">
                 <div className="booking-card-header">
@@ -206,13 +199,22 @@ function EventDetails() {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  className="book-now-button"
-                  onClick={handleBookTicketsClick}
-                >
-                  Book Tickets
-                </button>
+                {!isDrawerOpen ? (
+                  <button
+                    type="button"
+                    className="book-now-button"
+                    onClick={handleBookTicketsClick}
+                  >
+                    Book Tickets
+                  </button>
+                ) : (
+                  <Booking
+                    isOpen={isDrawerOpen}
+                    onClose={() => setIsDrawerOpen(false)}
+                    event={event}
+                    onRequireAuth={() => setShowAuthModal(true)}
+                  />
+                )}
 
                 <p className="booking-guarantee">
                   Official verified ticket - 100% Secure Checkout
@@ -223,14 +225,6 @@ function EventDetails() {
         </main>
       </div>
 
-      {/* Slide-out Booking Drawer */}
-      <Booking
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        event={event}
-      />
-
-      {/* Your Existing Auth Component */}
       {showAuthModal && (
         <Auth
           initialLogin={false}
