@@ -51,6 +51,12 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
                 message: "Email already exists"
             });
         }
+        else{
+          return res.status(500).json({
+            message: "Unable to register",
+          })
+        }
+        
         next(err);
     }
 };
@@ -124,6 +130,9 @@ export const logoutUser = async (req: Request, res: Response) => {
         }
     } catch (err) {
         console.log("logout error: ", err);
+        res.status(500).json({
+          message: "Unable to logout",
+        })
     }
 
     const cookieOptions = {

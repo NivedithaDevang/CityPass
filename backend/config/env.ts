@@ -9,7 +9,7 @@ export const database = {
   port: Number(process.env.DB_PORT || 3306),
 };
 
-export const REACT_PORT = process.env.PORT;
+export const SERVER_PORT = process.env.PORT || 5000;
 
 export const saltRounds = 10;
 
