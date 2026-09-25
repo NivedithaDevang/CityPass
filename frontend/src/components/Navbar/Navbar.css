@@ -13,6 +13,31 @@
   left: 0;
   z-index: 1000;
 }
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+}
+
+.navbar-logo-icon {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  border-radius: 8px; /* Smooth corners matching the modern aesthetic */
+  transition: transform 0.2s ease;
+}
+
+.navbar-brand:hover .navbar-logo-icon {
+  transform: scale(1.05);
+}
+
+.navbar-brand .logo {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
 
 body {
   padding-top: 72px;

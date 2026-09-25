@@ -12,7 +12,7 @@ import axios from "axios";
 import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../config/config";
 import { getNumberErrors } from "../../config/numberCheck";
-import { getPasswordErrors } from "../../config/passwordCheck";
+import { getPasswordErrors } from "../../config/passwordRules";
 import { Terms } from "../Terms/DeactivationTerms";
 import { Terms as OrganiserTerms } from "../Terms/OrganiserTerms";
 

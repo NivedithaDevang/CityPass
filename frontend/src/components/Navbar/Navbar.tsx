@@ -9,6 +9,7 @@ import { type City } from "../../types/auth";
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
 import { FaUserAlt } from "react-icons/fa";
 import { useNavigate, useSearchParams, NavLink } from "react-router-dom";
+import cityPassLogo from "../../../public/logo.png";
 function Navbar() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -16,43 +17,32 @@ function Navbar() {
   const [showAuth, setShowAuth] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [cities, setCities] = useState<City[]>([]);
-  const {selectedCity, setSelectedCity} = useCity();
+  const { selectedCity, setSelectedCity } = useCity();
   const [isCityMenuOpen, setIsCityMenuOpen] = useState<boolean>(false);
   const cityDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-  const fetchCities = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/v1/cities`);
+    const fetchCities = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/v1/cities`);
+        if (!response.ok) throw new Error("Failed to fetch cities");
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch cities");
+        const data = await response.json();
+        const cityList = data.city || [];
+        setCities(cityList);
+
+        const firstActiveCity = cityList.find((city: City) => city.is_active);
+        if (firstActiveCity && !selectedCity) {
+          setSelectedCity(firstActiveCity.name);
+        }
+      } catch (error) {
+        console.error("Error fetching cities:", error);
+        setCities([]);
       }
+    };
 
-      const data = await response.json();
-
-      console.log("Cities:", data);
-
-      const cityList = data.city || [];
-
-      setCities(cityList);
-
-      // Set first active city as default
-      const firstActiveCity = cityList.find(
-        (city: City) => city.is_active
-      );
-
-      if (firstActiveCity && !selectedCity) {
-        setSelectedCity(firstActiveCity.name);
-      }
-    } catch (error) {
-      console.error("Error fetching cities:", error);
-      setCities([]);
-    }
-  };
-
-  fetchCities();
-}, [selectedCity, setSelectedCity]);
+    fetchCities();
+  }, [selectedCity, setSelectedCity]);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -68,8 +58,6 @@ function Navbar() {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  
-  
   const handleProfileClick = () => {
     if (!user) {
       setShowAuth(true);
@@ -85,7 +73,7 @@ function Navbar() {
         credentials: "include",
       });
     } finally {
-clearUser();
+      clearUser();
       setIsSidebarOpen(false);
       navigate("/");
     }
@@ -95,9 +83,21 @@ clearUser();
     <>
       <nav className="navbar">
         <div className="navbar-left">
-<h2 className="logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-  CityPass
-</h2>
+          {/* Logo with Icon */}
+          <div
+            className="navbar-brand"
+            onClick={() => navigate("/")}
+            style={{ cursor: "pointer" }}
+          >
+            <img
+              src={cityPassLogo}
+              alt="CityPass Icon"
+              className="navbar-logo-icon"
+            />
+            <h2 className="logo">CityPass</h2>
+          </div>
+
+          {/* Location Selector */}
           <div className="location city-dropdown" ref={cityDropdownRef}>
             <MapPin size={18} />
 
@@ -130,31 +130,37 @@ clearUser();
                   }}
                 >
                   <span>{ALL_LOCATIONS}</span>
-                  {selectedCity === ALL_LOCATIONS && <span className="city-check">&#10003;</span>}
+                  {selectedCity === ALL_LOCATIONS && (
+                    <span className="city-check">&#10003;</span>
+                  )}
                 </button>
 
-                {cities.filter((city) => city.is_active).map((city) => (
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={selectedCity === city.name}
-                    className={`city-option ${
-                      selectedCity === city.name ? "selected" : ""
-                    }`}
-                    key={city.id}
-                    onClick={() => {
-                      setSelectedCity(city.name);
-                      setIsCityMenuOpen(false);
-                    }}
-                  >
-                    <span>{city.name}</span>
-                    {selectedCity === city.name && <span className="city-check">&#10003;</span>}
-                  </button>
-                ))}
+                {cities
+                  .filter((city) => city.is_active)
+                  .map((city) => (
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={selectedCity === city.name}
+                      className={`city-option ${
+                        selectedCity === city.name ? "selected" : ""
+                      }`}
+                      key={city.id}
+                      onClick={() => {
+                        setSelectedCity(city.name);
+                        setIsCityMenuOpen(false);
+                      }}
+                    >
+                      <span>{city.name}</span>
+                      {selectedCity === city.name && (
+                        <span className="city-check">&#10003;</span>
+                      )}
+                    </button>
+                  ))}
               </div>
             )}
           </div>
-</div>
+        </div>
 
         <div className="navbar-links">
           <NavLink
@@ -172,41 +178,40 @@ clearUser();
             Events
           </NavLink>
 
- <NavLink
+          <NavLink
             to="/activities"
-            onClick={() => navigate("/activities")}
             className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
           >
             Activities
           </NavLink>
-<NavLink
+
+          <NavLink
             to="/concerts"
             className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
           >
             Concerts
           </NavLink>
-          
         </div>
 
         <div className="profile-area">
-          
-          <button className="profile" onClick={handleProfileClick} aria-label="Open profile">
+          <button
+            className="profile"
+            onClick={handleProfileClick}
+            aria-label="Open profile"
+          >
             <FaUserAlt size={20} />
           </button>
-          
         </div>
-        
 
         {/* Auth Modal */}
         {showAuth && (
           <Auth
             onClose={() => setShowAuth(false)}
             initialLogin={searchParams.get("login") === "true"}
-            onSuccess={(loggedInUser) => {
-              setUser(loggedInUser);
+            onSuccess={(authenticatedUser) => {
+              setUser(authenticatedUser);
               setShowAuth(false);
               setIsSidebarOpen(true);
-             
             }}
           />
         )}

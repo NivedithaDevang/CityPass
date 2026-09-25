@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import "./Events.css";
@@ -16,6 +16,8 @@ import { createEventSlug } from "../../config/slug";
 
 function EventSection() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { selectedCity, setSelectedCity } = useCity();
 
   const categoryIcons: Record<string, IconType> = {
     Music: FaMicrophone,
@@ -29,7 +31,6 @@ function EventSection() {
 
   const getCategoryIcon = (categoryName?: string | null) => {
     const normalizedCategory = categoryName?.toLowerCase() || "";
-
     if (normalizedCategory.includes("music")) return categoryIcons.Music;
     if (normalizedCategory.includes("sport")) return categoryIcons.Sports;
     if (normalizedCategory.includes("comedy")) return categoryIcons.Comedy;
@@ -37,22 +38,39 @@ function EventSection() {
     if (normalizedCategory.includes("art")) return categoryIcons.Art;
     if (normalizedCategory.includes("adventure")) return categoryIcons.Adventure;
     if (normalizedCategory.includes("entertainment")) return categoryIcons.Entertainment;
-
     return null;
   };
 
   const [search, setSearch] = useState("");
   const [events, setEvents] = useState<Events[]>([]);
-  const { selectedCity } = useCity();
 
-  // Filter & Sort States
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [selectedLocation, setSelectedLocation] = useState<string>("ALL");
   const [sortBy, setSortBy] = useState<string>("date_asc");
 
-  // API-driven dropdown options
   const [categories, setCategories] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
+
+  // Sync city & category from URL query parameters
+  useEffect(() => {
+    const cityParam = searchParams.get("city");
+    const categoryParam = searchParams.get("category");
+
+    if (cityParam) {
+      setSelectedLocation(cityParam);
+      if (setSelectedCity) {
+        setSelectedCity(cityParam);
+      }
+    } else {
+      setSelectedLocation("ALL");
+    }
+
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+    } else {
+      setSelectedCategory("ALL");
+    }
+  }, [searchParams, setSelectedCity]);
 
   const hasActiveFilters =
     search.trim() !== "" ||
@@ -60,68 +78,73 @@ function EventSection() {
     selectedLocation !== "ALL" ||
     sortBy !== "date_asc";
 
+  const handleLocationChange = (loc: string) => {
+    setSelectedLocation(loc);
+    const params = new URLSearchParams(searchParams);
+    if (loc === "ALL") {
+      params.delete("city");
+    } else {
+      params.set("city", loc);
+    }
+    setSearchParams(params);
+  };
+
+  const handleCategoryChange = (cat: string) => {
+    setSelectedCategory(cat);
+    const params = new URLSearchParams(searchParams);
+    if (cat === "ALL") {
+      params.delete("category");
+    } else {
+      params.set("category", cat);
+    }
+    setSearchParams(params);
+  };
+
   const handleResetFilters = () => {
     setSearch("");
     setSelectedCategory("ALL");
     setSelectedLocation("ALL");
     setSortBy("date_asc");
+    setSearchParams({});
   };
 
-  // Fetch events, categories, and locations from backend
   useEffect(() => {
-  const fetchFilterData = async () => {
-    try {
-      const [eventsRes, catRes, locRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/v1/events`),
-        axios.get(`${API_BASE_URL}/v1/categories`),
-        axios.get(`${API_BASE_URL}/v1/cities`),
-      ]);
+    const fetchFilterData = async () => {
+      try {
+        const [eventsRes, catRes, locRes] = await Promise.all([
+          axios.get(`${API_BASE_URL}/v1/events`),
+          axios.get(`${API_BASE_URL}/v1/categories`),
+          axios.get(`${API_BASE_URL}/v1/cities`),
+        ]);
 
-      // -----------------------------
-      // EVENTS
-      // -----------------------------
-      setEvents(eventsRes.data?.events || []);
+        setEvents(eventsRes.data?.events || []);
 
-      // -----------------------------
-      // CATEGORIES
-      // -----------------------------
-      const categoryList = catRes.data?.categories || [];
+        const categoryList = catRes.data?.categories || [];
+        const categoryNames = (categoryList as Category[])
+          .map((cat) => cat.name?.trim())
+          .filter((name): name is string => Boolean(name));
+        setCategories([...new Set(categoryNames)]);
 
-      const categoryNames = (categoryList as Category[])
-        .map((category) => category.name?.trim())
-        .filter((name): name is string => Boolean(name));
+        const cityList = locRes.data?.city || [];
+        const cityNames = (cityList as City[])
+          .map((city) => city.name?.trim())
+          .filter((name): name is string => Boolean(name));
+        setLocations([...new Set(cityNames)]);
+      } catch (error) {
+        console.error("Error fetching event and filter data:", error);
+        setEvents([]);
+        setCategories([]);
+        setLocations([]);
+      }
+    };
 
-      setCategories([...new Set(categoryNames)]);
+    fetchFilterData();
+  }, []);
 
-      // -----------------------------
-      // CITIES
-      // -----------------------------
-      const cityList = locRes.data?.city || [];
-
-      const cityNames = (cityList as City[])
-        .map((city) => city.name?.trim())
-        .filter((name): name is string => Boolean(name));
-
-      setLocations([...new Set(cityNames)]);
-
-    } catch (error) {
-      console.error("Error fetching event and filter data:", error);
-
-      setEvents([]);
-      setCategories([]);
-      setLocations([]);
-    }
-  };
-
-  fetchFilterData();
-}, []);
-
-  // Combined Filtering and Sorting
   const processedEvents = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
     const filtered = events.filter((event) => {
-      // 1. Global Navbar City
       const matchesGlobalCity =
         !selectedCity ||
         selectedCity === ALL_LOCATIONS ||
@@ -129,7 +152,6 @@ function EventSection() {
 
       if (!matchesGlobalCity) return false;
 
-      // 2. Specific Location Filter
       if (
         selectedLocation !== "ALL" &&
         event.location?.trim().toLowerCase() !== selectedLocation.trim().toLowerCase()
@@ -137,7 +159,6 @@ function EventSection() {
         return false;
       }
 
-      // 3. Category Filter
       if (
         selectedCategory !== "ALL" &&
         event.category_name?.trim().toLowerCase() !== selectedCategory.trim().toLowerCase()
@@ -145,7 +166,6 @@ function EventSection() {
         return false;
       }
 
-      // 4. Text Search
       if (!normalizedSearch) return true;
       return [event.name, event.category_name, event.location]
         .filter(Boolean)
@@ -175,10 +195,7 @@ function EventSection() {
 
   const formatEventDate = (eventDate?: string) => {
     if (!eventDate) return "Date to be announced";
-
-    return new Intl.DateTimeFormat("en-US", {
-      dateStyle: "medium",
-    }).format(new Date(eventDate));
+    return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(eventDate));
   };
 
   const handleCardClick = (event: Events) => {
@@ -194,7 +211,6 @@ function EventSection() {
       </div>
 
       <section className="event-section">
-        {/* Search & Filter Toolbar */}
         <div className="event-filter-toolbar">
           <form className="event-search" onSubmit={(e) => e.preventDefault()}>
             <input
@@ -207,11 +223,10 @@ function EventSection() {
           </form>
 
           <div className="event-controls">
-            {/* Category Filter from API */}
             <select
               className="event-filter-select"
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={(e) => handleCategoryChange(e.target.value)}
             >
               <option value="ALL">All Categories</option>
               {categories.map((cat) => (
@@ -221,11 +236,10 @@ function EventSection() {
               ))}
             </select>
 
-            {/* Location Filter from API */}
             <select
               className="event-filter-select"
               value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
+              onChange={(e) => handleLocationChange(e.target.value)}
             >
               <option value="ALL">All Locations</option>
               {locations.map((loc) => (
@@ -235,7 +249,6 @@ function EventSection() {
               ))}
             </select>
 
-            {/* Sort Dropdown */}
             <select
               className="event-filter-select sort-select"
               value={sortBy}
@@ -247,7 +260,6 @@ function EventSection() {
               <option value="price_desc">Price: High to Low</option>
             </select>
 
-            {/* Reset Filters */}
             {hasActiveFilters && (
               <button
                 type="button"
@@ -260,7 +272,6 @@ function EventSection() {
           </div>
         </div>
 
-        {/* Events Grid */}
         <div className="event-grid">
           {processedEvents.map((event) => {
             const CategoryIcon = getCategoryIcon(event.category_name);

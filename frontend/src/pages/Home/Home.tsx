@@ -7,20 +7,18 @@ import HostEvent from "../../components/HostEvent/HostEvent";
 import { Footer } from "../../components/Footer/Footer";
 function Home() {
   return (
-    <>
+    <div style={{ position: "relative" }}>
+
       <Navbar />
 
-      <main>
         <Hero />
             <CitySection />
         <CategorySection />
         <EventSection />
         <HostEvent />
         <Footer />
-      </main>
 
-    </>
-  );
+</div>  );
 }
 
 export default Home;
