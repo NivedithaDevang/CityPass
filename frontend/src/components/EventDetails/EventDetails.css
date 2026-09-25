@@ -338,13 +338,6 @@
   margin: 1.1rem 0 0 0;
 }
 
-.details-outer-container {
-  position: relative;
-  width: 100%;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
 /* Shifts the page left on desktop when drawer is active */
 @media (min-width: 1024px) {
   .details-outer-container.drawer-active .details-page-bg {

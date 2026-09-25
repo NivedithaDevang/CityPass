@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import bcrypt from "bcrypt";
-import db from "../config/database.js";
+import { db } from "../config/database.js";
 import { saltRounds } from "../config/env.js";
 import { createUser, findUserByEmail } from "../models/authModel.js";
 import { generateUserToken } from "../middleware/tokenMiddleware.js";
@@ -57,58 +57,59 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
 
 
 //for logging in a user
-export const loginUser = async (
-    req: Request,
-    res: Response
-) => {
-    try {
-        const { email, password } = req.body;
+export const loginUser = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
 
-        const user = await findUserByEmail(email);
+    const user = await findUserByEmail(email);
 
-        if (!user) {
-            return res.status(401).json({
-                message: "Email id does not exist"
-            });
-        }
-
-        const isPasswordValid = await bcrypt.compare(
-            password,
-            user.password
-        );
-
-      if (!isPasswordValid) {
-    return res.status(401).json({
-        message: "Entered password is incorrect"
-    });
-}
-
-        generateUserToken(user.id, res, "1hr");
-
-        //"token" means the cookie name and given the same in the middleware also
-        //token means the jwt value name
-        //httpOnly : true means JS cannot access this cookie
-        //lax means send the cookies in citypass but not when other website tries to access citypass backend
-
-       
-
-        res.status(200).json({
-            message: "Login successful",
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                status: user.status
-            }
-        });
-
-    } catch (err) {
-        console.log("login error: ", err)
-        res.status(500).json({
-            message: "Unable to login"
-        });
+    if (!user) {
+      return res.status(401).json({
+        message: "Email id does not exist",
+      });
     }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        message: "Entered password is incorrect",
+      });
+    }
+
+    // Intercept inactive accounts before issuing credentials
+    if (user.status === "INACTIVE") {
+      return res.status(403).json({
+        code: "ACCOUNT_INACTIVE",
+        message: "Your account is currently deactivated.",
+        userId: user.id,
+      });
+    }
+
+    // Login
+    generateUserToken(user.id, res, {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      token_version: user.token_version ?? 0,
+    });
+
+    res.status(200).json({
+      message: "Login successful",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+      },
+    });
+  } catch (err) {
+    console.log("login error: ", err);
+    res.status(500).json({
+      message: "Unable to login",
+    });
+  }
 };
 
 export const logoutUser = async (req: Request, res: Response) => {
@@ -117,7 +118,7 @@ export const logoutUser = async (req: Request, res: Response) => {
 
         if (userId) {
             await db.query(
-                `update users set token_version = token_version + 1 where id = ?`,
+                `UPDATE users SET token_version = token_version + 1 WHERE id = ?`,
                 [userId]
             );
         }
@@ -125,14 +126,18 @@ export const logoutUser = async (req: Request, res: Response) => {
         console.log("logout error: ", err);
     }
 
-    res.clearCookie("token", {
+    const cookieOptions = {
         httpOnly: true,
-        secure: false,
-        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production", 
+        sameSite: "lax" as const,
         path: "/"
-    });
+    };
 
-    res.status(200).json({
+    // Clear both possible cookie names
+    res.clearCookie("userToken", cookieOptions);
+    res.clearCookie("token", cookieOptions);
+
+    return res.status(200).json({
         message: "Logout successful"
     });
 };

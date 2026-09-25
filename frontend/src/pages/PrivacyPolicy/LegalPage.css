@@ -1,0 +1,137 @@
+/* --- Global Container --- */
+.legal-page {
+  min-height: calc(100vh - 72px);
+  background-color: #f8fafc;
+  padding: 48px 24px 80px;
+  box-sizing: border-box;
+}
+
+.legal-header {
+  max-width: 1080px;
+  margin: 0 auto 36px;
+  padding: 0 4px;
+}
+
+.legal-header h1 {
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+}
+
+.legal-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+/* --- 2-Column Layout --- */
+.legal-layout {
+  display: flex;
+  gap: 36px;
+  max-width: 1080px;
+  margin: 0 auto;
+  align-items: flex-start;
+}
+
+/* --- Sticky Sidebar Navigation --- */
+.legal-sidebar {
+  flex: 0 0 280px;
+  position: sticky;
+  top: 96px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legal-nav-link {
+  display: block;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #475569;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.legal-nav-link:hover {
+  background: #eff0fe;
+  color: #5144ed;
+}
+
+/* --- Main Content Article --- */
+.legal-content {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 40px 44px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+  box-sizing: border-box;
+}
+
+.legal-section {
+  margin-bottom: 36px;
+  scroll-margin-top: 100px; /* Offset for sticky navs */
+}
+
+.legal-section:last-child {
+  margin-bottom: 0;
+}
+
+.legal-section h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 12px;
+  letter-spacing: -0.015em;
+}
+
+.legal-section p {
+  color: #475569;
+  font-size: 14.5px;
+  line-height: 1.7;
+  margin: 0 0 12px;
+}
+
+.legal-section ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.legal-section li {
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+/* --- Mobile Responsiveness --- */
+@media (max-width: 900px) {
+  .legal-page {
+    padding: 28px 16px 60px;
+  }
+
+  .legal-layout {
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .legal-sidebar {
+    position: static;
+    flex: unset;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .legal-content {
+    padding: 28px 20px;
+  }
+}

@@ -5,14 +5,12 @@ import { API_BASE_URL } from "../../config/config";
 import { type Events } from "../../types/auth";
 import { useUser } from "../../context/UserContext";
 import { 
-  FaMapPin, 
-  FaTimes, 
   FaMinus, 
   FaPlus, 
   FaCheckCircle,
   FaQuestionCircle 
 } from "react-icons/fa";
-import "./Booking.css"
+import "./Booking.css";
 
 interface BookingProps {
   isOpen: boolean;
@@ -28,22 +26,19 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
 
-  // 1. Pre-Booking Confirmation Dialog State
+  // Pre-Booking Confirmation Dialog State
   const [showReviewModal, setShowReviewModal] = useState(false);
 
-  // 2. Final Success Confirmation Modal State
+  // Final Success Confirmation Modal State
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [confirmedBookingId, setConfirmedBookingId] = useState<number | null>(null);
 
   const unitPrice = Number(event.price || 0);
   const totalAmount = unitPrice * ticketQuantity;
 
-  //Open the Review Dialog when "Pay" is pressed
   const handleOpenReview = () => {
-    //checks whether the user is logged in
     if (!user) {
       if (onRequireAuth) {
-        onClose();
         onRequireAuth();
       }
       return;
@@ -52,12 +47,10 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
     setShowReviewModal(true);
   };
 
-  //User clicked "Not Yet", close the review modal
   const handleCancelReview = () => {
     setShowReviewModal(false);
   };
 
-  //User clicked "Yes, Confirm" -> Call API & Show Confirmed Modal
   const handleFinalBookingSubmit = async () => {
     try {
       setIsSubmitting(true);
@@ -75,18 +68,15 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
       const res = await axios.post(`${API_BASE_URL}/v1/bookings`, payload, {
         withCredentials: true,
       });
-console.log("Booking data: ", res);
-      // Save ID, close the review modal, and open the confirmed popup
+
       setConfirmedBookingId(res.data?.bookingId || null);
       setShowReviewModal(false);
       setShowSuccessModal(true);
-
     } catch (err: any) {
       console.error("Booking error:", err);
-      setShowReviewModal(false); // return back to drawer to see error
+      setShowReviewModal(false);
 
       if (err.response?.status === 401 && onRequireAuth) {
-        onClose();
         onRequireAuth();
         return;
       }
@@ -98,109 +88,80 @@ console.log("Booking data: ", res);
     }
   };
 
-  //when user clicks on View my bookings
   const handleRedirectToBookings = () => {
     setShowSuccessModal(false);
     onClose();
     navigate("/bookings");
   };
 
+  if (!isOpen) return null;
+
   return (
     <>
-      <div
-      //if isOpen is true then drawer-backdrop-visible
-      //if not drawer-backdrop
-        className={`drawer-backdrop ${isOpen ? "visible" : ""}`}
-        onClick={() => {
-          if (!showReviewModal && !showSuccessModal) onClose();
-        }}
-      />
+      <div className="booking-inline-panel">
+        {bookingError && <div className="inline-error-banner">{bookingError}</div>}
 
-      <aside className={`booking-drawer ${isOpen ? "open" : ""}`}>
-        <div className="drawer-header">
+        <div className="inline-counter-box">
           <div>
-            <h3>Book Tickets</h3>
-            <p className="drawer-subtitle">Fast & secure checkout</p>
-          </div>
-          <button type="button" className="drawer-close-btn" onClick={onClose}>
-            <FaTimes />
-          </button>
-        </div>
-
-        <div className="drawer-body">
-          {/* Show booking error only when bookingError contains a message */}
-          {bookingError && <div className="drawer-error">{bookingError}</div>}
-
-          <div className="drawer-section">
-            <span className="drawer-label">SELECTED EVENT</span>
-            <div className="drawer-event-pill">
-              <span className="pill-badge">{event.category_name || "Event"}</span>
-              <p className="pill-title">{event.name}</p>
-              <p className="pill-meta">
-                <FaMapPin /> {event.location || "Venue TBA"}
-              </p>
-            </div>
+            <span className="counter-title">Quantity</span>
+            <p className="counter-sub">₹ {unitPrice.toLocaleString()} / ticket</p>
           </div>
 
-          <div className="ticket-counter-box">
-            <div>
-              <span className="ticket-label">Ticket Quantity</span>
-              <p className="ticket-rate">₹ {unitPrice.toLocaleString()} / ticket</p>
-            </div>
-
-            <div className="counter-btn-group">
- {/* Makes sure the ticket quantity doesnt go below 1 */}
-
-              <button
-                type="button"
-                className="counter-btn"
-                onClick={() => setTicketQuantity((q) => Math.max(1, q - 1))}
-                disabled={ticketQuantity <= 1}
-              >
-                <FaMinus />
-              </button>
-              <span className="counter-val">{ticketQuantity}</span>
-                {/* Makes sure the ticket quantity doesnt go above 10 */}
-
-              <button
-                type="button"
-                className="counter-btn"
-                onClick={() => setTicketQuantity((q) => Math.min(10, q + 1))}
-              >
-                <FaPlus />
-              </button>
-            </div>
-          </div>
-
-          <div className="drawer-breakdown">
-            <div className="breakdown-row">
-              <span>Net Price ({ticketQuantity}x)</span>
-              <span>₹ {totalAmount.toLocaleString()}</span>
-            </div>
-            <div className="breakdown-row">
-              <span>Booking & Convenience Fee</span>
-              <span className="free-badge">FREE</span>
-            </div>
-            <div className="breakdown-divider" />
-            <div className="breakdown-row total">
-              <span>Grand Total</span>
-              <span>₹ {totalAmount.toLocaleString()}</span>
-            </div>
+          <div className="counter-controls">
+            <button
+              type="button"
+              className="counter-action-btn"
+              onClick={() => setTicketQuantity((q) => Math.max(1, q - 1))}
+              disabled={ticketQuantity <= 1}
+            >
+              <FaMinus />
+            </button>
+            <span className="counter-count">{ticketQuantity}</span>
+            <button
+              type="button"
+              className="counter-action-btn"
+              onClick={() => setTicketQuantity((q) => Math.min(10, q + 1))}
+            >
+              <FaPlus />
+            </button>
           </div>
         </div>
 
-        <div className="drawer-footer">
+        <div className="inline-price-breakdown">
+          <div className="breakdown-line">
+            <span>Net Price ({ticketQuantity}x)</span>
+            <span>₹ {totalAmount.toLocaleString()}</span>
+          </div>
+          <div className="breakdown-line">
+            <span>Convenience Fee</span>
+            <span className="free-tag">FREE</span>
+          </div>
+          <div className="breakdown-sep" />
+          <div className="breakdown-line total-line">
+            <span>Grand Total</span>
+            <span>₹ {totalAmount.toLocaleString()}</span>
+          </div>
+        </div>
+
+        <div className="inline-action-buttons">
           <button
             type="button"
-            className="drawer-pay-button"
+            className="inline-pay-btn"
             onClick={handleOpenReview}
           >
             Pay ₹ {totalAmount.toLocaleString()}
           </button>
+          <button
+            type="button"
+            className="inline-cancel-btn"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
         </div>
-      </aside>
+      </div>
 
-      {/* 1. PRE-CONFIRMATION / REVIEW MODAL */}
+      {/* 1. REVIEW CONFIRMATION MODAL */}
       {showReviewModal && (
         <div className="booking-modal-overlay">
           <div className="booking-modal-card review-modal">
@@ -223,15 +184,15 @@ console.log("Booking data: ", res);
                 <strong>{event.location || "Venue TBA"}</strong>
               </div>
               {event.event_date && (
-  <div className="mini-row">
-    <span>Date:</span>
-    <strong>
-      {new Intl.DateTimeFormat("en-US", {
-        dateStyle: "medium",
-      }).format(new Date(event.event_date))}
-    </strong>
-  </div>
-)}
+                <div className="mini-row">
+                  <span>Date:</span>
+                  <strong>
+                    {new Intl.DateTimeFormat("en-US", {
+                      dateStyle: "medium",
+                    }).format(new Date(event.event_date))}
+                  </strong>
+                </div>
+              )}
               <div className="mini-row">
                 <span>Reserved For:</span>
                 <strong>{user?.name || user?.email}</strong>
@@ -268,7 +229,7 @@ console.log("Booking data: ", res);
         </div>
       )}
 
-      {/* 2. FINAL BOOKING CONFIRMED SUCCESS MODAL */}
+      {/* 2. SUCCESS CONFIRMATION MODAL */}
       {showSuccessModal && (
         <div className="booking-modal-overlay">
           <div className="booking-modal-card">

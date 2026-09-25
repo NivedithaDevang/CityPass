@@ -46,7 +46,7 @@
 }
 
 
-/*  TOP */
+/* TOP */
 
 .sidebar-top {
   height: 70px;
@@ -103,7 +103,7 @@
 
   border-radius: 50%;
 
-  background: #111;
+  background: #111111;
   color: white;
 
   font-size: 28px;
@@ -171,7 +171,6 @@
 }
 
 .status {
-  
   display: inline-block;
 
   padding: 4px 10px;
@@ -191,7 +190,8 @@
   background: #ffe5e5;
   color: #c62828;
 }
-/*  DIVIDER */
+
+/* DIVIDER */
 
 .sidebar-divider {
   height: 1px;
@@ -202,7 +202,7 @@
 }
 
 
-/*CONTENT */
+/* CONTENT */
 
 .sidebar-content {
   flex: 1;
@@ -213,111 +213,122 @@
 }
 
 
-/* MENU ITEMS*/
+/* MENU ITEMS */
 
 .sidebar-menu-item {
   width: 100%;
-  min-height: 54px;
+  min-height: 52px;
 
   border: none;
   background: transparent;
 
   border-radius: 12px;
 
-  padding: 0 14px;
+  padding: 0 16px;
 
   display: flex;
   align-items: center;
-
-  gap: 15px;
+  gap: 14px; /* Ensures consistent icon-to-label spacing on all rows */
 
   font-size: 15px;
   font-weight: 500;
 
-  color: #222;
+  color: #1e293b;
 
   cursor: pointer;
 
   text-align: left;
 
-  transition: background 0.2s;
+  transition: background 0.2s ease;
+  box-sizing: border-box;
 }
 
 .sidebar-menu-item:hover {
-  background: #f6f6f6;
+  background: #f8fafc;
 }
 
-.profile-icon{
-  width: 25px;
-  font-size: 25px;
-  display: flex;
+/* Unified Icon Sizing and Alignment across all options */
+.profile-icon,
+.ticket-icon,
+.terms-icon,
+.setting-icon,
+.privacy-icon {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  font-size: 20px; /* Equal optical size for all icons */
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  color: darkblue;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
-.ticket-icon{
-  font-size: 25px;
-  width: 20px;
-  display: flex;
-  justify-content: center;
+.profile-icon {
+  color: #161b77; /* Balanced slate tone matching the rest of the menu */
+}
+
+.ticket-icon {
   color: rgb(229, 76, 127);
 }
-.menu-icon {
-  width: 25px;
 
-  font-size: 19px;
 
-  display: flex;
-  justify-content: center;
+.terms-icon {
+  color: #161b77;
 }
 
+.privacy-icon,
+.setting-icon {
+  color: #475569;
+}
 
-/* 
-   BOOKING BUTTON */
+/* ACCORDION BUTTONS & EVEN ARROW STYLING */
 
-.booking-button {
+.booking-button,
+.settings-button {
   justify-content: space-between;
+  gap: 0; /* Let menu-left handle inner spacing */
 }
 
 .menu-left {
   display: flex;
   align-items: center;
-
-  gap: 15px;
+  gap: 14px;
 }
 
-.booking-arrow {
-  font-size: 25px;
-
-  color: #777;
-
-  transition: transform 0.25s;
-}
-
-.settings-button {
-  justify-content: space-between;
-}
-
+.booking-arrow,
 .settings-arrow {
-  font-size: 25px;
-  color: #777;
-
-  transition: transform 0.25s;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  color: #94a3b8;
+  margin-left: auto;
+  flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease;
 }
+
+.sidebar-menu-item:hover .booking-arrow,
+.sidebar-menu-item:hover .settings-arrow {
+  color: #475569;
+}
+
+.booking-arrow.rotate,
 .settings-arrow.rotate {
   transform: rotate(90deg);
-}
-
-.booking-arrow.rotate {
-  transform: rotate(90deg);
+  color: #5144ed;
 }
 
 
-/* BOOKING CATEGORIES*/
+/* SUB-CATEGORIES */
 
 .booking-categories {
   max-height: 0;
-color: #222;
+  color: #222;
   overflow: hidden;
 
   display: flex;
@@ -329,29 +340,29 @@ color: #222;
 }
 
 .booking-categories.expanded {
-  max-height: 200px;
-
+  max-height: 220px;
   padding-bottom: 8px;
 }
 
 .booking-categories a {
   text-decoration: none;
 
-  color: #666;
+  color: #64748b;
 
   font-size: 14px;
 
-  padding: 10px 0;
+  padding: 8px 0;
 
-  transition: 0.2s;
+  cursor: pointer;
+  transition: color 0.2s ease;
 }
 
 .booking-categories a:hover {
-  color: #111;
+  color: #0f172a;
 }
 
 
-/* BOTTOM*/
+/* BOTTOM */
 
 .sidebar-bottom {
   padding: 18px 24px 28px;
@@ -368,9 +379,8 @@ color: #222;
 
   border: none;
   border-radius: 12px;
- background: rgb(63, 120, 219);
+  background: #5144ed;
   color: white;
-  
 
   font-size: 15px;
   font-weight: 600;
@@ -383,13 +393,10 @@ color: #222;
 
   gap: 10px;
 
-  transition: 0.2s;
+  transition: background 0.2s ease;
 }
 
 .logout-btn:hover {
-  background: lightblue;
-  color: gray;
- 
+  background: #4338ca;
+  color: #ffffff;
 }
-
-

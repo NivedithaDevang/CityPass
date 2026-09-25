@@ -1,0 +1,329 @@
+/* Backdrop Overlay */
+.ticket-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 8, 28, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3500;
+  padding: 20px;
+  box-sizing: border-box;
+  animation: fadeInTicket 0.2s ease-out;
+}
+
+.ticket-modal-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+}
+
+/* Close button */
+.ticket-close-btn {
+  position: absolute;
+  top: -16px;
+  right: -16px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #1e143d;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.ticket-close-btn:hover {
+  background: #2b1d56;
+  transform: scale(1.08);
+}
+
+/* Dark Purple Themed Ticket Card */
+.digital-ticket-card {
+  position: relative;
+  width: 100%;
+  border-radius: 24px;
+  background: linear-gradient(165deg, #1d133f 0%, #130a2a 45%, #0d061e 100%);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  box-shadow: 
+    0 25px 50px -12px rgba(13, 6, 30, 0.8),
+    0 0 40px rgba(126, 58, 242, 0.15);
+  color: #ffffff;
+  overflow: hidden;
+  box-sizing: border-box;
+  animation: scaleUpTicket 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Cancelled State Dimming */
+.digital-ticket-card.ticket-cancelled {
+  border-color: rgba(239, 68, 68, 0.35);
+  filter: grayscale(0.2);
+}
+
+/* Top Header */
+.ticket-header-band {
+  padding: 24px 28px 16px;
+  background: linear-gradient(180deg, rgba(147, 51, 234, 0.15) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ticket-brand-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #c084fc;
+  background: rgba(192, 132, 252, 0.12);
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid rgba(192, 132, 252, 0.2);
+}
+
+.ticket-ref-id {
+  font-family: monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+}
+
+.ticket-main-heading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #f8fafc;
+}
+
+/* Core Ticket Details Body */
+.ticket-body {
+  padding: 22px 28px 20px;
+}
+
+.ticket-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.ticket-event-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #a855f7;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.ticket-event-name {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.ticket-status-tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 5px 11px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.ticket-status-tag.tag-active {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.ticket-status-tag.tag-cancelled {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+/* 2-Column Info Grid */
+.ticket-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 16px;
+}
+
+.ticket-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cell-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #a78bfa;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cell-value {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.3;
+}
+
+.cell-subvalue {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.cell-subvalue.total-price {
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+/* Perforation with Ticket Cut-Out Notches */
+.ticket-divider {
+  position: relative;
+  height: 28px;
+  display: flex;
+  align-items: center;
+}
+
+.notch {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #0a081c; /* Matches backdrop blur tone */
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5);
+  top: 0;
+}
+
+.notch-left {
+  left: -14px;
+}
+
+.notch-right {
+  right: -14px;
+}
+
+.dashed-line {
+  width: 100%;
+  margin: 0 24px;
+  border-bottom: 2px dashed rgba(168, 85, 247, 0.3);
+}
+
+/* Lower Ticket Stub */
+.ticket-stub {
+  padding: 16px 28px 22px;
+  background: rgba(10, 5, 25, 0.5);
+}
+
+.stub-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.qr-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.qr-icon {
+  font-size: 46px;
+  color: #ffffff;
+}
+
+.qr-box span {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #c084fc;
+}
+
+.barcode-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.barcode-svg {
+  font-size: 54px;
+  width: 100%;
+  color: #cbd5e1;
+}
+
+.barcode-digits {
+  font-family: monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #94a3b8;
+}
+
+/* Unique Tagline Container */
+.ticket-tagline-container {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.ticket-tagline {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #cbd5e1;
+  opacity: 0.85;
+}
+
+@keyframes fadeInTicket {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUpTicket {
+  from {
+    opacity: 0;
+    transform: scale(0.93) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

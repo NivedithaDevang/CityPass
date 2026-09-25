@@ -1,5 +1,5 @@
 import "./Hero.css";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
@@ -12,18 +12,28 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaCalendarDays,
+  FaTicket,
 } from "react-icons/fa6";
+
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay, Pagination } from "swiper/modules";
+import type { Swiper as SwiperType } from "swiper";
+
+import "swiper/css";
+import "swiper/css/pagination";
 
 function Hero() {
   const navigate = useNavigate();
+  //store events displayed in the hero carousel
   const [featuredEvents, setFeaturedEvents] = useState<Events[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  //store swiper instance so that the custoom -> / <- buttons can control it
+  const swiperRef = useRef<SwiperType | null>(null);
 
-  // Fetch top 5 events for the carousel
   useEffect(() => {
     const fetchHeroEvents = async () => {
       try {
         const response = await axios.get(`${API_BASE_URL}/v1/events`);
+        //extract events from API response
         const eventList: Events[] = response.data.events || [];
         setFeaturedEvents(eventList.slice(0, 5));
       } catch (error) {
@@ -34,36 +44,13 @@ function Hero() {
     fetchHeroEvents();
   }, []);
 
-  // Auto-play timer
-  useEffect(() => {
-    if (featuredEvents.length <= 1) return;
-
-    const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % featuredEvents.length);
-    }, 2000);
-
-    return () => clearInterval(timer);
-  }, [featuredEvents.length]);
-
-  const handlePrev = () => {
-    setCurrentIndex((prev) =>
-      prev === 0 ? featuredEvents.length - 1 : prev - 1
-    );
-  };
-
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % featuredEvents.length);
-  };
-
   const formatHeroDate = (dateStr?: string) => {
     if (!dateStr) return "Upcoming";
     return new Intl.DateTimeFormat("en-US", {
-      month: "short",
+      month: "short", //ex: Sep 24
       day: "numeric",
     }).format(new Date(dateStr));
   };
-
-  const activeEvent = featuredEvents[currentIndex];
 
   return (
     <section className="hero">
@@ -112,64 +99,26 @@ function Hero() {
           </div>
         </div>
 
-        {/* Right Column: Glassmorphic Event Carousel */}
+        {/* Right Column: Solid Ticket Showcase Carousel */}
         <div className="hero-carousel-wrapper">
-          {activeEvent ? (
-            <div
-              className="hero-carousel-card"
-              onClick={() =>
-                navigate(`/events/${createEventSlug(activeEvent.name)}`)
-              }
-            >
-              <div className="carousel-top-bar">
-                <span className="carousel-tag">
-                  {activeEvent.category_name || "FEATURED"}
-                </span>
-                <span className="carousel-price">
-                  ₹ {activeEvent.price || "Free"}
-                </span>
-              </div>
-
-              <h3 className="carousel-title">{activeEvent.name}</h3>
-
-              <div className="carousel-meta-row">
-                <span className="carousel-meta">
-                  <FaLocationDot /> {activeEvent.location || "City Venue"}
-                </span>
-                <span className="carousel-meta">
-                  <FaCalendarDays /> {formatHeroDate(activeEvent.event_date)}
-                </span>
-              </div>
-
-              <div className="carousel-footer">
-                <button
-                  type="button"
-                  className="carousel-book-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/events/${createEventSlug(activeEvent.name)}`);
-                  }}
-                >
-                  Book Tickets
-                </button>
-
-                {/* Left/Right manual arrows */}
-                <div
-                  className="carousel-nav-arrows"
-                  onClick={(e) => e.stopPropagation()}
-                >
+          {featuredEvents.length > 0 ? (
+            <div className="featured-showcase-container">
+              {/* Header Navigation with Next/Prev Arrows */}
+              <div className="showcase-nav-header">
+                <span className="showcase-label">FEATURED PASSES</span>
+                <div className="showcase-controls">
                   <button
                     type="button"
-                    className="carousel-arrow"
-                    onClick={handlePrev}
+                    className="showcase-arrow"
+                    onClick={() => swiperRef.current?.slidePrev()}
                     aria-label="Previous event"
                   >
                     <FaChevronLeft />
                   </button>
                   <button
                     type="button"
-                    className="carousel-arrow"
-                    onClick={handleNext}
+                    className="showcase-arrow"
+                    onClick={() => swiperRef.current?.slideNext()}
                     aria-label="Next event"
                   >
                     <FaChevronRight />
@@ -177,23 +126,89 @@ function Hero() {
                 </div>
               </div>
 
-              {/* Indicator Dots */}
-              <div
-                className="carousel-dots"
-                onClick={(e) => e.stopPropagation()}
+              <Swiper
+                modules={[Autoplay, Pagination]}
+                slidesPerView={1}
+                spaceBetween={24}
+                grabCursor={true}
+                autoplay={{
+                  delay: 2500,
+                  disableOnInteraction: false,
+                  pauseOnMouseEnter: true,
+                }}
+                pagination={{
+                  clickable: true,
+                  el: ".hero-swiper-pagination",
+                }}
+                onSwiper={(swiper) => (swiperRef.current = swiper)}
+                className="hero-swiper"
               >
-                {featuredEvents.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className={`carousel-dot ${
-                      i === currentIndex ? "active" : ""
-                    }`}
-                    onClick={() => setCurrentIndex(i)}
-                    aria-label={`Slide ${i + 1}`}
-                  />
-                ))}
-              </div>
+                {featuredEvents.map((event) => {
+                  const slug = createEventSlug(event.name);
+
+                  return (
+                    <SwiperSlide key={event.id || event.name}>
+                      <div
+                        className="ticket-card"
+                        onClick={() => navigate(`/events/${slug}`)}
+                      >
+                        {/* Ticket Top: Category & Price */}
+                        <div className="ticket-top">
+                          <span className="ticket-category">
+                            {event.category_name || "FEATURED"}
+                          </span>
+                          <span className="ticket-price">
+                            ₹ {event.price || "Free"}
+                          </span>
+                        </div>
+
+                        {/* Ticket Middle: Title & Meta */}
+                        <div className="ticket-body">
+                          <h3 className="ticket-title">{event.name}</h3>
+
+                          <div className="ticket-meta-row">
+                            <span className="ticket-meta">
+                              <FaLocationDot /> {event.location || "City Venue"}
+                            </span>
+                            <span className="ticket-meta">
+                              <FaCalendarDays /> {formatHeroDate(event.event_date)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Perforated Divider with Cutout Notches */}
+                        <div className="ticket-perforation">
+                          <span className="notch notch-left" />
+                          <div className="dashed-line" />
+                          <span className="notch notch-right" />
+                        </div>
+
+                        {/* Ticket Bottom: Action button */}
+                        <div className="ticket-footer">
+                          <div className="ticket-perk">
+                            <span className="perk-dot" />
+                            <span>Instant Confirmation</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            className="ticket-book-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/events/${slug}`);
+                            }}
+                          >
+                            <FaTicket />
+                            <span>Book Now</span>
+                          </button>
+                        </div>
+                      </div>
+                    </SwiperSlide>
+                  );
+                })}
+              </Swiper>
+
+              <div className="hero-swiper-pagination" />
             </div>
           ) : (
             <div className="hero-carousel-skeleton" />

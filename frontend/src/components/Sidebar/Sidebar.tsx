@@ -2,7 +2,14 @@ import { useState } from "react";
 import { useUser } from "../../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import "./Sidebar.css";
-import { IoSettings, IoLogOut, IoTicket, IoPersonCircle } from "react-icons/io5";
+import {
+  IoSettings,
+  IoLogOut,
+  IoTicket,
+  IoPersonCircle,
+  IoDocumentText,
+  IoShieldCheckmark,
+} from "react-icons/io5";
 import { IoIosArrowForward, IoMdCloseCircle } from "react-icons/io";
 
 interface SidebarProps {
@@ -94,7 +101,7 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
               <span
                 className={`booking-arrow ${isBookingsOpen ? "rotate" : ""}`}
               >
-                <IoIosArrowForward />
+                <IoIosArrowForward size={20} />
               </span>
             </button>
 
@@ -137,7 +144,7 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
               onClick={() => setIsSettingsOpen((prev) => !prev)}
             >
               <div className="menu-left">
-                <span className="menu-icon">
+                <span className="setting-icon">
                   <IoSettings />
                 </span>
                 <span>Settings</span>
@@ -145,7 +152,7 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
               <span
                 className={`settings-arrow ${isSettingsOpen ? "rotate" : ""}`}
               >
-                <IoIosArrowForward />
+                <IoIosArrowForward size={20} />
               </span>
             </button>
 
@@ -182,6 +189,34 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
               </a>
             </div>
           </div>
+
+          {/* Terms & Conditions */}
+          <button
+            className="sidebar-menu-item"
+            onClick={() => {
+              onClose();
+              navigate("/terms");
+            }}
+          >
+            <span className="terms-icon">
+              <IoDocumentText />
+            </span>
+            <span>Terms & Conditions</span>
+          </button>
+
+          {/* Privacy Policy */}
+          <button
+            className="sidebar-menu-item"
+            onClick={() => {
+              onClose();
+              navigate("/privacy");
+            }}
+          >
+            <span className="privacy-icon">
+              <IoShieldCheckmark />
+            </span>
+            <span>Privacy Policy</span>
+          </button>
         </div>
 
         {/* Bottom */}

@@ -11,18 +11,15 @@ export type AuthUser = RowDataPacket & AuthPayLoad & {
 /*This is the answer for the question : 
 Does a user with this email exist, and if so, give me their details.
 */
-export const findUserByEmail = async (
-    email: string
-): Promise<AuthUser | undefined> => {
+export const findUserByEmail = async (email: string) => {
+    const [rows] = await db.query(
+        `SELECT id, name, email, password, role, status, token_version
+         FROM users
+         WHERE email = ?`,
+        [email]
+    );
 
-    const sql = `
-        SELECT id, name, email, password, role, status
-        FROM users
-        WHERE email = ?
-    `;
-
-    const [results] = await db.query<AuthUser[]>(sql, [email]);
-    return results[0];
+    return (rows as any[])[0];
 };
 
 

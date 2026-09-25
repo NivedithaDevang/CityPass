@@ -1,9 +1,189 @@
+/* =========================================
+   INLINE BOOKING ACCORDION PANEL
+   ========================================= */
+
+.booking-inline-panel {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px dashed #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: expandInline 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes expandInline {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.inline-error-banner {
+  padding: 10px 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Quantity Box */
+.inline-counter-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.counter-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.counter-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.counter-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.counter-action-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.counter-action-btn:hover:not(:disabled) {
+  border-color: #5144ed;
+  color: #5144ed;
+}
+
+.counter-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.counter-count {
+  font-size: 15px;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+  color: #0f172a;
+}
+
+/* Price Breakdown */
+.inline-price-breakdown {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.breakdown-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.breakdown-line .free-tag {
+  color: #16a34a;
+  font-weight: 700;
+  font-size: 11.5px;
+}
+
+.breakdown-sep {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 8px 0;
+}
+
+.breakdown-line.total-line {
+  margin-bottom: 0;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* Pay & Cancel Buttons */
+.inline-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inline-pay-btn {
+  width: 100%;
+  height: 46px;
+  background: linear-gradient(135deg, #5144ed 0%, #3f35c8 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 11px;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(81, 68, 237, 0.28);
+  transition: all 0.2s ease;
+}
+
+.inline-pay-btn:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.inline-cancel-btn {
+  width: 100%;
+  height: 38px;
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.inline-cancel-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* =========================================
+   REVIEW & CONFIRMATION MODALS
+   ========================================= */
 
 .booking-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.72);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(5px);
   z-index: 99999;
   display: flex;
   align-items: center;
@@ -12,7 +192,7 @@
   box-sizing: border-box;
 }
 
-.booking-modal-card.review-modal {
+.booking-modal-card {
   background: #ffffff;
   border-radius: 24px;
   width: 100%;
@@ -20,8 +200,6 @@
   padding: 32px 28px;
   text-align: center;
   box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
-  position: relative;
-  z-index: 100000;
   box-sizing: border-box;
   animation: reviewPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -37,7 +215,6 @@
   }
 }
 
-/* Question Icon Circle */
 .review-icon-wrapper {
   width: 58px;
   height: 58px;
@@ -51,7 +228,7 @@
   justify-content: center;
 }
 
-.booking-modal-card.review-modal h3 {
+.booking-modal-card h3 {
   margin: 0 0 6px;
   font-size: 22px;
   font-weight: 800;
@@ -59,15 +236,14 @@
   letter-spacing: -0.02em;
 }
 
-.booking-modal-card.review-modal .booking-modal-sub {
+.booking-modal-card .booking-modal-sub {
   margin: 0 0 20px;
   font-size: 13.5px;
   line-height: 1.5;
   color: #64748b;
 }
 
-/* Review Summary Breakdown Box */
-.booking-modal-card.review-modal .booking-summary-mini {
+.booking-modal-card .booking-summary-mini {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
@@ -79,7 +255,7 @@
   text-align: left;
 }
 
-.booking-modal-card.review-modal .mini-row {
+.booking-modal-card .mini-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -87,12 +263,7 @@
   color: #64748b;
 }
 
-.booking-modal-card.review-modal .mini-row span {
-  color: #64748b;
-  font-weight: 500;
-}
-
-.booking-modal-card.review-modal .mini-row strong {
+.booking-modal-card .mini-row strong {
   color: #0f172a;
   font-weight: 700;
   text-align: right;
@@ -100,25 +271,23 @@
   word-break: break-word;
 }
 
-/* Payable Highlight Row */
-.booking-modal-card.review-modal .mini-row.total-highlight {
+.booking-modal-card .mini-row.total-highlight {
   margin-top: 4px;
   padding-top: 10px;
   border-top: 1px dashed #cbd5e1;
 }
 
-.booking-modal-card.review-modal .mini-row.total-highlight span {
+.booking-modal-card .mini-row.total-highlight span {
   font-weight: 700;
   color: #0f172a;
 }
 
-.booking-modal-card.review-modal .mini-row.total-highlight strong {
+.booking-modal-card .mini-row.total-highlight strong {
   color: #5144ed;
   font-size: 16px;
   font-weight: 800;
 }
 
-/* Action Buttons Container */
 .review-modal-actions {
   display: grid;
   grid-template-columns: 1fr 1.45fr;
@@ -126,7 +295,6 @@
   align-items: center;
 }
 
-/* Not Yet Button */
 .review-btn-cancel {
   height: 46px;
   background: #ffffff;
@@ -140,16 +308,13 @@
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
-  box-sizing: border-box;
 }
 
 .review-btn-cancel:hover:not(:disabled) {
   background: #f1f5f9;
-  border-color: #cbd5e1;
   color: #0f172a;
 }
 
-/* Yes, Confirm Booking Button */
 .review-btn-confirm {
   height: 46px;
   background: #5144ed;
@@ -164,18 +329,40 @@
   justify-content: center;
   box-shadow: 0 4px 14px rgba(81, 68, 237, 0.28);
   transition: all 0.15s ease;
-  box-sizing: border-box;
 }
 
 .review-btn-confirm:hover:not(:disabled) {
   background: #4335dc;
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(81, 68, 237, 0.38);
 }
 
-.review-btn-confirm:disabled,
-.review-btn-cancel:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
+.booking-success-icon-wrapper {
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 16px;
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.booking-view-all-btn {
+  width: 100%;
+  height: 48px;
+  background: #5144ed;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(81, 68, 237, 0.3);
+  transition: all 0.15s ease;
+}
+
+.booking-view-all-btn:hover {
+  background: #4335dc;
 }
