@@ -27,13 +27,8 @@ export const authenticate = async (
     try {
         const token = req.cookies?.userToken || req.cookies?.token;
 
-        console.log("AUTH DEBUG");
-        console.log("URL:", req.originalUrl);
-        console.log("Cookies:", req.cookies);
-        console.log("Token exists:", !!token);
 
         if (!token) {
-            console.log("NO TOKEN");
             return res.status(401).json({
                 message: "No token provided"
             });
@@ -50,9 +45,6 @@ export const authenticate = async (
             "SELECT token_version FROM users WHERE id = ?",
             [decoded.id]
         );
-
-        console.log("DB token version:", rows[0]?.token_version);
-        console.log("JWT token version:", decoded.token_version);
 
         if (rows.length === 0) {
             console.log("USER NOT FOUND");
@@ -71,16 +63,10 @@ export const authenticate = async (
                 message: "Token is no longer valid"
             });
         }
-
         req.user = decoded;
-
-        console.log("AUTH SUCCESS");
-
         next();
 
     } catch (error) {
-        console.error("AUTH ERROR:", error);
-
         return res.status(401).json({
             message: "Invalid or expired token"
         });

@@ -18,7 +18,7 @@ export const addBooking = async (req: Request, res: Response, next: NextFunction
   try {
     const {
       pass_id,
-      booking_date,
+      booking_date, //handle it as today's date
       number_of_tickets,
       total_amount,
       status = "CONFIRMED",
@@ -36,13 +36,12 @@ export const addBooking = async (req: Request, res: Response, next: NextFunction
     // Check required booking fields
     if (
       !pass_id ||
-      !booking_date ||
       number_of_tickets === undefined ||
       total_amount === undefined
     ) {
       return res.status(400).json({
         message:
-          "pass_id, booking_date, number_of_tickets, and total_amount are required"
+          "Something went wromg. Please try again"
       });
     }
 

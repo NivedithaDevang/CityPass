@@ -14,6 +14,7 @@ import errorHandler from "../../middleware/errorHandler.js";
 
 const router: Router = express.Router();
 
+//rearrange the routes for admin, organiser and user level
 router.use("/v1/admin", adminRouter);
 router.use("/v1/auth", authRoutes);
 router.use("/v1/bookings", bookRouter);
