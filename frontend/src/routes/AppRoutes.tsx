@@ -7,7 +7,7 @@ import Events from "../pages/Events/Events";
 import { Activities } from "../pages/Activities/Activities";
 import { Concerts } from "../pages/Concerts/Concerts";
 
-import EventDetails from "../components/EventDetails/EventDetails";
+import Event from "../pages/Events/Events";
 import BookingPage from "../pages/BookingPage/BookingPage";
 
 import TermsConditions from "../pages/PrivacyPolicy/TermsConditions";
@@ -48,7 +48,7 @@ function AppRoutes() {
 
         <Route
           path="/events/:slug"
-          element={<EventDetails />}
+          element={<Event />}
         />
 
         <Route

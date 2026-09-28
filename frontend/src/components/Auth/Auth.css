@@ -207,7 +207,7 @@
   margin-top: 18px;
 
   font-size: 14px;
-  color: #71717a;
+  color: #28289f;
 }
 
 .auth-switch button {
@@ -362,5 +362,100 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .auth-modal {
+    width: 460px;
+    max-width: 90vw;
+    max-height: 90vh;
+    padding: 36px 32px;
+    box-sizing: border-box;
+    border-radius: 16px;
+    overflow-y: auto;
+  }
+
+  .auth-modal h2 {
+    font-size: 32px;
+    line-height: 1.2;
+    margin-bottom: 8px;
+    font-weight: 700;
+  }
+
+  .auth-modal p {
+    font-size: 15px;
+    line-height: 1.5;
+    margin-bottom: 24px;
+    color: #666;
+  }
+
+  .auth-modal input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    box-sizing: border-box;
+    border-radius: 8px;
+  }
+
+  .auth-submit {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .auth-switch {
+    font-size: 14px;
+    margin-top: 20px;
+    text-align: center;
+  }
+
+  .auth-switch button {
+    font-size: 14px;
+    font-weight: 600;
+    padding-left: 4px;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 768px){
+  .auth-modal{
+    width: 270px;
+    max-height: 59vh;
+  }
+
+  .auth-modal h2{
+    font-size: 20px;
+  }
+
+  .auth-modal p {
+    font-size: 10px;
+  }
+
+  .auth-modal input { 
+    padding: 9px 11px;
+    width: 100%;
+    font-size:9px;
+  }
+
+
+  .auth-submit{
+    padding: 10px;
+    font-size: 11px;
+    font-weight: 250;
+  }
+
+  .auth-switch{
+    font-size: 11px;
+    margin-top: 16px;
+  }
+
+  .auth-switch button {
+font-size:10px;    
+padding-left: 2px;
   }
 }

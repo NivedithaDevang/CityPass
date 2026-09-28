@@ -69,3 +69,101 @@
   font-weight: 600;
   color: #222;
 }
+
+
+/* Tablet (max-width: 1024px) */
+@media (max-width: 1024px) {
+  .city-section {
+    padding: 36px 5%;
+  }
+
+  .city-section .section-heading h2 {
+    font-size: 28px;
+  }
+
+  .city-grid {
+    grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+    gap: 14px;
+  }
+
+  .city-icon {
+    width: 68px;
+    height: 68px;
+    font-size: 32px;
+  }
+}
+
+/* Mobile Devices (max-width: 768px) */
+@media (max-width: 768px) {
+  .city-section {
+    padding: 28px 16px;
+  }
+
+  .city-section .section-heading {
+    margin-bottom: 20px;
+  }
+
+  .city-section .section-heading h2 {
+    font-size: 24px;
+  }
+
+  .city-section .section-heading p,
+  .city-section .section-heading span {
+    font-size: 14px;
+  }
+
+  /* Enables smooth horizontal snap-scrolling on mobile to keep items compact */
+  .city-grid {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 12px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .city-grid::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
+
+  .city-card {
+    flex: 0 0 105px;
+    scroll-snap-align: start;
+    padding: 14px 8px;
+    border-radius: 14px;
+  }
+
+  /* Disable hover lift on touch devices */
+  .city-card:hover {
+    transform: none;
+  }
+
+  .city-icon {
+    width: 56px;
+    height: 56px;
+    font-size: 26px;
+    margin-bottom: 8px;
+  }
+
+  .city-card h2 {
+    font-size: 13px;
+  }
+}
+
+/* Small Mobile Screens (max-width: 480px) */
+@media (max-width: 480px) {
+  .city-section .section-heading h2 {
+    font-size: 22px;
+  }
+
+  .city-card {
+    flex: 0 0 95px;
+  }
+
+  .city-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+  }
+}

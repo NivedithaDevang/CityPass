@@ -5,6 +5,7 @@ import EventSection from "../../components/EventSection/EventSection";
 import CitySection from "../../components/CitySection/CitySection";
 import HostEvent from "../../components/HostEvent/HostEvent";
 import { Footer } from "../../components/Footer/Footer";
+import "./Home.css"
 function Home() {
   return (
     <div style={{ position: "relative" }}>

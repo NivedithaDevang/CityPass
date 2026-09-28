@@ -160,34 +160,78 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 960px) {
-  .footer-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 36px;
-  }
-
-  .brand-col {
-    grid-column: span 2;
-    padding-right: 0;
-  }
-}
-
-@media (max-width: 580px) {
+/* Tablet (768px to 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
   .footer {
     padding: 48px 6% 24px;
   }
 
   .footer-grid {
-    grid-template-columns: 1fr;
-    gap: 28px;
+    grid-template-columns: 1.5fr 1fr 1fr;
+    gap: 32px;
+    margin-bottom: 36px;
   }
 
   .brand-col {
-    grid-column: span 1;
+    padding-right: 16px;
+  }
+
+  .footer-tagline {
+    max-width: 100%;
+    font-size: 13.5px;
+  }
+}
+
+/* Mobile (up to 767px) */
+@media (max-width: 767px) {
+  .footer {
+    padding: 30px 20px 24px;
+  }
+
+  .footer-grid {
+    /* Brand on top across both columns, Discover and Company side-by-side */
+    grid-template-columns: 1fr 1fr;
+    gap: 32px 20px;
+    margin-bottom: 32px;
+  }
+
+  .brand-col {
+    grid-column: 1 / -1;
+    padding-right: 0;
+  }
+
+  .footer-brand {
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+
+  .footer-tagline {
+    font-size: 13px;
+    line-height: 1.6;
+    max-width: 100%;
+    margin-bottom: 16px;
+  }
+
+  .footer-heading {
+    font-size: 12.5px;
+    margin-bottom: 14px;
+  }
+
+  .footer-nav-list {
+    gap: 10px;
+  }
+
+  .footer-nav-list a {
+    font-size: 13px;
   }
 
   .footer-bottom {
-    flex-direction: column;
-    align-items: flex-start;
+    padding-top: 20px;
+    justify-content: center;
+  }
+
+  .footer-bottom p {
+    font-size: 12px;
+    line-height: 1.5;
   }
 }

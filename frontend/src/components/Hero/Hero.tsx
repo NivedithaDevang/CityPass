@@ -24,16 +24,15 @@ import "swiper/css/pagination";
 
 function Hero() {
   const navigate = useNavigate();
-  //store events displayed in the hero carousel
+  // Store events displayed in the hero carousel
   const [featuredEvents, setFeaturedEvents] = useState<Events[]>([]);
-  //store swiper instance so that the custoom -> / <- buttons can control it
+  // Store swiper instance so custom buttons and autoplay controls can target it
   const swiperRef = useRef<SwiperType | null>(null);
 
   useEffect(() => {
     const fetchHeroEvents = async () => {
       try {
         const response = await axios.get(`${API_BASE_URL}/v1/events`);
-        //extract events from API response
         const eventList: Events[] = response.data.events || [];
         setFeaturedEvents(eventList.slice(0, 5));
       } catch (error) {
@@ -44,10 +43,17 @@ function Hero() {
     fetchHeroEvents();
   }, []);
 
+  // Explicitly command Swiper autoplay to run once async events populate
+  useEffect(() => {
+    if (swiperRef.current && featuredEvents.length > 1) {
+      swiperRef.current.autoplay?.start();
+    }
+  }, [featuredEvents]);
+
   const formatHeroDate = (dateStr?: string) => {
     if (!dateStr) return "Upcoming";
     return new Intl.DateTimeFormat("en-US", {
-      month: "short", //ex: Sep 24
+      month: "short",
       day: "numeric",
     }).format(new Date(dateStr));
   };
@@ -131,11 +137,17 @@ function Hero() {
                 slidesPerView={1}
                 spaceBetween={24}
                 grabCursor={true}
-                autoplay={{
-                  delay: 2500,
-                  disableOnInteraction: false,
-                  pauseOnMouseEnter: true,
-                }}
+                observer={true}
+                observeParents={true}
+                autoplay={
+                  featuredEvents.length > 1
+                    ? {
+                        delay: 2500,
+                        disableOnInteraction: false,
+                        pauseOnMouseEnter: true,
+                      }
+                    : false
+                }
                 pagination={{
                   clickable: true,
                   el: ".hero-swiper-pagination",

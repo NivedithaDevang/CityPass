@@ -196,23 +196,23 @@ export function Activities() {
         <p>Find activities and experiences happening in the city.</p>
       </div>
 
-      <main className="event-section">
+      <main className="eventpage-section">
         {/* Search, Filter & Sort Controls */}
-        <div className="event-filter-toolbar">
-          <form className="event-search" onSubmit={(e) => e.preventDefault()}>
+        <div className="eventpage-filter-toolbar">
+          <form className="eventpage-search" onSubmit={(e) => e.preventDefault()}>
             <input
-              id="event-search-input"
+              id="eventpage-search-input"
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by category, activity name, or location"
             />
           </form>
-<div className = "event-controls">
+<div className = "eventpage-controls">
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="event-filter-select"
+            className="eventpage-filter-select"
           >
             <option value="ALL">All Categories</option>
             {categories.map((cat) => (
@@ -225,7 +225,7 @@ export function Activities() {
           <select
             value={selectedLocation}
             onChange={(e) => setSelectedLocation(e.target.value)}
-            className="event-filter-select"
+            className="eventpage-filter-select"
           >
             <option value="ALL">All Locations</option>
             {locations.map((loc) => (
@@ -238,7 +238,7 @@ export function Activities() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="event-filter-select sort-select"
+            className="eventpage-filter-select sort-select"
           >
             <option value="date_asc">Date: Earliest first</option>
             <option value="date_desc">Date: Latest first</option>
@@ -250,48 +250,48 @@ export function Activities() {
             <button
               type="button"
               onClick={handleResetFilters}
-              className="event-reset-button"
+              className="eventpage-reset-button"
             >
               Reset Filters
             </button>
           )}
         </div></div>
 
-        {error && <p className="event-empty">Activities are unavailable right now.</p>}
+        {error && <p className="eventpage-empty">Activities are unavailable right now.</p>}
 
-        <div className="event-grid">
+        <div className="eventpage-grid">
           {!error &&
             processedActivities.map((activity) => {
               const CategoryIcon = getCategoryIcon(activity.category_name);
 
               return (
                 <article
-                  className="event-card"
+                  className="eventpage-card"
                   key={activity.id}
                   onClick={() => handleCardClick(activity)}
                   style={{ cursor: "pointer" }}
                 >
-                  <div className="event-card-media">
-                    <span className="event-badge">
-                      {CategoryIcon && <CategoryIcon className="event-category-icon" />}
+                  <div className="eventpage-card-media">
+                    <span className="eventpage-badge">
+                      {CategoryIcon && <CategoryIcon className="eventpage-category-icon" />}
                       {activity.category_name || "Activity"}
                     </span>
-                    <p className="event-location">
-                      <FaMapPin className="event-location-pin" />
+                    <p className="eventpage-location">
+                      <FaMapPin className="eventpage-location-pin" />
                       {activity.location || "Location to be announced"}
                     </p>
                   </div>
-                  <div className="event-card-content">
-                    <span className="event-date">{formatActivityDate(activity.event_date)}</span>
+                  <div className="eventpage-card-content">
+                    <span className="eventpage-date">{formatActivityDate(activity.event_date)}</span>
                     <h3>{activity.name || "Untitled activity"}</h3>
-                    <div className="event-card-footer">
+                    <div className="eventpage-card-footer">
                       <div>
-                        <span className="event-price-label">Starting from</span>
-                        <p className="event-price">
+                        <span className="eventpage-price-label">Starting from</span>
+                        <p className="eventpage-price">
                           ₹ {activity.price || "Price yet to be announced"}
                         </p>
                       </div>
-                      <button type="button" className="event-pass-button">
+                      <button type="button" className="eventpage-pass-button">
                         Get Tickets
                       </button>
                     </div>
@@ -301,7 +301,7 @@ export function Activities() {
             })}
 
           {!error && !processedActivities.length && (
-            <p className="event-empty">
+            <p className="eventpage-empty">
               {hasActiveFilters
                 ? "No activities match your current filters."
                 : selectedCity && selectedCity !== ALL_LOCATIONS

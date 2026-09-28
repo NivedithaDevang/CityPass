@@ -194,11 +194,11 @@ export function Concerts() {
         <p>Find concerts and experiences happening in the city.</p>
       </div>
 
-      <main className="event-section">
-        <div className="event-filter-toolbar">
-          <form className="event-search" onSubmit={(e) => e.preventDefault()}>
+      <main className="eventpage-section">
+        <div className="eventpage-filter-toolbar">
+          <form className="eventpage-search" onSubmit={(e) => e.preventDefault()}>
             <input
-              id="event-search-input"
+              id="eventpage-search-input"
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -206,11 +206,11 @@ export function Concerts() {
             />
           </form>
 
-          <div className="event-controls">
+          <div className="eventpage-controls">
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="event-filter-select"
+              className="eventpage-filter-select"
             >
               <option value="ALL">All Categories</option>
               {categories.map((cat) => (
@@ -223,7 +223,7 @@ export function Concerts() {
             <select
               value={selectedLocation}
               onChange={(e) => setSelectedLocation(e.target.value)}
-              className="event-filter-select"
+              className="eventpage-filter-select"
             >
               <option value="ALL">All Locations</option>
               {locations.map((loc) => (
@@ -236,7 +236,7 @@ export function Concerts() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="event-filter-select sort-select"
+              className="eventpage-filter-select sort-select"
             >
               <option value="date_asc">Date:Earliest First</option>
               <option value="date_desc">Date:Latest First</option>
@@ -248,7 +248,7 @@ export function Concerts() {
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="event-reset-button"
+                className="eventpage-reset-button"
               >
                 Reset Filters
               </button>
@@ -256,44 +256,44 @@ export function Concerts() {
           </div>
         </div>
 
-        {error && <p className="event-empty">Concerts are unavailable right now.</p>}
+        {error && <p className="eventpage-empty">Concerts are unavailable right now.</p>}
 
-        <div className="event-grid">
+        <div className="eventpage-grid">
           {!error &&
             processedConcerts.map((concert) => {
               const CategoryIcon = getCategoryIcon(concert.category_name);
 
               return (
                 <article
-                  className="event-card"
+                  className="eventpage-card"
                   key={concert.id}
                   onClick={() => handleCardClick(concert)}
                   style={{ cursor: "pointer" }}
                 >
-                  <div className="event-card-media">
-                    <span className="event-badge">
+                  <div className="eventpage-card-media">
+                    <span className="eventpage-badge">
                       {CategoryIcon && <CategoryIcon className="event-category-icon" />}
                       {concert.category_name || "Concert"}
                     </span>
-                    <p className="event-location">
-                      <FaMapPin className="event-location-pin" />
+                    <p className="eventpage-location">
+                      <FaMapPin className="eventpage-location-pin" />
                       {concert.location || "Location to be announced"}
                     </p>
                   </div>
-                  <div className="event-card-content">
-                    <span className="event-date">{formatConcertDate(concert.event_date)}</span>
+                  <div className="eventpage-card-content">
+                    <span className="eventpage-date">{formatConcertDate(concert.event_date)}</span>
                     <h3>{concert.name || "Untitled concert"}</h3>
-                    <p className="event-description">
+                    <p className="eventpage-description">
                       {concert.description || "Description yet to be set"}
                     </p>
-                    <div className="event-card-footer">
+                    <div className="eventpage-card-footer">
                       <div>
-                        <span className="event-price-label">Starting from</span>
-                        <p className="event-price">
+                        <span className="eventpage-price-label">Starting from</span>
+                        <p className="eventpage-price">
                           ₹ {concert.price || "Price yet to be announced"}
                         </p>
                       </div>
-                      <button type="button" className="event-pass-button">
+                      <button type="button" className="eventpage-pass-button">
                         Get Tickets
                       </button>
                     </div>
@@ -303,7 +303,7 @@ export function Concerts() {
             })}
 
           {!error && !processedConcerts.length && (
-            <p className="event-empty">
+            <p className="eventpage-empty">
               {hasActiveFilters
                 ? "No concerts match your current filters."
                 : selectedCity && selectedCity !== ALL_LOCATIONS

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
-import "./EventSection.css";
 import { type Category, type City, type Events } from "../../types/auth";
 import Navbar from "../../components/Navbar/Navbar";
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
@@ -12,6 +11,7 @@ import { IoFastFoodSharp } from "react-icons/io5";
 import { FaPaintbrush, FaMountain } from "react-icons/fa6";
 import type { IconType } from "react-icons";
 import { createEventSlug } from "../../config/slug";
+import "./EventSection.css";
 
 function EventSection() {
   const navigate = useNavigate();
@@ -205,110 +205,49 @@ function EventSection() {
   return (
     <>
       <Navbar />
-      <section className="event-section">
+      <section className="eventsec-section">
         <div className="section-heading">
           <p>THE LINEUP</p>
           <h2>The City's Best Plans</h2>
           <span>Limited passes, standing pits, and reserved seats up for grabs.</span>
         </div>
 
-        <div className="event-filter-toolbar">
-          <form className="event-search" onSubmit={(e) => e.preventDefault()}>
-            <input
-              id="event-search-input"
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by category, event name, or location"
-            />
-          </form>
-
-          <div className="event-controls">
-            <select
-              className="event-filter-select"
-              value={selectedCategory}
-              onChange={(e) => handleCategoryChange(e.target.value)}
-            >
-              <option value="ALL">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="event-filter-select"
-              value={selectedLocation}
-              onChange={(e) => handleLocationChange(e.target.value)}
-            >
-              <option value="ALL">All Locations</option>
-              {locations.map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="event-filter-select sort-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="date_asc">Date: Upcoming first</option>
-              <option value="date_desc">Date: Later dates first</option>
-              <option value="price_asc">Price: Low to High</option>
-              <option value="price_desc">Price: High to Low</option>
-            </select>
-
-            {hasActiveFilters && (
-              <button
-                type="button"
-                className="event-reset-button"
-                onClick={handleResetFilters}
-              >
-                Reset Filters
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="event-grid">
+        <div className="eventsec-grid">
           {processedEvents.map((event) => {
             const CategoryIcon = getCategoryIcon(event.category_name);
 
             return (
               <article
-                className="event-card"
+                className="eventsec-card"
                 key={event.id}
                 onClick={() => handleCardClick(event)}
                 style={{ cursor: "pointer" }}
               >
-                <div className="event-card-media">
-                  <span className="event-badge">
-                    {CategoryIcon && <CategoryIcon className="event-category-icon" />}
+                <div className="eventsec-card-media">
+                  <span className="eventsec-badge">
+                    {CategoryIcon && <CategoryIcon className="eventsec-category-icon" />}
                     {event.category_name || "Event"}
                   </span>
-                  <p className="event-location">
-                    <FaMapPin className="event-location-pin" />
+                  <p className="eventsec-location">
+                    <FaMapPin className="eventsec-location-pin" />
                     {event.location || "Location to be announced"}
                   </p>
                 </div>
 
-                <div className="event-card-content">
+                <div className="eventsec-card-content">
                   <span className="event-date">{formatEventDate(event.event_date)}</span>
                   <h3>{event.name || "Untitled event"}</h3>
 
-                  <div className="event-card-footer">
+                  <div className="eventsec-card-footer">
                     <div>
-                      <span className="event-price-label">Starting from</span>
-                      <p className="event-price">
+                      <span className="eventsec-price-label">Starting from</span>
+                      <p className="eventsec-price">
                         ₹ {event.price || "Price yet to be announced"}
                       </p>
                     </div>
                     <button
                       type="button"
-                      className="event-pass-button"
+                      className="eventsec-pass-button"
                       onClick={(clickEvent) => {
                         clickEvent.stopPropagation();
                         handleCardClick(event);
@@ -323,7 +262,7 @@ function EventSection() {
           })}
 
           {!processedEvents.length && (
-            <p className="event-empty">
+            <p className="eventsec-empty">
               {hasActiveFilters
                 ? "No matching events found. Try adjusting or resetting your filters."
                 : selectedCity && selectedCity !== ALL_LOCATIONS

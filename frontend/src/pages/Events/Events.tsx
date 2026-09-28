@@ -14,7 +14,7 @@ import { FaPaintbrush, FaMountain } from "react-icons/fa6";
 import type { IconType } from "react-icons";
 import { createEventSlug } from "../../config/slug";
 
-function EventSection() {
+function Event() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { selectedCity, setSelectedCity } = useCity();
@@ -210,11 +210,11 @@ function EventSection() {
         <p>Top-rated concerts, masterclasses, and weekend pop-ups selling fast</p>
       </div>
 
-      <section className="event-section">
-        <div className="event-filter-toolbar">
-          <form className="event-search" onSubmit={(e) => e.preventDefault()}>
+      <section className="eventpage-section">
+        <div className="eventpage-filter-toolbar">
+          <form className="eventpage-search" onSubmit={(e) => e.preventDefault()}>
             <input
-              id="event-search-input"
+              id="eventpage-search-input"
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -222,9 +222,9 @@ function EventSection() {
             />
           </form>
 
-          <div className="event-controls">
+          <div className="eventpage-controls">
             <select
-              className="event-filter-select"
+              className="eventpage-filter-select"
               value={selectedCategory}
               onChange={(e) => handleCategoryChange(e.target.value)}
             >
@@ -237,7 +237,7 @@ function EventSection() {
             </select>
 
             <select
-              className="event-filter-select"
+              className="eventpage-filter-select"
               value={selectedLocation}
               onChange={(e) => handleLocationChange(e.target.value)}
             >
@@ -250,7 +250,7 @@ function EventSection() {
             </select>
 
             <select
-              className="event-filter-select sort-select"
+              className="eventpage-filter-select sort-select"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
@@ -263,7 +263,7 @@ function EventSection() {
             {hasActiveFilters && (
               <button
                 type="button"
-                className="event-reset-button"
+                className="eventpage-reset-button"
                 onClick={handleResetFilters}
               >
                 Reset Filters
@@ -272,42 +272,42 @@ function EventSection() {
           </div>
         </div>
 
-        <div className="event-grid">
+        <div className="eventpage-grid">
           {processedEvents.map((event) => {
             const CategoryIcon = getCategoryIcon(event.category_name);
 
             return (
               <article
-                className="event-card"
+                className="eventpage-card"
                 key={event.id}
                 onClick={() => handleCardClick(event)}
                 style={{ cursor: "pointer" }}
               >
-                <div className="event-card-media">
-                  <span className="event-badge">
-                    {CategoryIcon && <CategoryIcon className="event-category-icon" />}
+                <div className="eventpage-card-media">
+                  <span className="eventpage-badge">
+                    {CategoryIcon && <CategoryIcon className="eventpage-category-icon" />}
                     {event.category_name || "Event"}
                   </span>
-                  <p className="event-location">
-                    <FaMapPin className="event-location-pin" />
+                  <p className="eventpage-location">
+                    <FaMapPin className="eventpage-location-pin" />
                     {event.location || "Location to be announced"}
                   </p>
                 </div>
 
-                <div className="event-card-content">
-                  <span className="event-date">{formatEventDate(event.event_date)}</span>
+                <div className="eventpage-card-content">
+                  <span className="eventpage-date">{formatEventDate(event.event_date)}</span>
                   <h3>{event.name || "Untitled event"}</h3>
 
-                  <div className="event-card-footer">
+                  <div className="eventpage-card-footer">
                     <div>
-                      <span className="event-price-label">Starting from</span>
-                      <p className="event-price">
+                      <span className="eventpage-price-label">Starting from</span>
+                      <p className="eventpage-price">
                         ₹ {event.price || "Price yet to be announced"}
                       </p>
                     </div>
                     <button
                       type="button"
-                      className="event-pass-button"
+                      className="eventpage-pass-button"
                       onClick={(clickEvent) => {
                         clickEvent.stopPropagation();
                         handleCardClick(event);
@@ -322,7 +322,7 @@ function EventSection() {
           })}
 
           {!processedEvents.length && (
-            <p className="event-empty">
+            <p className="eventpage-empty">
               {hasActiveFilters
                 ? "No matching events found. Try adjusting or resetting your filters."
                 : selectedCity && selectedCity !== ALL_LOCATIONS
@@ -337,4 +337,4 @@ function EventSection() {
   );
 }
 
-export default EventSection;
+export default Event;
