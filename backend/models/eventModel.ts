@@ -155,3 +155,22 @@ export const updateEvent = async (id: number, event: Event) => {
     return results;
 };
 
+// Admin: Update event approval status
+export const updateEventStatus = async (
+    eventId: number,
+    status: "APPROVED" | "REJECTED"
+): Promise<ResultSetHeader> => {
+
+    const sql = `
+        UPDATE events
+        SET status = ?
+        WHERE id = ?
+    `;
+
+    const [result] = await db.execute<ResultSetHeader>(
+        sql,
+        [status, eventId]
+    );
+
+    return result;
+};

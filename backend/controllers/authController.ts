@@ -28,12 +28,13 @@ export const registerUser = async (req: Request, res: Response, next: NextFuncti
         } as Parameters<typeof createUser>[0]);
 
         const userId = Number(result?.insertId ?? 0);
-        const token = generateUserToken(userId, res, {
-            id: userId,
-            email,
-            role: "USER",
-            token_version: 0
-        });
+       const token = generateUserToken(userId, res, {
+    id: userId,
+    email,
+    role: "USER",
+    city_id: null,
+    token_version: 0
+});
 
         res.status(201).json({
             message: "User created successfully",
@@ -93,12 +94,13 @@ export const loginUser = async (req: Request, res: Response) => {
     }
 
     // Login
-    generateUserToken(user.id, res, {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      token_version: user.token_version ?? 0,
-    });
+generateUserToken(user.id, res, {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    city_id: user.city_id ?? null,
+    token_version: user.token_version ?? 0,
+});
 
     res.status(200).json({
       message: "Login successful",

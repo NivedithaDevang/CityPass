@@ -54,40 +54,73 @@ export const createCity = async (
 };
 
 // Update city
+// All fields are optional because this is a PATCH-style update
 export const updateCity = async (
     id: number,
-    name: string,
-    description: string
+    name?: string,
+    description?: string,
+    isActive?: boolean
 ): Promise<number> => {
+
+    const updates: string[] = [];
+    const values: (string | boolean | number)[] = [];
+
+    // Update name only if it was provided
+    if (name !== undefined) {
+        updates.push("name = ?");
+        values.push(name);
+    }
+
+    // Update description only if it was provided
+    if (description !== undefined) {
+        updates.push("description = ?");
+        values.push(description);
+    }
+
+    // Update status only if it was provided
+    if (isActive !== undefined) {
+        updates.push("is_active = ?");
+        values.push(isActive);
+    }
+
+    // Nothing was provided to update
+    if (updates.length === 0) {
+        return 0;
+    }
+
     const sql = `
         UPDATE cities
-        SET name = ?, description = ?
+        SET ${updates.join(", ")}
         WHERE id = ?
     `;
 
+    values.push(id);
+
     const [result] = await db.execute<ResultSetHeader>(
         sql,
-        [name, description, id]
+        values
     );
 
     return result.affectedRows;
 };
 
-// Change active/inactive status
-export const updateCityStatus = async (
-    id: number,
-    isActive: boolean
-): Promise<number> => {
+// Find city by name
+// Used to check for duplicate city names
+export const getCityByName = async (
+    name: string
+): Promise<City | undefined> => {
+
     const sql = `
-        UPDATE cities
-        SET is_active = ?
-        WHERE id = ?
+        SELECT id, name, description, is_active
+        FROM cities
+        WHERE LOWER(name) = LOWER(?)
+        LIMIT 1
     `;
 
-    const [result] = await db.execute<ResultSetHeader>(
+    const [results] = await db.query<City[]>(
         sql,
-        [isActive, id]
+        [name.trim()]
     );
 
-    return result.affectedRows;
+    return results[0];
 };

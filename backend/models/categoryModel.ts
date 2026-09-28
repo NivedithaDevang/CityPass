@@ -19,6 +19,7 @@ export const getAllCategory = async (): Promise<Category[]> => {
     return results;
 };
 
+
 // Get one category
 export const getCategoryById = async (
     id: number
@@ -33,6 +34,7 @@ export const getCategoryById = async (
 
     return results[0];
 };
+
 
 // Create category
 export const createCategory = async (
@@ -51,39 +53,46 @@ export const createCategory = async (
     return result.insertId;
 };
 
+
 // Update category
+// Name and status are optional
 export const updateCategory = async (
     id: number,
-    name: string,
+    name?: string,
+    isActive?: boolean
 ): Promise<number> => {
+
+    const updates: string[] = [];
+    const values: (string | boolean | number)[] = [];
+
+    // Update name only if provided
+    if (name !== undefined) {
+        updates.push("name = ?");
+        values.push(name);
+    }
+
+    // Update status only if provided
+    if (isActive !== undefined) {
+        updates.push("is_active = ?");
+        values.push(isActive);
+    }
+
+    // Nothing to update
+    if (updates.length === 0) {
+        return 0;
+    }
+
     const sql = `
         UPDATE categories
-        SET name = ? 
+        SET ${updates.join(", ")}
         WHERE id = ?
     `;
 
-    const [result] = await db.execute<ResultSetHeader>(
-        sql,
-        [name, id]
-    );
-
-    return result.affectedRows;
-};
-
-// Change active/inactive status
-export const updateCategoryStatus = async (
-    id: number,
-    isActive: boolean
-): Promise<number> => {
-    const sql = `
-        UPDATE categories
-        SET is_active = ?
-        WHERE id = ?
-    `;
+    values.push(id);
 
     const [result] = await db.execute<ResultSetHeader>(
         sql,
-        [isActive, id]
+        values
     );
 
     return result.affectedRows;

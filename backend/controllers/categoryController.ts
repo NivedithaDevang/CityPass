@@ -1,60 +1,64 @@
-import { getAllCategory,
+import {
+    getAllCategory,
     getCategoryById,
     createCategory,
-    updateCategory,
-    updateCategoryStatus
- } from "../models/categoryModel.js";
+    updateCategory
+} from "../models/categoryModel.js";
+
 import { Request, Response } from "express";
 
-export const getCategories = async(
-    req : Request,
-    res : Response
+
+// Get all categories
+export const getCategories = async (
+    req: Request,
+    res: Response
 ) => {
     try {
         const categories = await getAllCategory();
+
         res.status(200).json({
-            message: "Categories fetched succesfully",
-            categories: categories
+            message: "Categories fetched successfully",
+            categories
         });
 
-    }
-    catch(error){
+    } catch (error) {
         res.status(500).json({
-            message : "unable to fetch categories"
-        });
-    };
-}
-
-
-//get categories by id
-export const getCategory = async(
-    req : Request,
-    res : Response
-) => {
-    try{
-        const id = Number(req.params.id);
-        const category = await getCategoryById(id);
-
-        if(!category){
-            return res.status(404).json({
-                message : "Category not found"
-            });
-        }
-        res.status(200).json({
-    message : "Categories fetched succesfully",
-    categories: category
-
-        });
-    }
-    catch(error){
-        res.status(500).json({
-            message : "Unable to fetch category"
+            message: "Unable to fetch categories"
         });
     }
 };
 
 
-//create category
+// Get category by ID
+export const getCategory = async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const id = Number(req.params.id);
+
+        const category = await getCategoryById(id);
+
+        if (!category) {
+            return res.status(404).json({
+                message: "Category not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "Category fetched successfully",
+            category
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Unable to fetch category"
+        });
+    }
+};
+
+
+// Create category
 export const addCategory = async (
     req: Request,
     res: Response
@@ -62,9 +66,7 @@ export const addCategory = async (
     try {
         const { name } = req.body;
 
-        const categoryId = await createCategory(
-            name
-        );
+        const categoryId = await createCategory(name);
 
         res.status(201).json({
             message: "Category created successfully",
@@ -79,25 +81,55 @@ export const addCategory = async (
 };
 
 
-//update category
+// Update category
 export const editCategory = async (
     req: Request,
     res: Response
 ) => {
     try {
         const id = Number(req.params.id);
-        const { name } = req.body;
+
+        const {
+            name,
+            is_active
+        } = req.body;
+
+
+        // Validate is_active only when it is provided
+        if (
+            is_active !== undefined &&
+            typeof is_active !== "boolean"
+        ) {
+            return res.status(400).json({
+                message: "is_active must be true or false"
+            });
+        }
+
+
+        // At least one field must be provided
+        if (
+            name === undefined &&
+            is_active === undefined
+        ) {
+            return res.status(400).json({
+                message: "At least one field is required to update"
+            });
+        }
+
 
         const affectedRows = await updateCategory(
             id,
-            name
+            name,
+            is_active
         );
+
 
         if (affectedRows === 0) {
             return res.status(404).json({
                 message: "Category not found"
             });
         }
+
 
         res.status(200).json({
             message: "Category updated successfully"
@@ -106,46 +138,6 @@ export const editCategory = async (
     } catch (error) {
         res.status(500).json({
             message: "Unable to update category"
-        });
-    }
-};
-
-
-//active or inactive category
-export const changeCategoryStatus = async (
-    req: Request,
-    res: Response
-) => {
-    try {
-        const id = Number(req.params.id);
-        const { is_active } = req.body;
-
-        if (typeof is_active !== "boolean") {
-            return res.status(400).json({
-                message: "is_active must be true or false"
-            });
-        }
-
-        const affectedRows = await updateCategoryStatus(
-            id,
-            is_active
-        );
-
-        if (affectedRows === 0) {
-            return res.status(404).json({
-                message: "Category not found"
-            });
-        }
-
-        res.status(200).json({
-            message: is_active
-                ? "Category activated successfully"
-                : "Category deactivated successfully"
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            message: "Unable to update category status"
         });
     }
 };
