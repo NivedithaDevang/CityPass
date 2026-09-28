@@ -7,8 +7,9 @@ export const generateUserToken = (userId: number, res: Response, user: any) => {
     id: userId || user?.id,
     email: user?.email,
     role: user?.role || "USER",
+    city_id: user?.city_id ?? null,
     token_version: user?.token_version ?? 0,
-  };
+};
 
   const token = jwt.sign(payload, JWT_SECRET as string, {
     expiresIn: "1h",

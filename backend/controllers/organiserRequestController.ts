@@ -48,10 +48,14 @@ export const addRequest = async (req: Request, res: Response, next: NextFunction
 
 
 //for updating request details
-export const updateRequest = async (req: Request, res: Response, next: NextFunction) => {
+export const updateOrganizerRequestStatus = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
     try {
         const reqId = Number(req.params.id);
-        const { organization_name, description, status } = req.body;
+        const { status } = req.body;
 
         if (!Number.isInteger(reqId) || reqId <= 0) {
             return res.status(400).json({
@@ -59,14 +63,13 @@ export const updateRequest = async (req: Request, res: Response, next: NextFunct
             });
         }
 
-        if (!organization_name || !description || !status) {
+        if (status !== "APPROVED" && status !== "REJECTED") {
             return res.status(400).json({
-                message: "organization_name, description, and status are required"
+                message: "Status must be APPROVED or REJECTED"
             });
         }
 
-        const result = await updateOrgReq(reqId, {
-            organization_name, description, status        });
+        const result = await updateOrgReq(reqId, status);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({
@@ -75,9 +78,12 @@ export const updateRequest = async (req: Request, res: Response, next: NextFunct
         }
 
         res.status(200).json({
-            message: "Request updated successfully",
-            reqId
+            message:
+                status === "APPROVED"
+                    ? "Organizer request approved successfully"
+                    : "Organizer request rejected successfully"
         });
+
     } catch (err) {
         next(err);
     }

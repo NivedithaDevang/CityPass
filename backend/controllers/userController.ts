@@ -1,5 +1,4 @@
 import {
-    getAllUsers,
     getUserById,
     updateUser as updateUserModel,
     updatePassword
@@ -11,27 +10,12 @@ import { saltRounds } from "../config/env.js";
 import { db } from "../config/database.js";
 import { generateUserToken } from "../middleware/tokenMiddleware.js";
 
-//getting all users only if role is admin
 
-export const getUsers = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const results = await getAllUsers();
-
-        res.status(200).json({
-            message: "Users fetched successfully",
-            users: results
-        });
-    } catch (err) {
-        next(err);
-    }
-};
 
 //get user by id
 export const getUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.user?.id;
-        console.log(userId); 
-
         if (userId === undefined) {
             return res.status(401).json({
                 message: "User authentication is required"

@@ -1,22 +1,67 @@
 import { Request, Response, NextFunction } from "express";
-import { getUsers } from "../controllers/userController.js";
-//middleware to check if the role is admin , only then getting all users
 export const checkAdminRole = (
     req: Request,
     res: Response,
     next: NextFunction
 ) => {
-    if (req.user?.role !== "ADMIN") {
+    if (req.user?.role !== "ADMIN" || "SUPER_ADMIN") {
         return res.status(403).json({
-            message: "Access denied. Admins only."
-        });
-    }
-    if (req.user?.role === "ADMIN") {
-        return res.status(200).json({
-            message: "Access granted. Admins only.",
-            users: getUsers
+            message: "You do not have permission to access this action."
         });
     }
     next();
 };
 
+export const checkSuperAdminRole = (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+
+    if (req.user?.role !== "SUPER_ADMIN") {
+        return res.status(403).json({
+            message: "You do not have permission to access this action."
+        });
+    }
+
+    next();
+};
+
+// Checks whether an admin is allowed to access a particular city
+export const checkCityAccess = (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+
+    // Super Admin can access every city
+    if (req.user?.role === "SUPER_ADMIN") {
+        return next();
+    }
+
+    // Only City Admin reaches this point
+    if (req.user?.role !== "ADMIN") {
+        return res.status(403).json({
+            message: "You do not have permission to access this city."
+        });
+    }
+
+    const adminCityId = req.user.city_id;
+    const requestedCityId = Number(req.params.id);
+
+    // Admin must have a city assigned
+    if (!adminCityId) {
+        return res.status(403).json({
+            message: "No city is assigned to this admin."
+        });
+    }
+
+    // Check whether requested city belongs to this admin
+    if (adminCityId !== requestedCityId) {
+        return res.status(403).json({
+            message: "You do not have permission to access this city."
+        });
+    }
+
+    next();
+};

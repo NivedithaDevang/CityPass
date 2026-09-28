@@ -1,58 +1,62 @@
-import { getAllCities,
+import {
+    getAllCities,
     getCityById,
     createCity,
-    updateCity,
-    updateCityStatus
- } from "../models/cityModel.js";
+    updateCity
+} from "../models/cityModel.js";
+
 import { Request, Response } from "express";
 
-export const getCities = async(
-    req : Request,
-    res : Response
+// Get all cities
+export const getCities = async (
+    req: Request,
+    res: Response
 ) => {
     try {
         const cities = await getAllCities();
+
         res.status(200).json({
-     message : "Cities fetched succesfully",
-city: cities
+            message: "Cities fetched successfully",
+            city: cities
         });
 
-    }
-    catch(error){
+    } catch (error) {
         res.status(500).json({
-            message : "unable to fetch cities"
-        });
-    };
-}
-
-
-//get cities by id
-export const getCity = async(
-    req : Request,
-    res : Response
-) => {
-    try{
-        const id = Number(req.params.id);
-        const city = await getCityById(id);
-
-        if(!city){
-            return res.status(404).json({
-                message : "City not found"
-            });
-        }
-        res.status(200).json({
-            city
-        });
-    }
-    catch(error){
-        res.status(500).json({
-            message : "Unable to fetch city"
+            message: "Unable to fetch cities"
         });
     }
 };
 
 
-//create city
+// Get city by ID
+export const getCity = async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const id = Number(req.params.id);
+
+        const city = await getCityById(id);
+
+        if (!city) {
+            return res.status(404).json({
+                message: "City not found"
+            });
+        }
+
+        res.status(200).json({
+            city
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Unable to fetch city"
+        });
+    }
+};
+
+
+// Create city
 export const addCity = async (
     req: Request,
     res: Response
@@ -78,19 +82,46 @@ export const addCity = async (
 };
 
 
-//update city
+// Update city
 export const editCity = async (
     req: Request,
     res: Response
 ) => {
     try {
         const id = Number(req.params.id);
-        const { name, description } = req.body;
+
+        const {
+            name,
+            description,
+            is_active
+        } = req.body;
+
+        // Validate is_active only when it is provided
+        if (
+            is_active !== undefined &&
+            typeof is_active !== "boolean"
+        ) {
+            return res.status(400).json({
+                message: "is_active must be true or false"
+            });
+        }
+
+        // Make sure at least one field is provided
+        if (
+            name === undefined &&
+            description === undefined &&
+            is_active === undefined
+        ) {
+            return res.status(400).json({
+                message: "At least one field is required to update"
+            });
+        }
 
         const affectedRows = await updateCity(
             id,
             name,
-            description
+            description,
+            is_active
         );
 
         if (affectedRows === 0) {
@@ -106,46 +137,6 @@ export const editCity = async (
     } catch (error) {
         res.status(500).json({
             message: "Unable to update city"
-        });
-    }
-};
-
-
-//active or inactive city
-export const changeCityStatus = async (
-    req: Request,
-    res: Response
-) => {
-    try {
-        const id = Number(req.params.id);
-        const { is_active } = req.body;
-
-        if (typeof is_active !== "boolean") {
-            return res.status(400).json({
-                message: "is_active must be true or false"
-            });
-        }
-
-        const affectedRows = await updateCityStatus(
-            id,
-            is_active
-        );
-
-        if (affectedRows === 0) {
-            return res.status(404).json({
-                message: "City not found"
-            });
-        }
-
-        res.status(200).json({
-            message: is_active
-                ? "City activated successfully"
-                : "City deactivated successfully"
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            message: "Unable to update city status"
         });
     }
 };

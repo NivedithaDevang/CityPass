@@ -1,5 +1,6 @@
 import path from "path";
 import express, { Router } from "express";
+import adminRouter from "./adminRoute.js";
 import authRoutes from "./authRoute.js";
 import bookRouter from "./bookingRoute.js";
 import categoryRouter from "./categoryRoute.js";
@@ -13,6 +14,7 @@ import errorHandler from "../../middleware/errorHandler.js";
 
 const router: Router = express.Router();
 
+router.use("/v1/admin", adminRouter);
 router.use("/v1/auth", authRoutes);
 router.use("/v1/bookings", bookRouter);
 router.use("/v1/categories", categoryRouter);

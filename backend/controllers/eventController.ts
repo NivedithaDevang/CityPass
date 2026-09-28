@@ -4,7 +4,8 @@ import {
     getAllConcerts,
     getEventBySlug,
     createEvent,
-    updateEvent as updateEventModel
+    updateEvent as updateEventModel,
+    updateEventStatus as updateEventStatusModel
 } from "../models/eventModel.js";
 import { Request, Response, NextFunction } from "express";
 
@@ -168,6 +169,61 @@ const slug = generateSlug(name);
             message: "Event updated successfully",
             eventId
         });
+    } catch (err) {
+        next(err);
+    }
+};
+
+
+// Admin: Approve or reject an event
+export const updateEventStatus = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const eventId = Number(req.params.id);
+        const { status } = req.body;
+
+        // Validate event ID
+        if (!Number.isInteger(eventId) || eventId <= 0) {
+            return res.status(400).json({
+                message: "A valid event id is required"
+            });
+        }
+
+        // Only APPROVED or REJECTED is allowed
+        if (
+            status !== "APPROVED" &&
+            status !== "REJECTED"
+        ) {
+            return res.status(400).json({
+                message: "Status must be APPROVED or REJECTED"
+            });
+        }
+
+        // Update only the event status
+        const result = await updateEventStatusModel(
+            eventId,
+            status
+        );
+
+        // Event does not exist
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                message: "Event not found"
+            });
+        }
+
+        res.status(200).json({
+            message:
+                status === "APPROVED"
+                    ? "Event approved successfully"
+                    : "Event rejected successfully",
+            eventId,
+            status
+        });
+
     } catch (err) {
         next(err);
     }

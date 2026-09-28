@@ -13,7 +13,15 @@ Does a user with this email exist, and if so, give me their details.
 */
 export const findUserByEmail = async (email: string) => {
     const [rows] = await db.query(
-        `SELECT id, name, email, password, role, status, token_version
+        `SELECT
+            id,
+            name,
+            email,
+            password,
+            role,
+            status,
+            city_id,
+            token_version
          FROM users
          WHERE email = ?`,
         [email]

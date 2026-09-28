@@ -10,57 +10,62 @@ export const getBookings = async (req: Request, res: Response, next: NextFunctio
       bookings: results
     });
   } catch (err: any) {
-    console.error("GET bookings SQL error:", err.message);
-    res.status(500).json({ message: err.sqlMessage || err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
 export const addBooking = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
-      user_id,
       pass_id,
-      event_id,
       booking_date,
       number_of_tickets,
       total_amount,
       status = "CONFIRMED",
     } = req.body;
 
-    // Check all potential sources for the user's ID:
-    const activeUserId = req.body.user_id;
-
-    const activePassId = pass_id ?? event_id;
+    // Get logged-in user from JWT
+    const activeUserId = req.user?.id;
 
     if (!activeUserId) {
       return res.status(401).json({
-        message: "User ID is required. Please log in again.",
+        message: "Authentication required. Please sign in to proceed.",
       });
     }
 
-    if (!activePassId || !booking_date || number_of_tickets === undefined || total_amount === undefined) {
+    // Check required booking fields
+    if (
+      !pass_id ||
+      !booking_date ||
+      number_of_tickets === undefined ||
+      total_amount === undefined
+    ) {
       return res.status(400).json({
-        message: "pass_id, booking_date, number_of_tickets, and total_amount are required",
+        message:
+          "pass_id, booking_date, number_of_tickets, and total_amount are required"
       });
     }
 
+      // Create booking
     const result = await createBooking({
       user_id: Number(activeUserId),
-      pass_id: Number(activePassId),
+      pass_id: Number(pass_id),
       booking_date,
       number_of_tickets: Number(number_of_tickets),
       total_amount: Number(total_amount),
-      status,
+      status
     });
 
     res.status(201).json({
       message: "Booking created successfully",
-      bookingId: result?.insertId,
+      bookingId: result.insertId
     });
+
   } catch (err: any) {
-    console.error("SQL Error in addBooking:", err.message, err.sqlMessage);
+    console.error("SQL Error in addBooking:", err);
+
     res.status(500).json({
-      message: err.sqlMessage || err.message || "Failed to create booking",
+      message: "Failed to create booking"
     });
   }
 };
@@ -86,6 +91,6 @@ export const cancelBooking = async (req: Request, res: Response, next: NextFunct
     });
   } catch (err: any) {
     console.error("Error cancelling booking:", err);
-    res.status(500).json({ message: err.sqlMessage || err.message || "Failed to cancel booking" });
+    res.status(500).json({ message: err.message || "Failed to cancel booking" });
   }
 };

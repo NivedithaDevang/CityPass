@@ -26,11 +26,6 @@ type UserRow = RowDataPacket & {
 
 };
 
-//getting all users
-export const getAllUsers = async () => {
-    const [results] = await db.query<UserRow[]>("SELECT id, name, email, role FROM users");
-    return results;
-};
 
 //get user by id
 export const getUserById = async (id: number) => {

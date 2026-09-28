@@ -7,8 +7,7 @@ const PORT: number | string = SERVER_PORT;
 async function startServer(): Promise<void> {
   try {
     await connectDB();
-    console.log("Database connected successfully");
-
+    
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
