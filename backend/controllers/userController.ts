@@ -337,40 +337,6 @@ export const deactivateAccount = async (
     }
 };
 
-
-//for getting user details(profile)
-export const getProfile = async (req: Request, res: Response) => {
-    try {
-        const userId = Number(req.user?.id);
-
-        if (!Number.isInteger(userId) || userId <= 0) {
-            return res.status(401).json({
-                message: "Unauthorized"
-            });
-        }
-
-        const user = await getUserById(userId);
-
-        if (!user) {
-            return res.status(404).json({
-                message: "User not found"
-            });
-        }
-
-        res.status(200).json({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role
-        });
-
-    } catch (err) {
-        res.status(500).json({
-            message: "Unable to fetch profile"
-        });
-    }
-};
-
 export const reactivateAndLogin = async (
   req: Request,
   res: Response,
