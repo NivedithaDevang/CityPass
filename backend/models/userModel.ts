@@ -80,7 +80,24 @@ export const updatePassword = async(id: number, hashedPassword: string) => {
 }
 
 
+export const getAllUsers = async () => {
+    const sql = `
+        SELECT
+            id,
+            name,
+            email,
+            phone,
+            role,
+            status,
+            city_id
+        FROM users
+        ORDER BY id DESC
+    `;
 
+    const [results] = await db.query(sql);
+
+    return results;
+};
 
 
 

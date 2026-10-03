@@ -1,5 +1,6 @@
 import {
     getUserById,
+    getAllUsers,
     updateUser as updateUserModel,
     updatePassword
 } from "../models/userModel.js";
@@ -46,6 +47,23 @@ export const getUser = async (req: Request, res: Response, next: NextFunction) =
         });
     } catch (err) {
         console.log(err);
+        next(err);
+    }
+};
+
+export const getUsers = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const users = await getAllUsers();
+
+        return res.status(200).json({
+            message: "Users fetched successfully",
+            users
+        });
+    } catch (err) {
         next(err);
     }
 };

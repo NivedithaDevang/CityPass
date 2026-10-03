@@ -5,7 +5,7 @@ import {
     updateCategory
 } from "../models/categoryModel.js";
 
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 
 
 // Get all categories
@@ -83,61 +83,55 @@ export const addCategory = async (
 
 // Update category
 export const editCategory = async (
-    req: Request,
-    res: Response
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
-    try {
-        const id = Number(req.params.id);
+  try {
+    const id = Number(req.params.id);
 
-        const {
-            name,
-            is_active
-        } = req.body;
+    const { name, is_active } = req.body;
 
-
-        // Validate is_active only when it is provided
-        if (
-            is_active !== undefined &&
-            typeof is_active !== "boolean"
-        ) {
-            return res.status(400).json({
-                message: "is_active must be true or false"
-            });
-        }
-
-
-        // At least one field must be provided
-        if (
-            name === undefined &&
-            is_active === undefined
-        ) {
-            return res.status(400).json({
-                message: "At least one field is required to update"
-            });
-        }
-
-
-        const affectedRows = await updateCategory(
-            id,
-            name,
-            is_active
-        );
-
-
-        if (affectedRows === 0) {
-            return res.status(404).json({
-                message: "Category not found"
-            });
-        }
-
-
-        res.status(200).json({
-            message: "Category updated successfully"
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            message: "Unable to update category"
-        });
+    if (Number.isNaN(id)) {
+      return res.status(400).json({
+        message: "Invalid category ID",
+      });
     }
+
+    if (
+      is_active !== undefined &&
+      typeof is_active !== "boolean"
+    ) {
+      return res.status(400).json({
+        message: "is_active must be true or false",
+      });
+    }
+
+    if (
+      name === undefined &&
+      is_active === undefined
+    ) {
+      return res.status(400).json({
+        message: "At least one field is required to update",
+      });
+    }
+
+    const affectedRows = await updateCategory(
+      id,
+      name,
+      is_active
+    );
+
+    if (affectedRows === 0) {
+      return res.status(404).json({
+        message: "Category not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Category updated successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
 };

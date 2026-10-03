@@ -4,7 +4,8 @@ export const checkAdminRole = (
     res: Response,
     next: NextFunction
 ) => {
-    if (req.user?.role !== "ADMIN" || "SUPER_ADMIN") {
+    const role = req.user?.role?.toUpperCase();
+    if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
         return res.status(403).json({
             message: "You do not have permission to access this action."
         });

@@ -22,7 +22,7 @@ router.use("/v1/categories", categoryRouter);
 router.use("/v1/cities", cityRouter);
 router.use("/v1/events", eventRouter);
 router.use("/v1/organisers", organiserRouter);
-router.use("/v1/orgrequest", orgRequestRouter);
+router.use("/v1/organiser-requests", orgRequestRouter);
 router.use("/v1/tickets", ticketRouter);
 router.use("/v1/users", userRouter);
 router.use("/uploads", express.static(path.join(process.cwd(), "uploads")));

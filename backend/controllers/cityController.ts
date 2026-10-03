@@ -5,7 +5,7 @@ import {
     updateCity
 } from "../models/cityModel.js";
 
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 
 // Get all cities
 export const getCities = async (
@@ -15,13 +15,13 @@ export const getCities = async (
     try {
         const cities = await getAllCities();
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "Cities fetched successfully",
-            city: cities
+            cities
         });
 
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             message: "Unable to fetch cities"
         });
     }
@@ -84,59 +84,65 @@ export const addCity = async (
 
 // Update city
 export const editCity = async (
-    req: Request,
-    res: Response
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
-    try {
-        const id = Number(req.params.id);
+  try {
+    const id = Number(req.params.id);
 
-        const {
-            name,
-            description,
-            is_active
-        } = req.body;
+    const {
+      name,
+      description,
+      is_active,
+    } = req.body;
 
-        // Validate is_active only when it is provided
-        if (
-            is_active !== undefined &&
-            typeof is_active !== "boolean"
-        ) {
-            return res.status(400).json({
-                message: "is_active must be true or false"
-            });
-        }
-
-        // Make sure at least one field is provided
-        if (
-            name === undefined &&
-            description === undefined &&
-            is_active === undefined
-        ) {
-            return res.status(400).json({
-                message: "At least one field is required to update"
-            });
-        }
-
-        const affectedRows = await updateCity(
-            id,
-            name,
-            description,
-            is_active
-        );
-
-        if (affectedRows === 0) {
-            return res.status(404).json({
-                message: "City not found"
-            });
-        }
-
-        res.status(200).json({
-            message: "City updated successfully"
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            message: "Unable to update city"
-        });
+    if (Number.isNaN(id)) {
+      return res.status(400).json({
+        message: "Invalid city ID",
+      });
     }
+
+    if (
+      is_active !== undefined &&
+      typeof is_active !== "boolean"
+    ) {
+      return res.status(400).json({
+        message:
+          "is_active must be true or false",
+      });
+    }
+
+    if (
+      name === undefined &&
+      description === undefined &&
+      is_active === undefined
+    ) {
+      return res.status(400).json({
+        message:
+          "At least one field is required to update",
+      });
+    }
+
+    const affectedRows =
+      await updateCity(
+        id,
+        name,
+        description,
+        is_active
+      );
+
+    if (affectedRows === 0) {
+      return res.status(404).json({
+        message: "City not found",
+      });
+    }
+
+    return res.status(200).json({
+      message:
+        "City updated successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
 };

@@ -39,15 +39,12 @@ export const authenticate = async (
             JWT_SECRET as string
         ) as AuthPayLoad;
 
-        console.log("Decoded JWT:", decoded);
-
         const [rows] = await db.query<TokenVersionRow[]>(
             "SELECT token_version FROM users WHERE id = ?",
             [decoded.id]
         );
 
         if (rows.length === 0) {
-            console.log("USER NOT FOUND");
 
             return res.status(401).json({
                 message: "User not found"
@@ -57,8 +54,6 @@ export const authenticate = async (
         const currentTokenVersion = rows[0].token_version ?? 0;
 
         if ((decoded.token_version ?? 0) !== currentTokenVersion) {
-            console.log("TOKEN VERSION MISMATCH");
-
             return res.status(401).json({
                 message: "Token is no longer valid"
             });

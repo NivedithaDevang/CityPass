@@ -56,52 +56,47 @@ export const createCity = async (
 // Update city
 // All fields are optional because this is a PATCH-style update
 export const updateCity = async (
-    id: number,
-    name?: string,
-    description?: string,
-    isActive?: boolean
-): Promise<number> => {
+  id: number,
+  name?: string,
+  description?: string,
+  is_active?: boolean
+) => {
+  const fields: string[] = [];
+  const values: any[] = [];
 
-    const updates: string[] = [];
-    const values: (string | boolean | number)[] = [];
+  if (name !== undefined) {
+    fields.push("name = ?");
+    values.push(name);
+  }
 
-    // Update name only if it was provided
-    if (name !== undefined) {
-        updates.push("name = ?");
-        values.push(name);
-    }
+  if (description !== undefined) {
+    fields.push("description = ?");
+    values.push(description);
+  }
 
-    // Update description only if it was provided
-    if (description !== undefined) {
-        updates.push("description = ?");
-        values.push(description);
-    }
+  if (is_active !== undefined) {
+    fields.push("is_active = ?");
+    values.push(is_active);
+  }
 
-    // Update status only if it was provided
-    if (isActive !== undefined) {
-        updates.push("is_active = ?");
-        values.push(isActive);
-    }
+  if (fields.length === 0) {
+    return 0;
+  }
 
-    // Nothing was provided to update
-    if (updates.length === 0) {
-        return 0;
-    }
+  values.push(id);
 
-    const sql = `
-        UPDATE cities
-        SET ${updates.join(", ")}
-        WHERE id = ?
-    `;
+  const sql = `
+    UPDATE cities
+    SET ${fields.join(", ")}
+    WHERE id = ?
+  `;
 
-    values.push(id);
+  const [result]: any = await db.query(
+    sql,
+    values
+  );
 
-    const [result] = await db.execute<ResultSetHeader>(
-        sql,
-        values
-    );
-
-    return result.affectedRows;
+  return result.affectedRows;
 };
 
 // Find city by name
