@@ -1,0 +1,635 @@
+.cities-container {
+  padding: 0;
+  min-height: auto;
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.cities-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.cities-subtitle {
+  display: block;
+  margin-bottom: 8px;
+  color: #6c3cff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.cities-header h1 {
+  margin: 0;
+  color: #1f1f1f;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.cities-header p {
+  margin: 8px 0 0;
+  color: #777;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.add-city-btn {
+  border: none;
+  border-radius: 8px;
+
+  padding: 11px 18px;
+
+  background: #6c3cff;
+  color: #fff;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.add-city-btn:hover {
+  background: #5930d8;
+}
+
+.add-city-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cities-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 13px 16px;
+  margin-bottom: 20px;
+
+  border-radius: 8px;
+
+  font-size: 14px;
+}
+
+.cities-message button {
+  border: none;
+  background: transparent;
+
+  cursor: pointer;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cities-error {
+  background: #fff0f0;
+  color: #c62828;
+}
+
+.cities-error button {
+  color: #c62828;
+}
+
+.cities-success {
+  background: #edf9f1;
+  color: #218838;
+}
+
+.cities-success button {
+  color: #218838;
+}
+
+.city-form {
+  padding: 24px;
+  margin-bottom: 24px;
+
+  background: #fff;
+
+  border: 1px solid #eee;
+  border-radius: 12px;
+
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.city-form h2 {
+  margin: 0 0 22px;
+
+  color: #222;
+  font-size: 20px;
+}
+
+.city-form-group {
+  margin-bottom: 18px;
+}
+
+.city-form-group label {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: #444;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.city-form-group input,
+.city-form-group textarea {
+  width: 100%;
+
+  padding: 12px 14px;
+
+  border: 1px solid #ddd;
+  border-radius: 8px;
+
+  box-sizing: border-box;
+  outline: none;
+
+  background: #fff;
+  color: #333;
+
+  font-family: inherit;
+  font-size: 14px;
+
+  resize: vertical;
+}
+
+.city-form-group input:focus,
+.city-form-group textarea:focus {
+  border-color: #6c3cff;
+  box-shadow: 0 0 0 3px rgba(108, 60, 255, 0.08);
+}
+
+.city-form-group input:disabled {
+  background: #f5f5f5;
+  color: #777;
+  cursor: not-allowed;
+}
+
+.cities-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 18px;
+
+  margin-bottom: 24px;
+}
+
+.cities-search {
+  width: 100%;
+  max-width: 450px;
+
+  padding: 12px 14px;
+
+  border: 1px solid #ddd;
+  border-radius: 8px;
+
+  box-sizing: border-box;
+  outline: none;
+
+  background: #fff;
+
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.cities-search::placeholder {
+  color: #999;
+}
+
+.cities-search:focus {
+  border-color: #6c3cff;
+
+  box-shadow:
+    0 0 0 3px rgba(108, 60, 255, 0.08);
+}
+
+.cities-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.city-filter-btn {
+  padding: 9px 15px;
+
+  border: 1px solid #ddd;
+  border-radius: 7px;
+
+  background: #fff;
+  color: #555;
+
+  cursor: pointer;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+
+  transition: 0.2s ease;
+}
+
+.city-filter-btn:hover {
+  border-color: #6c3cff;
+  color: #6c3cff;
+}
+
+.city-filter-btn.active {
+  border-color: #6c3cff;
+
+  background: #6c3cff;
+  color: #fff;
+}
+
+.cities-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 20px;
+}
+
+.city-card {
+  display: flex;
+  flex-direction: column;
+
+  min-height: 190px;
+
+  padding: 20px;
+
+  background: #fff;
+
+  border: 1px solid #eee;
+  border-radius: 12px;
+
+  box-sizing: border-box;
+
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.04);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.city-card:hover {
+  box-shadow:
+    0 5px 18px rgba(0, 0, 0, 0.07);
+}
+
+.city-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  gap: 12px;
+}
+
+.city-card-header h3 {
+  margin: 0;
+
+  color: #222;
+
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.city-status {
+  flex-shrink: 0;
+
+  padding: 5px 10px;
+
+  border-radius: 20px;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.city-status.active {
+  background: #e9f7ee;
+  color: #218838;
+}
+
+.city-status.inactive {
+  background: #fdecec;
+  color: #d93025;
+}
+
+.city-description {
+  flex: 1;
+
+  margin: 16px 0 20px;
+
+  color: #777;
+
+  font-size: 14px;
+  line-height: 1.6;
+
+  text-align: left;
+}
+
+.city-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  gap: 8px;
+
+  margin-top: auto;
+}
+
+.city-edit-btn {
+  padding: 8px 13px;
+
+  border: 1px solid #d8cdfc;
+  border-radius: 7px;
+
+  background: #fff;
+  color: #6c3cff;
+
+  cursor: pointer;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+
+  transition: 0.2s ease;
+}
+
+.city-edit-btn:hover {
+  background: #f5f1ff;
+  border-color: #6c3cff;
+}
+
+.city-deactivate-btn,
+.city-activate-btn {
+  padding: 8px 13px;
+
+  border-radius: 7px;
+
+  cursor: pointer;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+
+  transition: 0.2s ease;
+}
+
+.city-deactivate-btn {
+  border: 1px solid #e0b4b4;
+
+  background: #fff;
+  color: #c62828;
+}
+
+.city-deactivate-btn:hover {
+  background: #fff0f0;
+  border-color: #c62828;
+}
+
+.city-activate-btn {
+  border: 1px solid #b7d9c0;
+
+  background: #fff;
+  color: #218838;
+}
+
+.city-activate-btn:hover {
+  background: #edf9f1;
+  border-color: #218838;
+}
+
+.city-deactivate-btn:disabled,
+.city-activate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.city-edit-form {
+  display: flex;
+  flex-direction: column;
+
+  height: 100%;
+}
+
+.city-edit-form .city-card-header {
+  margin-bottom: 18px;
+}
+
+.city-edit-form .city-card-header h3 {
+  margin: 0;
+
+  color: #222;
+
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.city-edit-group {
+  margin-bottom: 16px;
+}
+
+.city-edit-group label {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color: #444;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.city-edit-group input,
+.city-edit-group textarea,
+.city-edit-group select {
+  width: 100%;
+
+  padding: 10px 12px;
+
+  border: 1px solid #ddd;
+  border-radius: 7px;
+
+  box-sizing: border-box;
+  outline: none;
+
+  background: #fff;
+  color: #333;
+
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.city-edit-group textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.city-edit-group input:focus,
+.city-edit-group textarea:focus,
+.city-edit-group select:focus {
+  border-color: #6c3cff;
+
+  box-shadow:
+    0 0 0 3px rgba(108, 60, 255, 0.08);
+}
+
+.city-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+
+  gap: 8px;
+
+  margin-top: auto;
+  padding-top: 10px;
+}
+
+.city-cancel-btn,
+.city-save-btn {
+  padding: 8px 13px;
+
+  border-radius: 7px;
+
+  cursor: pointer;
+
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+
+  transition: 0.2s ease;
+}
+
+.city-cancel-btn {
+  border: 1px solid #ddd;
+
+  background: #fff;
+  color: #555;
+}
+
+.city-cancel-btn:hover {
+  background: #f5f5f5;
+}
+
+.city-save-btn {
+  border: 1px solid #6c3cff;
+
+  background: #6c3cff;
+  color: #fff;
+}
+
+.city-save-btn:hover {
+  background: #5930d8;
+}
+
+.city-cancel-btn:disabled,
+.city-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cities-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  min-height: 180px;
+
+  background: #fff;
+
+  border: 1px solid #eee;
+  border-radius: 12px;
+
+  color: #777;
+
+  font-size: 14px;
+
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 1100px) {
+  .cities-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .cities-container {
+    padding: 20px;
+  }
+
+  .cities-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cities-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cities-search {
+    max-width: none;
+  }
+
+  .cities-filters {
+    width: 100%;
+  }
+
+  .city-filter-btn {
+    flex: 1;
+  }
+
+  .cities-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .cities-container {
+    padding: 16px;
+  }
+
+  .cities-header h1 {
+    font-size: 25px;
+  }
+
+  .city-form {
+    padding: 18px;
+  }
+
+  .city-card {
+    padding: 16px;
+  }
+
+  .cities-message {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .city-card-header {
+    flex-direction: column;
+  }
+
+  .city-status {
+    align-self: flex-start;
+  }
+
+  .city-card-footer {
+    flex-wrap: wrap;
+  }
+
+  .city-edit-btn,
+  .city-deactivate-btn,
+  .city-activate-btn {
+    flex: 1;
+  }
+}

@@ -6,3 +6,11 @@ export function createEventSlug(title?: string): string {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
 }
+
+
+export function createOrganiserRequestSlug(title?: string): string {
+  return (title || "organiser-requests")
+    .toLowerCase()
+    .trim()
+
+}

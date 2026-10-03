@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios, { AxiosError } from "axios";
 import "./Auth.css";
 import { API_BASE_URL } from "../../config/config";
@@ -10,6 +11,7 @@ import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 interface ApiResponse {
   message: string;
   user?: User;
+  token?: string;
 }
 
 interface ApiErrorResponse {
@@ -24,26 +26,32 @@ interface AuthProps {
   onClose: () => void;
   onSuccess: (user: User) => void;
   initialLogin?: boolean;
+  redirectOnSuccess?: boolean; // Controls whether to navigate away
 }
 
-function Auth({ onClose, onSuccess, initialLogin = false }: AuthProps) {
+function Auth({
+  onClose,
+  onSuccess,
+  initialLogin = false,
+  redirectOnSuccess = true,
+}: AuthProps) {
+  const navigate = useNavigate();
   const { setUser } = useUser();
   const [isLogin, setIsLogin] = useState(initialLogin);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  
-  // Track focus so hints don't show before the user reaches the fields
+
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [confirmFocused, setConfirmFocused] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Live condition checks
   const allRulesPassed = PASSWORD_RULES.every((rule) => rule.check(password));
-  const isConfirmValid = confirmPassword.length > 0 && confirmPassword === password;
+  const isConfirmValid =
+    confirmPassword.length > 0 && confirmPassword === password;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -82,13 +90,35 @@ function Auth({ onClose, onSuccess, initialLogin = false }: AuthProps) {
       });
 
       if (response.data.user) {
-        setUser(response.data.user);
-        onSuccess(response.data.user);
+        const loggedUser = response.data.user;
+
+        // 1. Update Context and Local Storage
+        setUser(loggedUser);
+        localStorage.setItem("user", JSON.stringify(loggedUser));
+
+        if (response.data.token) {
+          localStorage.setItem("token", response.data.token);
+        }
+
+        // 2. Trigger success callback and reset form
+        onSuccess(loggedUser);
         setName("");
         setEmail("");
         setPassword("");
         setConfirmPassword("");
         onClose();
+
+        // 3. SuperAdmin / Admin Check & Conditional Redirect
+        const isSuperAdmin =
+          loggedUser.role === "SUPER_ADMIN" ||
+          loggedUser.role === "ADMIN" ||
+          loggedUser.email === "superadmincitypass@gmail.com";
+
+        if (isSuperAdmin) {
+          navigate("/admin");
+        } else if (redirectOnSuccess) {
+          navigate("/");
+        }
       } else {
         setError("User details were not returned.");
       }
@@ -107,10 +137,16 @@ function Auth({ onClose, onSuccess, initialLogin = false }: AuthProps) {
   return (
     <div className="auth-overlay" onClick={onClose}>
       <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="auth-close" onClick={onClose}>&times;</button>
+        <button className="auth-close" onClick={onClose}>
+          &times;
+        </button>
 
         <h2>{isLogin ? "Welcome back" : "Create your account"}</h2>
-        <p>{isLogin ? "Login to explore CityPass" : "Join CityPass and explore your city"}</p>
+        <p>
+          {isLogin
+            ? "Login to explore CityPass"
+            : "Join CityPass and explore your city"}
+        </p>
 
         {error && <div className="auth-error-banner">{error}</div>}
 
@@ -143,7 +179,6 @@ function Auth({ onClose, onSuccess, initialLogin = false }: AuthProps) {
               required
             />
 
-            {/* Live requirement badges appear once user clicks or types */}
             {!isLogin && (passwordFocused || password.length > 0) && (
               <div className="live-rule-tray">
                 {PASSWORD_RULES.map((rule) => {
@@ -184,31 +219,41 @@ function Auth({ onClose, onSuccess, initialLogin = false }: AuthProps) {
                 required
               />
 
-              {/* Dynamic match notification while typing */}
-              {(confirmFocused || confirmPassword.length > 0) && confirmPassword.length > 0 && (
-                <div className={`live-match-hint ${isConfirmValid ? "valid" : "invalid"}`}>
-                  {isConfirmValid ? (
-                    <>
-                      <FaCheckCircle /> Passwords match
-                    </>
-                  ) : (
-                    <>
-                      <FaTimesCircle /> Passwords do not match
-                    </>
-                  )}
-                </div>
-              )}
+              {(confirmFocused || confirmPassword.length > 0) &&
+                confirmPassword.length > 0 && (
+                  <div
+                    className={`live-match-hint ${
+                      isConfirmValid ? "valid" : "invalid"
+                    }`}
+                  >
+                    {isConfirmValid ? (
+                      <>
+                        <FaCheckCircle /> Passwords match
+                      </>
+                    ) : (
+                      <>
+                        <FaTimesCircle /> Passwords do not match
+                      </>
+                    )}
+                  </div>
+                )}
             </div>
           )}
 
           <button
             type="submit"
             className="auth-submit"
-            disabled={isLoading || (!isLogin && (!allRulesPassed || !isConfirmValid))}
+            disabled={
+              isLoading || (!isLogin && (!allRulesPassed || !isConfirmValid))
+            }
           >
             {isLoading
-              ? isLogin ? "Logging in..." : "Creating account..."
-              : isLogin ? "Login" : "Create account"}
+              ? isLogin
+                ? "Logging in..."
+                : "Creating account..."
+              : isLogin
+              ? "Login"
+              : "Create account"}
           </button>
         </form>
 

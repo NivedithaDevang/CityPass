@@ -15,8 +15,13 @@ import { getNumberErrors } from "../../config/numberCheck";
 import { getPasswordErrors } from "../../config/passwordRules";
 import { Terms } from "../Terms/DeactivationTerms";
 import { Terms as OrganiserTerms } from "../Terms/OrganiserTerms";
+import { type City } from "../../types/auth";
 
-// Map friendly URL slugs to tab IDs
+interface Category {
+  id: number;
+  name: string;
+}
+
 const TAB_SLUGS = {
   profile: "profile",
   password: "password",
@@ -39,17 +44,14 @@ const DEACTIVATE_REASONS = [
 ];
 
 function SettingsView() {
-  const { tabSlug } = useParams<{ tabSlug: string }>(); //current tab from url
+  const { tabSlug } = useParams<{ tabSlug: string }>();
   const navigate = useNavigate();
 
-  //if the url slug exists in TAB_SLUGS
-  //if not it is set to profile
   const activeTab: ActiveTab =
     tabSlug && tabSlug in TAB_SLUGS
       ? TAB_SLUGS[tabSlug as SlugKey]
       : "profile";
 
-      //if the user enters invalid settings url, they are redirected to profile page
   useEffect(() => {
     if (!tabSlug || !(tabSlug in TAB_SLUGS)) {
       navigate("/settings/profile", { replace: true });
@@ -61,13 +63,10 @@ function SettingsView() {
   };
 
   const { user, setUser, profileImage, setProfileImage } = useUser();
-  //allows the camera button to oopen file selector
   const profileImageInputRef = useRef<HTMLInputElement>(null);
 
-  // Store the raw file selected by the user to send on Save
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
-  //current values displayed in the profile form
   const [profile, setProfile] = useState({
     name: user?.name || "",
     email: user?.email || "",
@@ -76,7 +75,6 @@ function SettingsView() {
     gender: "",
   });
 
-  // Track initial fetched profile data to detect user changes
   const [initialProfile, setInitialProfile] = useState({
     name: "",
     email: "",
@@ -88,22 +86,31 @@ function SettingsView() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Organiser Request States
+  // Organiser Form State
   const [org, setOrg] = useState({
     organization_name: "",
     description: "",
+    category: "",
+    city: "",
+    pan_card: "",
+    email: user?.email || "",
+    phone: user?.phone || "",
   });
-  const [showOrgConfirmPopup, setShowOrgConfirmPopup] = useState(false); //organiser confirmation popup 
-  const [showOrgTerms, setShowOrgTerms] = useState(false); //organiser t&c modal
+
+  // Dynamic Options from Backend
+  const [cities, setCities] = useState<City[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [metaLoading, setMetaLoading] = useState(false);
+
+  const [showOrgConfirmPopup, setShowOrgConfirmPopup] = useState(false);
+  const [showOrgTerms, setShowOrgTerms] = useState(false);
   const [orgSubmitting, setOrgSubmitting] = useState(false);
   const [orgMessage, setOrgMessage] = useState("");
   const [showOrgSuccessPopup, setShowOrgSuccessPopup] = useState(false);
 
-  // Success Popups after updating profile
   const [showProfileSuccessPopup, setShowProfileSuccessPopup] = useState(false);
   const [showPasswordSuccessPopup, setShowPasswordSuccessPopup] = useState(false);
 
-  // Password & general states
   const [passwordMessage, setPasswordMessage] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -112,7 +119,6 @@ function SettingsView() {
   const [showReloginPopup, setShowReloginPopup] = useState(false);
   const [reloginLoading, setReloginLoading] = useState(false);
 
-  // Deactivate states
   const [showDeactivatePopup, setShowDeactivatePopup] = useState(false);
   const [showDeactivateTerms, setShowDeactivateTerms] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
@@ -123,7 +129,6 @@ function SettingsView() {
   const phoneErrors = profile.phone ? getNumberErrors(profile.phone) : [];
   const passwordErrors = newPassword ? getPasswordErrors(newPassword) : [];
 
-  // Check if profile fields or photo have been modified
   const isProfileDirty =
     Boolean(avatarFile) ||
     profile.name !== initialProfile.name ||
@@ -132,10 +137,39 @@ function SettingsView() {
     profile.dob !== initialProfile.dob ||
     profile.gender !== initialProfile.gender;
 
-    //runs when user selects a new profile image
+  // Fetch Cities and Categories from Backend
+  useEffect(() => {
+    if (activeTab === "organiser_request") {
+      const fetchMetadata = async () => {
+        try {
+          setMetaLoading(true);
+          const [citiesRes, categoriesRes] = await Promise.all([
+            axios.get(`${API_BASE_URL}/v1/cities`),
+            axios.get(`${API_BASE_URL}/v1/categories`),
+          ]);
+
+          const cityList = citiesRes.data?.city || citiesRes.data?.cities || citiesRes.data || [];
+          const categoryList =
+            categoriesRes.data?.categories ||
+            categoriesRes.data?.category ||
+            categoriesRes.data ||
+            [];
+
+          setCities(Array.isArray(cityList) ? cityList : []);
+          setCategories(Array.isArray(categoryList) ? categoryList : []);
+        } catch (err) {
+          console.error("Error fetching cities or categories:", err);
+        } finally {
+          setMetaLoading(false);
+        }
+      };
+
+      fetchMetadata();
+    }
+  }, [activeTab]);
+
   const handleProfileImageChange = (event: ChangeEvent<HTMLInputElement>) => {
-    
-    const file = event.target.files?.[0];  //gets the first selected file
+    const file = event.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
@@ -148,30 +182,40 @@ function SettingsView() {
       return;
     }
 
-    setAvatarFile(file);    //store the file
+    setAvatarFile(file);
 
-    const reader = new FileReader();    //preview selected image
+    const reader = new FileReader();
     reader.onload = () => setProfileImage(reader.result as string);
     reader.readAsDataURL(file);
     event.target.value = "";
   };
 
   const handleOrgChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = event.target;
-    //update only changed organiser field
     setOrg((currentOrg) => ({ ...currentOrg, [name]: value }));
     setOrgMessage("");
   };
 
-  //validated the form and opens the confirmation popup
   const handleInitiateOrgSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!org.organization_name.trim() || !org.description.trim()) {
+    if (
+      !org.organization_name.trim() ||
+      !org.description.trim() ||
+      !org.category.trim() ||
+      !org.city.trim() ||
+      !org.email.trim()
+    ) {
       setOrgMessage("Please fill in all required fields.");
       return;
     }
+
+    if (org.pan_card.trim() && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(org.pan_card.trim())) {
+      setOrgMessage("Please enter a valid 10-character PAN number (e.g. ABCDE1234F).");
+      return;
+    }
+
     setOrgMessage("");
     setShowOrgConfirmPopup(true);
   };
@@ -182,10 +226,15 @@ function SettingsView() {
       setOrgMessage("");
 
       await axios.post(
-        `${API_BASE_URL}/v1/orgrequest`,
+        `${API_BASE_URL}/v1/organiser-requests`,
         {
           organization_name: org.organization_name.trim(),
           description: org.description.trim(),
+          category: org.category.trim(),
+          city: org.city.trim(),
+          pan_card: org.pan_card.trim().toUpperCase(),
+          email: org.email.trim(),
+          phone: org.phone.trim(),
         },
         {
           withCredentials: true,
@@ -194,13 +243,28 @@ function SettingsView() {
 
       setShowOrgConfirmPopup(false);
       setShowOrgSuccessPopup(true);
-      setOrg({ organization_name: "", description: "" });
+      setOrg({
+        organization_name: "",
+        description: "",
+        category: "",
+        city: "",
+        pan_card: "",
+        email: user?.email || "",
+        phone: user?.phone || "",
+      });
     } catch (error: any) {
       console.error("Error submitting organiser request:", error);
       setShowOrgConfirmPopup(false);
+
+      if (error?.response?.status === 401) {
+        setShowReloginPopup(true);
+        return;
+      }
+
       setOrgMessage(
-        error.response?.data?.message ||
-          "Failed to submit application. Please try again."
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          "Failed to submit application. Please verify server connection."
       );
     } finally {
       setOrgSubmitting(false);
@@ -237,6 +301,13 @@ function SettingsView() {
 
         setProfile(loadedProfile);
         setInitialProfile(loadedProfile);
+
+        // Pre-populate email and phone in the organiser form
+        setOrg((prev) => ({
+          ...prev,
+          email: fetchedUser.email || prev.email,
+          phone: fetchedUser.phone || prev.phone,
+        }));
       } catch (error) {
         console.error("Error fetching profile:", error);
       } finally {
@@ -256,7 +327,7 @@ function SettingsView() {
     try {
       setSaving(true);
       setMessage("");
-        //both text fields and image file can be sent
+
       const formData = new FormData();
       formData.append("name", profile.name);
       formData.append("email", profile.email);
@@ -280,7 +351,6 @@ function SettingsView() {
       setUser(updatedUser);
 
       if (updatedUser?.profile_image) {
-        //convert the backend path to full URL
         const fullImageUrl = updatedUser.profile_image.startsWith("http")
           ? updatedUser.profile_image
           : `${API_BASE_URL}${updatedUser.profile_image}`;
@@ -334,7 +404,6 @@ function SettingsView() {
       return <p>Loading profile...</p>;
     }
 
-    //check whether save changes should be disabled
     const isSaveDisabled =
       saving ||
       !isProfileDirty ||
@@ -481,7 +550,6 @@ function SettingsView() {
       return;
     }
 
-    //validate password rules
     if (passwordErrors.length > 0) {
       setPasswordMessage(passwordErrors.join(". "));
       return;
@@ -521,7 +589,6 @@ function SettingsView() {
   };
 
   const changePassword = () => {
-    //disable the button
     const isUpdateDisabled =
       passwordSaving || !newPassword.trim() || passwordErrors.length > 0;
 
@@ -582,7 +649,10 @@ function SettingsView() {
     const isOrgSubmitDisabled =
       orgSubmitting ||
       !org.organization_name.trim() ||
-      !org.description.trim();
+      !org.description.trim() ||
+      !org.category.trim() ||
+      !org.city.trim() ||
+      !org.email.trim();
 
     return (
       <div className="panel-content">
@@ -603,6 +673,94 @@ function SettingsView() {
               onChange={handleOrgChange}
               placeholder="Enter your organisation name"
               required
+            />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div className="form-group">
+              <label>
+                Category <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="category"
+                value={org.category}
+                onChange={handleOrgChange}
+                required
+                disabled={metaLoading}
+              >
+                <option value="">
+                  {metaLoading ? "Loading categories..." : "Select category"}
+                </option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.name}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>
+                City / Location <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="city"
+                value={org.city}
+                onChange={handleOrgChange}
+                required
+                disabled={metaLoading}
+              >
+                <option value="">
+                  {metaLoading ? "Loading cities..." : "Select city"}
+                </option>
+                {cities
+                  .filter((c) => Boolean(c.is_active ?? true))
+                  .map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div className="form-group">
+              <label>
+                Official Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={org.email}
+                onChange={handleOrgChange}
+                placeholder="contact@organisation.com"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Phone Number</label>
+              <input
+                type="tel"
+                name="phone"
+                value={org.phone}
+                onChange={handleOrgChange}
+                placeholder="e.g. +91 9876543210"
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>PAN Card / Tax ID</label>
+            <input
+              type="text"
+              name="pan_card"
+              value={org.pan_card}
+              onChange={handleOrgChange}
+              placeholder="e.g. ABCDE1234F"
+              maxLength={10}
+              style={{ textTransform: "uppercase" }}
             />
           </div>
 
@@ -641,7 +799,6 @@ function SettingsView() {
           </button>
         </form>
 
-        {/* Organiser Request Confirmation Modal */}
         {showOrgConfirmPopup && (
           <div className="deactivate-overlay" role="dialog" aria-modal="true">
             <div className="deactivate-popup">
@@ -694,7 +851,6 @@ function SettingsView() {
           </div>
         )}
 
-        {/* Organiser Terms Modal */}
         <OrganiserTerms
           isOpen={showOrgTerms}
           onClose={() => setShowOrgTerms(false)}
@@ -817,7 +973,6 @@ function SettingsView() {
           </div>
         </div>
 
-        {/* Confirmation Modal */}
         {showDeactivatePopup && (
           <div className="deactivate-overlay" role="dialog" aria-modal="true">
             <div className="deactivate-popup">
@@ -869,7 +1024,6 @@ function SettingsView() {
           </div>
         )}
 
-        {/* Terms Modal using your Terms.css */}
         <Terms
           isOpen={showDeactivateTerms}
           onClose={() => setShowDeactivateTerms(false)}
@@ -889,7 +1043,6 @@ function SettingsView() {
         </div>
 
         <div className="settings-layout">
-          {/* LEFT MENU */}
           <div className="settings-container">
             <button
               className={`settings-item ${
@@ -972,7 +1125,6 @@ function SettingsView() {
             </button>
           </div>
 
-          {/* RIGHT PANEL */}
           <div className="settings-panel">
             {activeTab === "profile" && showProfile()}
             {activeTab === "password" && changePassword()}
@@ -982,7 +1134,6 @@ function SettingsView() {
         </div>
       </div>
 
-      {/* Profile Updated Success Popup */}
       {showProfileSuccessPopup && (
         <div className="org-success-overlay" role="dialog" aria-modal="true">
           <div className="org-success-popup">
@@ -998,7 +1149,6 @@ function SettingsView() {
         </div>
       )}
 
-      {/* Password Updated Success Popup */}
       {showPasswordSuccessPopup && (
         <div className="org-success-overlay" role="dialog" aria-modal="true">
           <div className="org-success-popup">
@@ -1014,7 +1164,6 @@ function SettingsView() {
         </div>
       )}
 
-      {/* Host Event Request Success Popup */}
       {showOrgSuccessPopup && (
         <div className="org-success-overlay" role="dialog" aria-modal="true">
           <div className="org-success-popup">

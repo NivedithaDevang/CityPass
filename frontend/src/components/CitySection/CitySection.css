@@ -4,11 +4,10 @@
 
 .city-section .section-heading {
   width: 100%;
-  margin: 0 0 28px;
+  margin: 0 auto 28px;
 }
 
 .city-section .section-heading p {
-  margin: 0 0 8px;
   font-size: 15px;
   font-weight: 400;
   line-height: 1.5;
@@ -17,7 +16,7 @@
 }
 
 .city-section .section-heading h2 {
-  margin: 0 0 8px;
+  margin: 0 auto 8px;
   font-size: 32px;
   font-weight: 800;
   line-height: 1.2;
@@ -27,7 +26,7 @@
 
 .city-section .section-heading span {
   display: block;
-  margin-top: 4px;
+  margin: 4px auto 0;
   font-size: 15px;
   font-weight: 400;
   color: #64748b;
@@ -58,18 +57,19 @@
 .city-card img {
   width: 80px;
   height: 80px;
-  margin-bottom: 12px;
+  margin: 0 auto 12px;
   border-radius: 50%;
   object-fit: cover;
+  display: block;
 }
 
-.city-card h3 {
+.city-card h4 {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
   color: #222;
+  text-align: center;
 }
-
 
 /* Tablet (max-width: 1024px) */
 @media (max-width: 1024px) {
@@ -112,7 +112,6 @@
     font-size: 14px;
   }
 
-  /* Enables smooth horizontal snap-scrolling on mobile to keep items compact */
   .city-grid {
     display: flex;
     overflow-x: auto;
@@ -134,7 +133,6 @@
     border-radius: 14px;
   }
 
-  /* Disable hover lift on touch devices */
   .city-card:hover {
     transform: none;
   }
@@ -143,15 +141,15 @@
     width: 56px;
     height: 56px;
     font-size: 26px;
-    margin-bottom: 8px;
+    margin: 0 auto 8px;
   }
 
-  .city-card h2 {
+  .city-card h2,
+  .city-card h4 {
     font-size: 13px;
   }
 }
 
-/* Small Mobile Screens (max-width: 480px) */
 @media (max-width: 480px) {
   .city-section .section-heading h2 {
     font-size: 22px;
