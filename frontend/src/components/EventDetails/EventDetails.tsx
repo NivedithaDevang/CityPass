@@ -14,7 +14,6 @@ import {
   FaChevronRight,
   FaTicketAlt,
 } from "react-icons/fa";
-import { createEventSlug } from "../../config/slug";
 import { TermsModal } from "../Terms/EventTerms";
 import { OrganiserDetails } from "../OrganiserCard/OrganiserCard";
 import { Booking } from "../Booking/Booking";
@@ -24,7 +23,7 @@ import "./EventDetails.css";
 function EventDetails() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { user } = useUser();
+  const { user, setUser } = useUser();
 
   const [event, setEvent] = useState<Events | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -37,25 +36,27 @@ function EventDetails() {
     const fetchEventDetails = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`${API_BASE_URL}/v1/events/${slug}`);
-        const loadedEvent = response.data.event || response.data;
-        setEvent(loadedEvent);
 
-        const canonicalSlug = createEventSlug(loadedEvent.name);
-        if (canonicalSlug && canonicalSlug !== slug) {
-          navigate(`/events/${canonicalSlug}`, { replace: true });
-        }
+        const response = await axios.get(
+          `${API_BASE_URL}/v1/events/${slug}`
+        );
+
+        const loadedEvent = response.data.event || response.data;
+
+        setEvent(loadedEvent);
         document.title = `${loadedEvent.name || "Event"} | CityPass`;
       } catch (err) {
-        console.error("Error loading event:", err);
+        console.error("EVENT DETAILS ERROR:", err);
         setError("Failed to load event details. Please try again later.");
       } finally {
         setLoading(false);
       }
     };
 
-    if (slug) fetchEventDetails();
-  }, [slug, navigate]);
+    if (slug) {
+      fetchEventDetails();
+    }
+  }, [slug]);
 
   const formatEventDate = (eventDate?: string) => {
     if (!eventDate) return "Date to be announced";
@@ -73,7 +74,8 @@ function EventDetails() {
     setIsDrawerOpen((prev) => !prev);
   };
 
-  const handleAuthSuccess = (_authenticatedUser: User) => {
+  const handleAuthSuccess = (authenticatedUser: User) => {
+    setUser(authenticatedUser);
     setShowAuthModal(false);
     setIsDrawerOpen(true);
   };
@@ -227,7 +229,8 @@ function EventDetails() {
 
       {showAuthModal && (
         <Auth
-          initialLogin={false}
+          initialLogin={true}
+          redirectOnSuccess={false}
           onClose={() => setShowAuthModal(false)}
           onSuccess={handleAuthSuccess}
         />

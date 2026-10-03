@@ -5,11 +5,36 @@ import {
     getEventBySlug,
     createEvent,
     updateEvent as updateEventModel,
-    updateEventStatus as updateEventStatusModel
+    updateEventStatus as updateEventStatusModel,
+    checkSlugExists
 } from "../models/eventModel.js";
 import { Request, Response, NextFunction } from "express";
 
 
+// Generates a base slug from a string
+const slugify = (text: string): string => {
+    return text
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-");
+};
+
+// Ensures the slug is strictly unique in the database
+const generateUniqueSlug = async (name: string, excludeId?: number): Promise<string> => {
+    const baseSlug = slugify(name);
+    let candidateSlug = baseSlug;
+    let counter = 1;
+
+    // Loop until we find a slug that does not exist in the database
+    while (await checkSlugExists(candidateSlug, excludeId)) {
+        candidateSlug = `${baseSlug}-${counter}`;
+        counter++;
+    }
+
+    return candidateSlug;
+};
 
 //generating a slug
 const generateSlug = (name: string): string => {
@@ -105,30 +130,58 @@ export const getConcerts = async (req: Request, res: Response, next: NextFunctio
 //for posting new event
 export const addEvent = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { organizer_id, city_id, category_id, name, description, location, event_date, time, price, capacity, status = "PENDING" } = req.body;
-        if (organizer_id === undefined || city_id === undefined || category_id === undefined || !name || !event_date || !time || price === undefined || capacity === undefined) {
+        const {
+            organizer_id,
+            city_id,
+            category_id,
+            name,
+            description,
+            location,
+            event_date,
+            time,
+            price,
+            capacity,
+            status = "PENDING"
+        } = req.body;
+
+        if (
+            organizer_id === undefined ||
+            city_id === undefined ||
+            category_id === undefined ||
+            !name ||
+            !event_date ||
+            !time ||
+            price === undefined ||
+            capacity === undefined
+        ) {
             return res.status(400).json({
                 message: "city_id, category_id, name, event_date, price and capacity are required"
             });
         }
-const slug = generateSlug(name);
 
-        const result = await createEvent(
-    {
-        organizer_id,
-        city_id,
-        category_id,
-        name,
-        slug,
-        description,
-        location,
-        event_date,
-        time,
-        price,
-        capacity,
-        status
-    }
-);
+        // Generate unique slug (e.g. pottery-workshop, pottery-workshop-1, etc.)
+        const slug = await generateUniqueSlug(name);
+
+        const result = await createEvent({
+            organizer_id,
+            city_id,
+            category_id,
+            name,
+            slug,
+            description,
+            location,
+            event_date,
+            time,
+            price,
+            capacity,
+            status
+        });
+
+        res.status(201).json({
+            message: "Event created successfully",
+            eventId: result.insertId,
+            slug
+        });
     } catch (err) {
         next(err);
     }
@@ -152,10 +205,22 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
                 message: "Name, city_id, category_id, event_date, price, capacity and status are required"
             });
         }
-const slug = generateSlug(name);
+
+        // Pass eventId to exclude self during collision check
+        const slug = await generateUniqueSlug(name, eventId);
 
         const result = await updateEventModel(eventId, {
-            name, slug, description, city_id, category_id, location, event_date, time, price, capacity, status,
+            name,
+            slug,
+            description,
+            city_id,
+            category_id,
+            location,
+            event_date,
+            time,
+            price,
+            capacity,
+            status,
             organizer_id: organizer_id || 0
         });
 
@@ -167,7 +232,8 @@ const slug = generateSlug(name);
 
         res.status(200).json({
             message: "Event updated successfully",
-            eventId
+            eventId,
+            slug
         });
     } catch (err) {
         next(err);
@@ -228,3 +294,4 @@ export const updateEventStatus = async (
         next(err);
     }
 };
+

@@ -325,6 +325,29 @@
   box-shadow: 0 0 0 3px rgba(81, 68, 237, 0.12);
 }
 
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+  background-color: #ffffff;
+  color: #1e1e2d;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+}
+
+.form-group select:focus {
+  border-color: #7f60de;
+}
+
+@media (max-width: 640px) {
+  .panel-content div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 .phone-error {
   color: #e63946;
   font-size: 12.5px;

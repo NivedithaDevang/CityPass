@@ -10,6 +10,7 @@ import {
   IoDocumentText,
   IoShieldCheckmark,
 } from "react-icons/io5";
+import { MdSpaceDashboard } from "react-icons/md";
 import { IoIosArrowForward, IoMdCloseCircle } from "react-icons/io";
 
 interface SidebarProps {
@@ -24,11 +25,24 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
   const [isBookingsOpen, setIsBookingsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // Check if current user is an admin or super admin
+  const normalizedRole = user?.role?.toUpperCase() || "";
+  const isAdmin = normalizedRole === "ADMIN" || normalizedRole === "SUPER_ADMIN" || normalizedRole === "SUPERADMIN";
+
   const getInitial = () => {
     if (user?.name) {
       return user.name.charAt(0).toUpperCase();
     }
     return "U";
+  };
+
+  const handleAccountClick = () => {
+    onClose();
+    if (isAdmin) {
+      navigate("/admin");
+    } else {
+      navigate("/settings/profile");
+    }
   };
 
   return (
@@ -71,14 +85,24 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
 
         {/* Menu */}
         <div className="sidebar-content">
-          {/* My Account -> /settings/profile */}
-          <button
-            className="sidebar-menu-item"
-            onClick={() => {
-              onClose();
-              navigate("/settings/profile");
-            }}
-          >
+          {/* Admin Command Center Link (Visible for Admins) */}
+          {isAdmin && (
+            <button
+              className="sidebar-menu-item admin-item"
+              onClick={() => {
+                onClose();
+                navigate("/admin");
+              }}
+            >
+              <span className="profile-icon">
+                <MdSpaceDashboard />
+              </span>
+              <span>Admin Dashboard</span>
+            </button>
+          )}
+
+          {/* My Account -> Redirects to /admin if admin, otherwise /settings/profile */}
+          <button className="sidebar-menu-item" onClick={handleAccountClick}>
             <span className="profile-icon">
               <IoPersonCircle />
             </span>

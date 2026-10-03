@@ -11,6 +11,22 @@ import { FaUserAlt } from "react-icons/fa";
 import { useNavigate, useSearchParams, NavLink } from "react-router-dom";
 import cityPassLogo from "../../../public/logo.png";
 
+// Helper function to check if a city is active regardless of backend format
+const isCityActive = (city: any): boolean => {
+  if (city.status !== undefined && city.status !== null) {
+    return String(city.status).trim().toUpperCase() === "ACTIVE";
+  }
+  if (city.is_active !== undefined && city.is_active !== null) {
+    return (
+      city.is_active === true ||
+      Number(city.is_active) === 1 ||
+      String(city.is_active).toLowerCase() === "true"
+    );
+  }
+  // If no status or is_active property is supplied, default to active
+  return true;
+};
+
 function Navbar() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -35,16 +51,22 @@ function Navbar() {
         }
 
         const data = await response.json();
-        const cityList = data.city || [];
 
-        setCities(cityList);
+        // Safely extract the array across all common API response structures
+        const cityList: City[] = Array.isArray(data)
+          ? data
+          : data?.city ?? data?.cities ?? data?.data?.cities ?? data?.data ?? [];
 
-        const firstActiveCity = cityList.find(
-          (city: City) => city.is_active
-        );
+        if (Array.isArray(cityList)) {
+          setCities(cityList);
 
-        if (firstActiveCity && !selectedCity) {
-          setSelectedCity(firstActiveCity.name);
+          const firstActiveCity = cityList.find(isCityActive);
+
+          if (firstActiveCity && !selectedCity) {
+            setSelectedCity(firstActiveCity.name);
+          }
+        } else {
+          setCities([]);
         }
       } catch (error) {
         console.error("Error fetching cities:", error);
@@ -97,10 +119,12 @@ function Navbar() {
     setIsMobileMenuOpen(false);
   };
 
+  // Filter only active cities for the dropdown
+  const activeCities = cities.filter(isCityActive);
+
   return (
     <>
       <nav className="navbar">
-
         <div className="mobile-menu-button">
           <button
             type="button"
@@ -112,7 +136,6 @@ function Navbar() {
         </div>
 
         <div className="navbar-left">
-
           <div
             className="navbar-brand"
             onClick={() => navigate("/")}
@@ -123,7 +146,6 @@ function Navbar() {
               alt="CityPass Icon"
               className="navbar-logo-icon"
             />
-
             <h2 className="logo">CityPass</h2>
           </div>
 
@@ -135,18 +157,13 @@ function Navbar() {
               className="city-trigger"
               aria-expanded={isCityMenuOpen}
               aria-haspopup="listbox"
-              onClick={() =>
-                setIsCityMenuOpen((isOpen) => !isOpen)
-              }
+              onClick={() => setIsCityMenuOpen((isOpen) => !isOpen)}
             >
               <span>{selectedCity || ALL_LOCATIONS}</span>
-
               <ChevronDown
                 size={16}
                 className={
-                  isCityMenuOpen
-                    ? "city-chevron open"
-                    : "city-chevron"
+                  isCityMenuOpen ? "city-chevron open" : "city-chevron"
                 }
               />
             </button>
@@ -162,9 +179,7 @@ function Navbar() {
                   role="option"
                   aria-selected={selectedCity === ALL_LOCATIONS}
                   className={`city-option ${
-                    selectedCity === ALL_LOCATIONS
-                      ? "selected"
-                      : ""
+                    selectedCity === ALL_LOCATIONS ? "selected" : ""
                   }`}
                   onClick={() => {
                     setSelectedCity(ALL_LOCATIONS);
@@ -172,39 +187,31 @@ function Navbar() {
                   }}
                 >
                   <span>{ALL_LOCATIONS}</span>
-
                   {selectedCity === ALL_LOCATIONS && (
                     <span className="city-check">&#10003;</span>
                   )}
                 </button>
 
-                {cities
-                  .filter((city) => city.is_active)
-                  .map((city) => (
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={selectedCity === city.name}
-                      className={`city-option ${
-                        selectedCity === city.name
-                          ? "selected"
-                          : ""
-                      }`}
-                      key={city.id}
-                      onClick={() => {
-                        setSelectedCity(city.name);
-                        setIsCityMenuOpen(false);
-                      }}
-                    >
-                      <span>{city.name}</span>
-
-                      {selectedCity === city.name && (
-                        <span className="city-check">
-                          &#10003;
-                        </span>
-                      )}
-                    </button>
-                  ))}
+                {activeCities.map((city) => (
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={selectedCity === city.name}
+                    className={`city-option ${
+                      selectedCity === city.name ? "selected" : ""
+                    }`}
+                    key={city.id}
+                    onClick={() => {
+                      setSelectedCity(city.name);
+                      setIsCityMenuOpen(false);
+                    }}
+                  >
+                    <span>{city.name}</span>
+                    {selectedCity === city.name && (
+                      <span className="city-check">&#10003;</span>
+                    )}
+                  </button>
+                ))}
               </div>
             )}
           </div>

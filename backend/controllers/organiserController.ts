@@ -1,23 +1,21 @@
-import { getAllOrganizers } from "../models/organiserModel.js";
 import { Request, Response, NextFunction } from "express";
+import { getAllOrganisers } from "../models/organiserModel.js";
 
-export const getOrganizers = async (
+export const getOrganisers = async (
     req: Request,
     res: Response,
     next: NextFunction
 ) => {
     try {
-        // Fetch all organizers from the database
-        const results = await getAllOrganizers();
 
-        // Send the fetched organizers to the frontend
+        const organisers = await getAllOrganisers();
+
         res.status(200).json({
-            message: "Organizers fetched successfully",
-            organizers: results
+            message: "Organisers fetched successfully",
+            organisers: organisers
         });
 
     } catch (err) {
-        // Pass the error to the centralized error-handling middleware
         next(err);
     }
 };

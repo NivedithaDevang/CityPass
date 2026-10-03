@@ -13,13 +13,13 @@ import { validateIdParam } from "../../validators/idValidator.js";
 import { checkAdminRole } from "../../middleware/roleMiddleware.js";
 const eventRouter = express.Router();
 
-eventRouter.get("/", getEvents);
+eventRouter.get("/events", getEvents);
 
-eventRouter.post("/", validateEvent, handleValidation, checkAdminRole, addEvent);
+eventRouter.post("/add-event", validateEvent, handleValidation, checkAdminRole, addEvent);
 
-eventRouter.get("/activities", getActivities);
+eventRouter.get("/events/activities", getActivities);
 
-eventRouter.get("/concerts", getConcerts);
+eventRouter.get("/events/concerts", getConcerts);
 
 eventRouter.put("/:id", validateIdParam, checkAdminRole, updateEvent);
 eventRouter.get("/:slug", getEventDetailsBySlug);

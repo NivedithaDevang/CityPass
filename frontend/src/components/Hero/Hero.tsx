@@ -24,16 +24,20 @@ import "swiper/css/pagination";
 
 function Hero() {
   const navigate = useNavigate();
-  // Store events displayed in the hero carousel
   const [featuredEvents, setFeaturedEvents] = useState<Events[]>([]);
-  // Store swiper instance so custom buttons and autoplay controls can target it
   const swiperRef = useRef<SwiperType | null>(null);
 
   useEffect(() => {
     const fetchHeroEvents = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/v1/events`);
-        const eventList: Events[] = response.data.events || [];
+        const response = await axios.get(`${API_BASE_URL}/v1/events/events`);
+        const rawData = response.data;
+
+        // Handles direct array returns or nested objects ({ events: [] }, { data: [] })
+        const eventList: Events[] = Array.isArray(rawData)
+          ? rawData
+          : rawData?.events || rawData?.data || [];
+
         setFeaturedEvents(eventList.slice(0, 5));
       } catch (error) {
         console.error("Error fetching hero carousel events:", error);
@@ -43,9 +47,10 @@ function Hero() {
     fetchHeroEvents();
   }, []);
 
-  // Explicitly command Swiper autoplay to run once async events populate
+  // Update Swiper layout and restart autoplay once async items populate
   useEffect(() => {
     if (swiperRef.current && featuredEvents.length > 1) {
+      swiperRef.current.update();
       swiperRef.current.autoplay?.start();
     }
   }, [featuredEvents]);
@@ -190,9 +195,7 @@ function Hero() {
 
                         {/* Perforated Divider with Cutout Notches */}
                         <div className="ticket-perforation">
-                          <span className="notch notch-left" />
                           <div className="dashed-line" />
-                          <span className="notch notch-right" />
                         </div>
 
                         {/* Ticket Bottom: Action button */}

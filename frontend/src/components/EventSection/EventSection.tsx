@@ -1,22 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
-import { type Category, type City, type Events } from "../../types/auth";
+import { type Events } from "../../types/auth";
 import Navbar from "../../components/Navbar/Navbar";
-import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
 import { FaMapPin, FaMicrophone, FaLaughSquint } from "react-icons/fa";
 import { MdSportsFootball, MdTheaterComedy } from "react-icons/md";
 import { IoFastFoodSharp } from "react-icons/io5";
 import { FaPaintbrush, FaMountain } from "react-icons/fa6";
 import type { IconType } from "react-icons";
-import { createEventSlug } from "../../config/slug";
 import "./EventSection.css";
 
 function EventSection() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { selectedCity, setSelectedCity } = useCity();
+  const [events, setEvents] = useState<Events[]>([]);
 
   const categoryIcons: Record<string, IconType> = {
     Music: FaMicrophone,
@@ -40,158 +37,24 @@ function EventSection() {
     return null;
   };
 
-  const [search, setSearch] = useState("");
-  const [events, setEvents] = useState<Events[]>([]);
-
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
-  const [selectedLocation, setSelectedLocation] = useState<string>("ALL");
-  const [sortBy, setSortBy] = useState<string>("date_asc");
-
-  const [categories, setCategories] = useState<string[]>([]);
-  const [locations, setLocations] = useState<string[]>([]);
-
-  // Sync city & category from URL query parameters
   useEffect(() => {
-    const cityParam = searchParams.get("city");
-    const categoryParam = searchParams.get("category");
-
-    if (cityParam) {
-      setSelectedLocation(cityParam);
-      if (setSelectedCity) {
-        setSelectedCity(cityParam);
-      }
-    } else {
-      setSelectedLocation("ALL");
-    }
-
-    if (categoryParam) {
-      setSelectedCategory(categoryParam);
-    } else {
-      setSelectedCategory("ALL");
-    }
-  }, [searchParams, setSelectedCity]);
-
-  const hasActiveFilters =
-    search.trim() !== "" ||
-    selectedCategory !== "ALL" ||
-    selectedLocation !== "ALL" ||
-    sortBy !== "date_asc";
-
-  const handleLocationChange = (loc: string) => {
-    setSelectedLocation(loc);
-    const params = new URLSearchParams(searchParams);
-    if (loc === "ALL") {
-      params.delete("city");
-    } else {
-      params.set("city", loc);
-    }
-    setSearchParams(params);
-  };
-
-  const handleCategoryChange = (cat: string) => {
-    setSelectedCategory(cat);
-    const params = new URLSearchParams(searchParams);
-    if (cat === "ALL") {
-      params.delete("category");
-    } else {
-      params.set("category", cat);
-    }
-    setSearchParams(params);
-  };
-
-  const handleResetFilters = () => {
-    setSearch("");
-    setSelectedCategory("ALL");
-    setSelectedLocation("ALL");
-    setSortBy("date_asc");
-    setSearchParams({});
-  };
-
-  // Fetch events, categories, and locations
-  useEffect(() => {
-    const fetchFilterData = async () => {
+    const fetchEvents = async () => {
       try {
-        const [eventsRes, catRes, locRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/v1/events`),
-          axios.get(`${API_BASE_URL}/v1/categories`),
-          axios.get(`${API_BASE_URL}/v1/cities`),
-        ]);
-
-        setEvents(eventsRes.data?.events || []);
-
-        const categoryList = catRes.data?.categories || [];
-        const categoryNames = (categoryList as Category[])
-          .map((cat) => cat.name?.trim())
-          .filter((name): name is string => Boolean(name));
-        setCategories([...new Set(categoryNames)]);
-
-        const cityList = locRes.data?.city || [];
-        const cityNames = (cityList as City[])
-          .map((city) => city.name?.trim())
-          .filter((name): name is string => Boolean(name));
-        setLocations([...new Set(cityNames)]);
+        const response = await axios.get(`${API_BASE_URL}/v1/events/events`);
+        const rawData = response.data;
+        const eventList: Events[] = Array.isArray(rawData)
+          ? rawData
+          : rawData?.events || rawData?.data || [];
+        // Limit to only 8 events
+        setEvents(eventList.slice(0, 8));
       } catch (error) {
-        console.error("Error fetching event and filter data:", error);
+        console.error("Error fetching events:", error);
         setEvents([]);
-        setCategories([]);
-        setLocations([]);
       }
     };
 
-    fetchFilterData();
+    fetchEvents();
   }, []);
-
-  const processedEvents = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-
-    const filtered = events.filter((event) => {
-      const matchesGlobalCity =
-        !selectedCity ||
-        selectedCity === ALL_LOCATIONS ||
-        event.location?.trim().toLowerCase() === selectedCity.trim().toLowerCase();
-
-      if (!matchesGlobalCity) return false;
-
-      if (
-        selectedLocation !== "ALL" &&
-        event.location?.trim().toLowerCase() !== selectedLocation.trim().toLowerCase()
-      ) {
-        return false;
-      }
-
-      if (
-        selectedCategory !== "ALL" &&
-        event.category_name?.trim().toLowerCase() !== selectedCategory.trim().toLowerCase()
-      ) {
-        return false;
-      }
-
-      if (!normalizedSearch) return true;
-      return [event.name, event.category_name, event.location]
-        .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(normalizedSearch));
-    });
-
-    return filtered.sort((a, b) => {
-      const priceA = Number(a.price) || 0;
-      const priceB = Number(b.price) || 0;
-      const timeA = a.event_date ? new Date(a.event_date).getTime() : Infinity;
-      const timeB = b.event_date ? new Date(b.event_date).getTime() : Infinity;
-
-      switch (sortBy) {
-        case "date_asc":
-          return timeA - timeB;
-        case "date_desc":
-          return timeB - timeA;
-        case "price_asc":
-          return priceA - priceB;
-        case "price_desc":
-          return priceB - priceA;
-        default:
-          return 0;
-      }
-    });
-  }, [events, selectedCity, selectedLocation, selectedCategory, search, sortBy]);
 
   const formatEventDate = (eventDate?: string) => {
     if (!eventDate) return "Date to be announced";
@@ -199,8 +62,13 @@ function EventSection() {
   };
 
   const handleCardClick = (event: Events) => {
-    navigate(`/events/${createEventSlug(event.name)}`);
-  };
+  console.log("Clicked event:", event);
+  if (!event.slug) {
+    console.warn("Event is missing a slug! Event ID:", event.id);
+    return;
+  }
+  navigate(`/events/${event.slug}`);
+};
 
   return (
     <>
@@ -213,13 +81,13 @@ function EventSection() {
         </div>
 
         <div className="eventsec-grid">
-          {processedEvents.map((event) => {
+          {events.map((event) => {
             const CategoryIcon = getCategoryIcon(event.category_name);
 
             return (
               <article
                 className="eventsec-card"
-                key={event.id}
+                key={event.id || event.name}
                 onClick={() => handleCardClick(event)}
                 style={{ cursor: "pointer" }}
               >
@@ -261,13 +129,9 @@ function EventSection() {
             );
           })}
 
-          {!processedEvents.length && (
+          {!events.length && (
             <p className="eventsec-empty">
-              {hasActiveFilters
-                ? "No matching events found. Try adjusting or resetting your filters."
-                : selectedCity && selectedCity !== ALL_LOCATIONS
-                ? "Currently no events in this place."
-                : "No upcoming events are available right now."}
+              No upcoming events are available right now.
             </p>
           )}
         </div>

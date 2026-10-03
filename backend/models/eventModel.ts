@@ -81,19 +81,16 @@ export const getEventBySlug = async (slug: string) => {
         SELECT events.*, categories.name AS category_name
         FROM events
         LEFT JOIN categories ON categories.id = events.category_id
-        WHERE (
-            events.slug = ?
-            OR LOWER(events.name) = REPLACE(?, '-', ' ')
-        )
+        WHERE events.slug = ?
         AND events.status = 'APPROVED'
     `;
 
     const [results] = await db.query<EventWithCategory[]>(
         sql,
-        [slug, slug]
+        [slug]
     );
 
-    return results.filter((event) => event.slug === slug || createEventSlug(event.name) === slug);
+    return results;
 };
 
 
@@ -173,4 +170,18 @@ export const updateEventStatus = async (
     );
 
     return result;
+};
+
+// Check if a slug already exists
+export const checkSlugExists = async (slug: string, excludeId?: number): Promise<boolean> => {
+    let sql = `SELECT id FROM events WHERE slug = ?`;
+    const params: (string | number)[] = [slug];
+
+    if (excludeId) {
+        sql += ` AND id != ?`;
+        params.push(excludeId);
+    }
+
+    const [rows] = await db.query<RowDataPacket[]>(sql, params);
+    return rows.length > 0;
 };

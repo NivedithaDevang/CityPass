@@ -1,43 +1,110 @@
-import {
-    getAllTickets,
-    createTicket,
-} from "../models/ticketModel.js"
 import { Request, Response, NextFunction } from "express";
 
+import {
+  getAllTickets,
+  createTicket,
+  deleteTicketById,
+} from "../models/ticketModel.js";
 
-//for getting all tickets
-export const getTickets = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const results = await getAllTickets();
+export const getTickets = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const tickets = await getAllTickets();
 
-        res.status(200).json({
-            message: "Tickets fetched successfully",
-            passes: results
-        });
-    } catch (err) {
-        next(err);
-    }
+    return res.status(200).json({
+      message: "Tickets fetched successfully",
+      tickets,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
-//for posting new ticket
-export const addTicket = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const { event_id, name, description, price, status = "ACTIVE" } = req.body;
-        if (event_id === undefined || !name || price === undefined) {
-            return res.status(400).json({
-                message: "event_id, name and price are required"
-            });
-        }
+export const addTicket = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const {
+      name,
+      description,
+      price,
+      category,
+    } = req.body;
 
-        const result = await createTicket(
-            { event_id, name, description, price, status }
-        );
-
-        res.status(201).json({
-            message: "Ticket created successfully",
-            passId: result?.insertId
-        });
-    } catch (err) {
-        next(err);
+    if (!name?.trim()) {
+      return res.status(400).json({
+        message: "Ticket name is required",
+      });
     }
+
+    if (price === undefined || price === null || price === "") {
+      return res.status(400).json({
+        message: "Ticket price is required",
+      });
+    }
+
+    if (!category?.trim()) {
+      return res.status(400).json({
+        message: "Ticket category is required",
+      });
+    }
+
+    const numericPrice = Number(price);
+
+    if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+      return res.status(400).json({
+        message: "Price must be a valid non-negative number",
+      });
+    }
+
+    const result = await createTicket({
+      name: name.trim(),
+      description: description?.trim() || null,
+      price: numericPrice,
+      status: "ACTIVE",
+      category: category.trim(),
+    });
+
+    return res.status(201).json({
+      message: "Ticket created successfully",
+      ticketId: result.insertId,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteTicket = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const ticketId = Number(req.params.id);
+
+    if (!Number.isInteger(ticketId) || ticketId <= 0) {
+      return res.status(400).json({
+        message: "A valid ticket ID is required",
+      });
+    }
+
+    const result = await deleteTicketById(ticketId);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        message: "Ticket not found or already deleted",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Ticket deleted successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
 };

@@ -1,0 +1,487 @@
+.categories-container {
+  width: 100%;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.categories-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.categories-subtitle {
+  display: block;
+  margin-bottom: 8px;
+  color: #6c3cff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.categories-header h1 {
+  margin: 0;
+  color: #1f1f1f;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.categories-header p {
+  margin: 8px 0 0;
+  color: #777;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.categories-add-btn {
+  border: none;
+  padding: 11px 18px;
+  border-radius: 8px;
+  background: #6c3cff;
+  color: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.categories-add-btn:hover {
+  background: #5930d6;
+  transform: translateY(-1px);
+}
+
+.categories-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 16px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.categories-message button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.categories-error {
+  background: #fff0f0;
+  color: #c62828;
+}
+
+.categories-error button {
+  color: #c62828;
+}
+
+.categories-success {
+  background: #edf9f1;
+  color: #218838;
+}
+
+.categories-success button {
+  color: #218838;
+}
+
+.category-add-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  margin-bottom: 22px;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #eeeeee;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.category-form-group {
+  flex: 1;
+}
+
+.category-form-group label {
+  display: block;
+  margin-bottom: 7px;
+  color: #444;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.category-form-group input {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+  box-sizing: border-box;
+  color: #333;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.category-form-group input:focus {
+  border-color: #6c3cff;
+  box-shadow: 0 0 0 3px
+    rgba(108, 60, 255, 0.08);
+}
+
+.category-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.categories-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.categories-search {
+  width: 100%;
+  max-width: 450px;
+  padding: 12px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-sizing: border-box;
+  outline: none;
+  background: #fff;
+  color: #333;
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.categories-search::placeholder {
+  color: #999;
+}
+
+.categories-search:focus {
+  border-color: #6c3cff;
+  box-shadow: 0 0 0 3px
+    rgba(108, 60, 255, 0.08);
+}
+
+.categories-count {
+  color: #666;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.categories-table-container {
+  width: 100%;
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid #eeeeee;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px
+    rgba(0, 0, 0, 0.04);
+}
+
+.categories-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px;
+}
+
+.categories-table thead {
+  background: #fafafa;
+}
+
+.categories-table th {
+  padding: 15px 18px;
+  border-bottom: 1px solid #eeeeee;
+  color: #555;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.categories-table td {
+  padding: 16px 18px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.categories-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.categories-table tbody tr:hover {
+  background: #faf9ff;
+}
+
+.categories-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.categories-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.categories-status.active {
+  background: #e9f7ee;
+  color: #218838;
+}
+
+.categories-status.inactive {
+  background: #fdecec;
+  color: #d93025;
+}
+
+.category-action-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.categories-edit-btn {
+  padding: 8px 13px;
+  border: 1px solid #cfc4ff;
+  border-radius: 7px;
+  background: #fff;
+  color: #6c3cff;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.categories-edit-btn:hover {
+  background: #f4f0ff;
+  border-color: #6c3cff;
+}
+
+.categories-deactivate-btn,
+.categories-activate-btn {
+  padding: 8px 13px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.categories-deactivate-btn {
+  border: 1px solid #e0b4b4;
+  background: #fff;
+  color: #c62828;
+}
+
+.categories-deactivate-btn:hover {
+  background: #fff0f0;
+  border-color: #c62828;
+}
+
+.categories-activate-btn {
+  border: 1px solid #b7d9c0;
+  background: #fff;
+  color: #218838;
+}
+
+.categories-activate-btn:hover {
+  background: #edf9f1;
+  border-color: #218838;
+}
+
+.category-edit-input {
+  width: 100%;
+  max-width: 300px;
+  padding: 9px 11px;
+  border: 1px solid #6c3cff;
+  border-radius: 7px;
+  outline: none;
+  box-sizing: border-box;
+  background: #fff;
+  color: #333;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.category-edit-input:focus {
+  box-shadow: 0 0 0 3px
+    rgba(108, 60, 255, 0.08);
+}
+
+.category-edit-select {
+  padding: 8px 11px;
+  border: 1px solid #ddd;
+  border-radius: 7px;
+  outline: none;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.category-edit-select:focus {
+  border-color: #6c3cff;
+}
+
+.category-save-btn,
+.category-cancel-btn {
+  padding: 8px 13px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.category-save-btn {
+  border: 1px solid #6c3cff;
+  background: #6c3cff;
+  color: #fff;
+}
+
+.category-save-btn:hover {
+  background: #5930d6;
+  border-color: #5930d6;
+}
+
+.category-cancel-btn {
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #555;
+}
+
+.category-cancel-btn:hover {
+  background: #f5f5f5;
+}
+
+.category-save-btn:disabled,
+.category-cancel-btn:disabled,
+.categories-deactivate-btn:disabled,
+.categories-activate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.categories-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 180px;
+  background: #fff;
+  border: 1px solid #eeeeee;
+  border-radius: 12px;
+  color: #777;
+  font-size: 14px;
+  box-shadow: 0 2px 10px
+    rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 768px) {
+  .categories-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .categories-header h1 {
+    font-size: 26px;
+  }
+
+  .categories-add-btn {
+    width: 100%;
+  }
+
+  .category-add-form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .category-form-actions {
+    justify-content: flex-end;
+  }
+
+  .categories-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .categories-search {
+    max-width: none;
+  }
+
+  .categories-count {
+    align-self: flex-start;
+  }
+
+  .categories-table-container {
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .categories-header {
+    margin-bottom: 20px;
+  }
+
+  .categories-header h1 {
+    font-size: 24px;
+  }
+
+  .categories-header p {
+    font-size: 13px;
+  }
+
+  .categories-message {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .category-form-actions {
+    flex-direction: column;
+  }
+
+  .category-save-btn,
+  .category-cancel-btn {
+    width: 100%;
+  }
+
+  .categories-table th,
+  .categories-table td {
+    padding: 13px 14px;
+  }
+
+  .category-action-group {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .categories-edit-btn,
+  .categories-deactivate-btn,
+  .categories-activate-btn {
+    width: 100%;
+  }
+}

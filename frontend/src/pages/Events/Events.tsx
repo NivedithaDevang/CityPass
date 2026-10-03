@@ -12,7 +12,6 @@ import { MdSportsFootball, MdTheaterComedy } from "react-icons/md";
 import { IoFastFoodSharp } from "react-icons/io5";
 import { FaPaintbrush, FaMountain } from "react-icons/fa6";
 import type { IconType } from "react-icons";
-import { createEventSlug } from "../../config/slug";
 
 function Event() {
   const navigate = useNavigate();
@@ -112,7 +111,7 @@ function Event() {
     const fetchFilterData = async () => {
       try {
         const [eventsRes, catRes, locRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/v1/events`),
+          axios.get(`${API_BASE_URL}/v1/events/events`),
           axios.get(`${API_BASE_URL}/v1/categories`),
           axios.get(`${API_BASE_URL}/v1/cities`),
         ]);
@@ -199,8 +198,13 @@ function Event() {
   };
 
   const handleCardClick = (event: Events) => {
-    navigate(`/events/${createEventSlug(event.name)}`);
-  };
+  console.log("Clicked event:", event);
+  if (!event.slug) {
+    console.warn("Event is missing a slug! Event ID:", event.id);
+    return;
+  }
+  navigate(`/events/${event.slug}`);
+};
 
   return (
     <>
