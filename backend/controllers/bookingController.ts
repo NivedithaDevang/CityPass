@@ -1,24 +1,50 @@
 import { Request, Response, NextFunction } from "express";
-import { getAllBookings, createBooking, updateBookingStatus } from "../models/bookingModel.js";
+import {
+  getBookingsByUserId,
+  createBooking,
+  updateBookingStatus,
+} from "../models/bookingModel.js";
 
-export const getBookings = async (req: Request, res: Response, next: NextFunction) => {
+
+export const getBookings = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const results = await getAllBookings();
+    // Get logged-in user from JWT
+    const activeUserId = req.user?.id;
+
+    if (!activeUserId) {
+      return res.status(401).json({
+        message: "Authentication required. Please sign in to view your bookings.",
+      });
+    }
+
+    const results = await getBookingsByUserId(Number(activeUserId));
 
     res.status(200).json({
       message: "Bookings fetched successfully",
-      bookings: results
+      bookings: results,
     });
   } catch (err: any) {
-    res.status(500).json({ message: err.message });
+    console.error("Error fetching bookings:", err);
+
+    res.status(500).json({
+      message: "Failed to fetch bookings",
+    });
   }
 };
 
-export const addBooking = async (req: Request, res: Response, next: NextFunction) => {
+export const addBooking = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const {
       pass_id,
-      booking_date, //handle it as today's date
+      booking_date,
       number_of_tickets,
       total_amount,
       status = "CONFIRMED",
@@ -40,48 +66,53 @@ export const addBooking = async (req: Request, res: Response, next: NextFunction
       total_amount === undefined
     ) {
       return res.status(400).json({
-        message:
-          "Something went wromg. Please try again"
+        message: "Something went wrong. Please try again.",
       });
     }
 
-      // Create booking
     const result = await createBooking({
       user_id: Number(activeUserId),
       pass_id: Number(pass_id),
-      booking_date,
+      booking_date: booking_date || new Date(),
       number_of_tickets: Number(number_of_tickets),
       total_amount: Number(total_amount),
-      status
+      status,
     });
 
     res.status(201).json({
       message: "Booking created successfully",
-      bookingId: result.insertId
+      bookingId: result.insertId,
     });
-
   } catch (err: any) {
     console.error("SQL Error in addBooking:", err);
 
     res.status(500).json({
-      message: "Failed to create booking"
+      message: "Failed to create booking",
     });
   }
 };
 
-
-export const cancelBooking = async (req: Request, res: Response, next: NextFunction) => {
+export const cancelBooking = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { id } = req.params;
-    const activeUserId = 
-    req.body.user_id;
+
+    const activeUserId = req.user?.id;
 
     if (!activeUserId) {
-      return res.status(401).json({ message: "Please log in to manage your bookings." });
+      return res.status(401).json({
+        message: "Please log in to manage your bookings.",
+      });
     }
 
-    
-    await updateBookingStatus(Number(id), Number(activeUserId), "CANCELLED");
+    await updateBookingStatus(
+      Number(id),
+      Number(activeUserId),
+      "CANCELLED"
+    );
 
     res.status(200).json({
       message: "Booking cancelled successfully",
@@ -90,6 +121,9 @@ export const cancelBooking = async (req: Request, res: Response, next: NextFunct
     });
   } catch (err: any) {
     console.error("Error cancelling booking:", err);
-    res.status(500).json({ message: err.message || "Failed to cancel booking" });
+
+    res.status(500).json({
+      message: "Failed to cancel booking",
+    });
   }
 };

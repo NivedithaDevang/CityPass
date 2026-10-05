@@ -1,78 +1,98 @@
 import { db } from "../config/database.js";
-import { RowDataPacket, ResultSetHeader } from "mysql2";
-import bcrypt from "bcrypt";
-import { saltRounds } from "../config/env.js";
+import { RowDataPacket } from "mysql2";
 
-export const createCityAdmin = async (
-  name: string,
-  email: string,
-  password: string,
-  cityId: number
-): Promise<number> => {
-  const [countResult] = await db.query<RowDataPacket[]>(
-    `
-      SELECT COUNT(*) AS count
-      FROM users
-      WHERE role = 'admin'
-      AND city_id = ?
-    `,
-    [cityId]
-  );
+export const approveOrganiserRequest = async (
+  requestId: number
+): Promise<void> => {
 
-  const adminCount = Number(countResult[0]?.count ?? 0);
+  const connection = await db.getConnection();
 
-  if (adminCount >= 2) {
-    const error: any = new Error(
-      "Limit reached: This city already has 2 assigned admins."
+  try {
+
+    await connection.beginTransaction();
+
+    const [requestRows] =
+      await connection.query<RowDataPacket[]>(
+        `
+        SELECT
+          id,
+          user_id,
+          organization_name,
+          description,
+          email,
+          status
+        FROM organizer_requests
+        WHERE id = ?
+        FOR UPDATE
+        `,
+        [requestId]
+      );
+
+    if (requestRows.length === 0) {
+      throw new Error("Organiser request not found");
+    }
+
+    const request = requestRows[0];
+
+    if (request.status !== "PENDING") {
+      throw new Error(
+        "Only pending organiser requests can be approved"
+      );
+    }
+
+    if (!request.user_id) {
+      throw new Error(
+        "This organiser request is not linked to a user"
+      );
+    }
+
+    await connection.query(
+      `
+      UPDATE users
+      SET role = 'ORGANIZER'
+      WHERE id = ?
+      `,
+      [request.user_id]
     );
 
-    error.statusCode = 409;
-    throw error;
-  }
-
-  const hashedPassword = await bcrypt.hash(
-    password,
-    saltRounds
-  );
-
-  const [result] = await db.query<ResultSetHeader>(
-    `
-      INSERT INTO users
+    await connection.query(
+      `
+      INSERT INTO organizers
       (
-        name,
+        user_id,
+        description,
         email,
-        password,
-        role,
-        city_id,
-        token_version
+        stage_name
       )
-      VALUES (?, ?, ?, 'admin', ?, 1)
-    `,
-    [
-      name,
-      email,
-      hashedPassword,
-      cityId,
-    ]
-  );
+      VALUES (?, ?, ?, ?)
+      `,
+      [
+        request.user_id,
+        request.description ?? null,
+        request.email ?? null,
+        request.organization_name ?? null,
+      ]
+    );
 
-  return result.insertId;
-};
-
-export const revokeCityAdmin = async (
-  adminId: number
-): Promise<boolean> => {
-  const [result] = await db.query<ResultSetHeader>(
-    `
-      UPDATE users
-      SET
-        role = 'user',
-        city_id = NULL
+    await connection.query(
+      `
+      UPDATE organizer_requests
+      SET status = 'APPROVED'
       WHERE id = ?
-      AND role = 'admin'
-    `,
-    [adminId]
-  );
+      `,
+      [requestId]
+    );
 
-  return result.affectedRows > 0;
+    await connection.commit();
+
+  } catch (error) {
+
+    await connection.rollback();
+    throw error;
+
+  } finally {
+
+    connection.release();
+
+  }
 };

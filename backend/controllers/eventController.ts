@@ -8,7 +8,9 @@ import {
     updateEventStatus as updateEventStatusModel,
     checkSlugExists
 } from "../models/eventModel.js";
+import { getOrganiserByUserId } from "../models/organiserModel.js";
 import { Request, Response, NextFunction } from "express";
+
 
 
 // Generates a base slug from a string
@@ -34,16 +36,6 @@ const generateUniqueSlug = async (name: string, excludeId?: number): Promise<str
     }
 
     return candidateSlug;
-};
-
-//generating a slug
-const generateSlug = (name: string): string => {
-    return name
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-");
 };
 
 //getting event by slug
@@ -128,10 +120,15 @@ export const getConcerts = async (req: Request, res: Response, next: NextFunctio
 }
 
 //for posting new event
-export const addEvent = async (req: Request, res: Response, next: NextFunction) => {
+export const addEvent = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+
     try {
+
         const {
-            organizer_id,
             city_id,
             category_id,
             name,
@@ -140,12 +137,32 @@ export const addEvent = async (req: Request, res: Response, next: NextFunction) 
             event_date,
             time,
             price,
-            capacity,
-            status = "PENDING"
+            capacity
         } = req.body;
 
+
+        // Get logged-in user
+        const userId = req.user?.id;
+
+        if (!userId) {
+            return res.status(401).json({
+                message: "Unauthorized"
+            });
+        }
+
+
+        // Find organiser using user_id
+        const organiser = await getOrganiserByUserId(userId);
+
+        if (!organiser) {
+            return res.status(404).json({
+                message: "Organiser profile not found"
+            });
+        }
+
+
+        // Validate required fields
         if (
-            organizer_id === undefined ||
             city_id === undefined ||
             category_id === undefined ||
             !name ||
@@ -155,15 +172,19 @@ export const addEvent = async (req: Request, res: Response, next: NextFunction) 
             capacity === undefined
         ) {
             return res.status(400).json({
-                message: "city_id, category_id, name, event_date, price and capacity are required"
+                message:
+                    "city_id, category_id, name, event_date, time, price and capacity are required"
             });
         }
 
-        // Generate unique slug (e.g. pottery-workshop, pottery-workshop-1, etc.)
+
+        // Generate unique slug
         const slug = await generateUniqueSlug(name);
 
+
+        // Create event
         const result = await createEvent({
-            organizer_id,
+            organizer_id: organiser.id,
             city_id,
             category_id,
             name,
@@ -174,14 +195,19 @@ export const addEvent = async (req: Request, res: Response, next: NextFunction) 
             time,
             price,
             capacity,
-            status
+
+            // Organizer cannot approve their own event
+            status: "PENDING"
         });
+
 
         res.status(201).json({
             message: "Event created successfully",
             eventId: result.insertId,
-            slug
+            slug,
+            status: "PENDING"
         });
+
     } catch (err) {
         next(err);
     }

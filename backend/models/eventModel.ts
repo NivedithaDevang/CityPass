@@ -98,7 +98,20 @@ export const getEventBySlug = async (slug: string) => {
 export const createEvent = async (event: Event) => {
     const sql = `
         INSERT INTO events
-        (organizer_id, city_id, category_id, name, slug, description, location, event_date, time, price, capacity, status)
+        (
+            organizer_id,
+            city_id,
+            category_id,
+            name,
+            slug,
+            description,
+            location,
+            event_date,
+            time,
+            price,
+            capacity,
+            status
+        )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
@@ -184,4 +197,27 @@ export const checkSlugExists = async (slug: string, excludeId?: number): Promise
 
     const [rows] = await db.query<RowDataPacket[]>(sql, params);
     return rows.length > 0;
+};
+
+export const getEventsByOrganiser = async (
+    organiserId: number
+): Promise<EventWithCategory[]> => {
+
+    const sql = `
+        SELECT
+            events.*,
+            categories.name AS category_name
+        FROM events
+        LEFT JOIN categories
+            ON categories.id = events.category_id
+        WHERE events.organizer_id = ?
+        ORDER BY events.event_date ASC
+    `;
+
+    const [results] = await db.query<EventWithCategory[]>(
+        sql,
+        [organiserId]
+    );
+
+    return results;
 };
