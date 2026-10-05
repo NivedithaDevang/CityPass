@@ -1,0 +1,132 @@
+.organiser-attendees {
+    padding: 30px;
+}
+
+.attendees-header {
+    margin-bottom: 25px;
+}
+.attendees-header h2 {
+    margin: 0;
+
+    font-size: 24px;
+
+    color: #111827;
+}
+.attendees-header p {
+    margin: 6px 0 0;
+
+    color: #6b7280;
+
+    font-size: 14px;
+}
+
+.attendees-toolbar {
+    background: white;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 10px;
+
+    padding: 14px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    margin-bottom: 20px;
+}
+.attendee-search {
+    flex: 1;
+
+    height: 40px;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 8px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    padding: 0 12px;
+
+    color: #9ca3af;
+}
+
+
+.attendee-search input {
+    width: 100%;
+
+    border: none;
+
+    outline: none;
+
+    font-size: 13px;
+
+    color: #111827;
+}
+.attendee-filter {
+    height: 40px;
+
+    padding: 0 12px;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 8px;
+
+    background: white;
+
+    color: #374151;
+
+    outline: none;
+
+    font-size: 13px;
+}
+
+.attendees-empty {
+    min-height: 400px;
+
+    background: white;
+
+    border: 1px solid #e5e7eb;
+
+    border-radius: 12px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    text-align: center;
+
+    color: #9ca3af;
+}
+
+
+.attendees-empty h3 {
+    margin: 15px 0 5px;
+
+    color: #374151;
+
+    font-size: 16px;
+}
+
+
+.attendees-empty p {
+    max-width: 350px;
+
+    margin: 0;
+
+    color: #9ca3af;
+
+    font-size: 13px;
+
+    line-height: 1.6;
+}

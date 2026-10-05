@@ -6,21 +6,22 @@ const adminApi = axios.create({
   withCredentials: true,
 });
 
-/* USERS */
+export const verifySuperAdminKey = async (secretKey: string) => {
+  const response = await adminApi.post("/verify-super-admin-key", { secretKey });
+  return response.data;
+};
+
 
 export const fetchAdminUsers = async () => {
   const response = await adminApi.get("/users");
   return response.data;
 };
 
-/* EVENTS */
 
 export const fetchAdminEvents = async () => {
   const response = await adminApi.get("/events");
   return response.data;
 };
-
-/* ORGANISER REQUESTS */
 
 export const fetchAdminOrganiserRequests = async (
   status?: string
@@ -43,21 +44,17 @@ export const updateOrganizerStatus = async (
   status: string
 ) => {
   const response = await adminApi.patch(
-    `/organiser-requests/${requestId}/status`,
+    `/organiser-requests/${requestId}/approve`,
     { status }
   );
 
   return response.data;
 };
 
-/* ORGANISERS */
-
 export const fetchAdminOrganisers = async () => {
   const response = await adminApi.get("/organisers");
   return response.data;
 };
-
-/* CITIES */
 
 export const fetchAdminCities = async () => {
   const response = await adminApi.get("/cities");
@@ -109,8 +106,6 @@ export const updateCity = async (
   return response.data;
 };
 
-/* CATEGORIES */
-
 export const fetchAdminCategories = async () => {
   const response = await adminApi.get(
     "/categories"
@@ -147,8 +142,6 @@ export const updateCategory = async (
   return response.data;
 };
 
-/* EVENTS STATUS */
-
 export const updateEventStatus = async (
   eventId: number,
   status: string
@@ -162,8 +155,6 @@ export const updateEventStatus = async (
 
   return response.data;
 };
-
-/* TICKETS */
 
 export const fetchAdminTickets = async () => {
   const response = await adminApi.get("/tickets");

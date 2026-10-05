@@ -9,13 +9,13 @@ import { type City } from "../../types/auth";
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
 import { FaUserAlt } from "react-icons/fa";
 import { useNavigate, useSearchParams, NavLink } from "react-router-dom";
-import cityPassLogo from "../../../public/logo.png";
 
-// Helper function to check if a city is active regardless of backend format
+// Check whether a city is active
 const isCityActive = (city: any): boolean => {
   if (city.status !== undefined && city.status !== null) {
     return String(city.status).trim().toUpperCase() === "ACTIVE";
   }
+
   if (city.is_active !== undefined && city.is_active !== null) {
     return (
       city.is_active === true ||
@@ -23,24 +23,29 @@ const isCityActive = (city: any): boolean => {
       String(city.is_active).toLowerCase() === "true"
     );
   }
-  // If no status or is_active property is supplied, default to active
+
+  // If backend does not send status, consider it active
   return true;
 };
 
 function Navbar() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
   const { user, setUser, clearUser } = useUser();
+
+  const { selectedCity, setSelectedCity } = useCity();
 
   const [showAuth, setShowAuth] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [cities, setCities] = useState<City[]>([]);
-  const { selectedCity, setSelectedCity } = useCity();
   const [isCityMenuOpen, setIsCityMenuOpen] = useState<boolean>(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] =
+    useState<boolean>(false);
 
   const cityDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Fetch cities only once
   useEffect(() => {
     const fetchCities = async () => {
       try {
@@ -52,14 +57,19 @@ function Navbar() {
 
         const data = await response.json();
 
-        // Safely extract the array across all common API response structures
+        // Support different backend response structures
         const cityList: City[] = Array.isArray(data)
           ? data
-          : data?.city ?? data?.cities ?? data?.data?.cities ?? data?.data ?? [];
+          : data?.city ??
+            data?.cities ??
+            data?.data?.cities ??
+            data?.data ??
+            [];
 
         if (Array.isArray(cityList)) {
           setCities(cityList);
 
+          // Set first active city only if no city is selected
           const firstActiveCity = cityList.find(isCityActive);
 
           if (firstActiveCity && !selectedCity) {
@@ -75,8 +85,9 @@ function Navbar() {
     };
 
     fetchCities();
-  }, [selectedCity, setSelectedCity]);
+  }, [setSelectedCity, selectedCity]);
 
+  // Close city dropdown when clicking outside
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (
@@ -119,37 +130,51 @@ function Navbar() {
     setIsMobileMenuOpen(false);
   };
 
-  // Filter only active cities for the dropdown
+  // Only active cities should appear
   const activeCities = cities.filter(isCityActive);
 
   return (
     <>
       <nav className="navbar">
+        {/* Mobile Menu Button */}
         <div className="mobile-menu-button">
           <button
             type="button"
-            onClick={() => setIsMobileMenuOpen((open) => !open)}
+            onClick={() =>
+              setIsMobileMenuOpen((open) => !open)
+            }
             aria-label="Toggle navigation menu"
           >
-            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {isMobileMenuOpen ? (
+              <X size={24} />
+            ) : (
+              <Menu size={24} />
+            )}
           </button>
         </div>
 
+        {/* Left Section */}
         <div className="navbar-left">
+          {/* Logo */}
           <div
             className="navbar-brand"
             onClick={() => navigate("/")}
             style={{ cursor: "pointer" }}
           >
             <img
-              src={cityPassLogo}
+              src="/image.png"
               alt="CityPass Icon"
               className="navbar-logo-icon"
             />
+
             <h2 className="logo">CityPass</h2>
           </div>
 
-          <div className="location city-dropdown" ref={cityDropdownRef}>
+          {/* City Dropdown */}
+          <div
+            className="location city-dropdown"
+            ref={cityDropdownRef}
+          >
             <MapPin size={18} />
 
             <button
@@ -157,13 +182,20 @@ function Navbar() {
               className="city-trigger"
               aria-expanded={isCityMenuOpen}
               aria-haspopup="listbox"
-              onClick={() => setIsCityMenuOpen((isOpen) => !isOpen)}
+              onClick={() =>
+                setIsCityMenuOpen((isOpen) => !isOpen)
+              }
             >
-              <span>{selectedCity || ALL_LOCATIONS}</span>
+              <span>
+                {selectedCity || ALL_LOCATIONS}
+              </span>
+
               <ChevronDown
                 size={16}
                 className={
-                  isCityMenuOpen ? "city-chevron open" : "city-chevron"
+                  isCityMenuOpen
+                    ? "city-chevron open"
+                    : "city-chevron"
                 }
               />
             </button>
@@ -174,12 +206,17 @@ function Navbar() {
                 role="listbox"
                 aria-label="Cities"
               >
+                {/* All Locations */}
                 <button
                   type="button"
                   role="option"
-                  aria-selected={selectedCity === ALL_LOCATIONS}
+                  aria-selected={
+                    selectedCity === ALL_LOCATIONS
+                  }
                   className={`city-option ${
-                    selectedCity === ALL_LOCATIONS ? "selected" : ""
+                    selectedCity === ALL_LOCATIONS
+                      ? "selected"
+                      : ""
                   }`}
                   onClick={() => {
                     setSelectedCity(ALL_LOCATIONS);
@@ -187,18 +224,26 @@ function Navbar() {
                   }}
                 >
                   <span>{ALL_LOCATIONS}</span>
+
                   {selectedCity === ALL_LOCATIONS && (
-                    <span className="city-check">&#10003;</span>
+                    <span className="city-check">
+                      &#10003;
+                    </span>
                   )}
                 </button>
 
+                {/* Active Cities */}
                 {activeCities.map((city) => (
                   <button
                     type="button"
                     role="option"
-                    aria-selected={selectedCity === city.name}
+                    aria-selected={
+                      selectedCity === city.name
+                    }
                     className={`city-option ${
-                      selectedCity === city.name ? "selected" : ""
+                      selectedCity === city.name
+                        ? "selected"
+                        : ""
                     }`}
                     key={city.id}
                     onClick={() => {
@@ -207,8 +252,11 @@ function Navbar() {
                     }}
                   >
                     <span>{city.name}</span>
+
                     {selectedCity === city.name && (
-                      <span className="city-check">&#10003;</span>
+                      <span className="city-check">
+                        &#10003;
+                      </span>
                     )}
                   </button>
                 ))}
@@ -217,12 +265,15 @@ function Navbar() {
           </div>
         </div>
 
+        {/* Desktop Navigation */}
         <div className="navbar-links">
           <NavLink
             to="/"
             end
             className={({ isActive }) =>
-              isActive ? "nav-item active" : "nav-item"
+              isActive
+                ? "nav-item active"
+                : "nav-item"
             }
           >
             For You
@@ -231,33 +282,19 @@ function Navbar() {
           <NavLink
             to="/events"
             className={({ isActive }) =>
-              isActive ? "nav-item active" : "nav-item"
+              isActive
+                ? "nav-item active"
+                : "nav-item"
             }
           >
             Events
           </NavLink>
-
-          <NavLink
-            to="/activities"
-            className={({ isActive }) =>
-              isActive ? "nav-item active" : "nav-item"
-            }
-          >
-            Activities
-          </NavLink>
-
-          <NavLink
-            to="/concerts"
-            className={({ isActive }) =>
-              isActive ? "nav-item active" : "nav-item"
-            }
-          >
-            Concerts
-          </NavLink>
         </div>
 
+        {/* Profile */}
         <div className="profile-area">
           <button
+            type="button"
             className="profile"
             onClick={handleProfileClick}
             aria-label="Open profile"
@@ -266,13 +303,16 @@ function Navbar() {
           </button>
         </div>
 
+        {/* Mobile Navigation */}
         {isMobileMenuOpen && (
           <div className="mobile-nav-menu">
             <NavLink
               to="/"
               end
               className={({ isActive }) =>
-                isActive ? "mobile-nav-item active" : "mobile-nav-item"
+                isActive
+                  ? "mobile-nav-item active"
+                  : "mobile-nav-item"
               }
               onClick={closeMobileMenu}
             >
@@ -282,39 +322,24 @@ function Navbar() {
             <NavLink
               to="/events"
               className={({ isActive }) =>
-                isActive ? "mobile-nav-item active" : "mobile-nav-item"
+                isActive
+                  ? "mobile-nav-item active"
+                  : "mobile-nav-item"
               }
               onClick={closeMobileMenu}
             >
               Events
             </NavLink>
-
-            <NavLink
-              to="/activities"
-              className={({ isActive }) =>
-                isActive ? "mobile-nav-item active" : "mobile-nav-item"
-              }
-              onClick={closeMobileMenu}
-            >
-              Activities
-            </NavLink>
-
-            <NavLink
-              to="/concerts"
-              className={({ isActive }) =>
-                isActive ? "mobile-nav-item active" : "mobile-nav-item"
-              }
-              onClick={closeMobileMenu}
-            >
-              Concerts
-            </NavLink>
           </div>
         )}
 
+        {/* Authentication Modal */}
         {showAuth && (
           <Auth
             onClose={() => setShowAuth(false)}
-            initialLogin={searchParams.get("login") === "true"}
+            initialLogin={
+              searchParams.get("login") === "true"
+            }
             onSuccess={(authenticatedUser) => {
               setUser(authenticatedUser);
               setShowAuth(false);
@@ -324,6 +349,7 @@ function Navbar() {
         )}
       </nav>
 
+      {/* Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}

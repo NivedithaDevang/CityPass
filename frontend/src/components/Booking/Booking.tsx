@@ -57,12 +57,12 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
       setBookingError(null);
 
       const payload = {
-        user_id: user?.id,
-        pass_id: Number(event.id),
-        number_of_tickets: ticketQuantity,
-        total_amount: totalAmount,
-        booking_date: new Date().toISOString().split("T")[0],
-        status: "CONFIRMED",
+  pass_id: Number(event.id),
+  number_of_tickets: ticketQuantity,
+  total_amount: totalAmount,
+  booking_date: new Date().toISOString().split("T")[0],
+  status: "CONFIRMED",
+
       };
 
       const res = await axios.post(`${API_BASE_URL}/v1/bookings`, payload, {

@@ -2,12 +2,12 @@
   padding: 40px 8%;
 }
 
-.category-section .section-heading {
+.category-section .category-section-heading {
   width: 100%;
   margin: 0 0 28px;
 }
 
-.category-section .section-heading p {
+.category-section .category-section-heading p {
   margin: 0 0 8px;
   font-size: 15px;
   font-weight: 400;
@@ -16,7 +16,7 @@
   letter-spacing: normal;
 }
 
-.category-section .section-heading h2 {
+.category-section .category-section-heading h2 {
   margin: 0 0 8px;
   font-size: 32px;
   font-weight: 800;
@@ -25,7 +25,7 @@
   color: #111;
 }
 
-.category-section .section-heading span {
+.category-section .category-section-heading span {
   display: block;
   margin-top: 4px;
   font-size: 15px;

@@ -362,10 +362,6 @@
   text-decoration: none;
 }
 
-/* =========================================
-   CANCEL BOOKING CONFIRMATION MODAL
-   ========================================= */
-
 .cancel-modal-overlay {
   position: fixed;
   inset: 0;
@@ -514,10 +510,6 @@
     transform: scale(1);
   }
 }
-
-/* =========================================
-   DIGITAL TICKET MODAL STYLING
-   ========================================= */
 
 .ticket-modal-overlay {
   position: fixed;
@@ -785,7 +777,7 @@
   }
 }
 
-/* Responsive Styles */
+
 @media (max-width: 768px) {
   .hz-booking-card {
     flex-direction: column;

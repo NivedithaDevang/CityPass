@@ -56,9 +56,6 @@ const CITY_IMAGE_MAP: Record<string, string> = {
 
 const DEFAULT_POSTER = "/categories/image.png";
 
-// ==========================================
-// DIGITAL TICKET MODAL COMPONENT
-// ==========================================
 interface DigitalTicketModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -123,18 +120,17 @@ function DigitalTicketModal({ isOpen, onClose, booking }: DigitalTicketModalProp
         </button>
 
         <div className={`digital-ticket-card ${isCancelled ? "ticket-cancelled" : ""}`}>
-          {/* Header Banner */}
+
           <div className="ticket-header-band">
             <div className="ticket-brand-row">
               <span className="brand-badge">
                 <IoSparkles className="sparkle-icon" /> CityPass Official
               </span>
-              <span className="ticket-ref-id">PASS #{booking.id.toString().padStart(6, "0")}</span>
             </div>
             <h2 className="ticket-main-heading">CityPass Digital Ticket</h2>
           </div>
 
-          {/* Event Core Info */}
+
           <div className="ticket-body">
             <div className="ticket-title-row">
               <div>
@@ -176,7 +172,7 @@ function DigitalTicketModal({ isOpen, onClose, booking }: DigitalTicketModalProp
             </div>
           </div>
 
-          {/* Perforated Tear Divider */}
+
           <div className="ticket-divider">
             <div className="notch notch-left" />
             <div className="dashed-line" />
@@ -194,9 +190,6 @@ function DigitalTicketModal({ isOpen, onClose, booking }: DigitalTicketModalProp
   );
 }
 
-// ==========================================
-// MAIN BOOKING PAGE
-// ==========================================
 export function BookingPage() {
   const { user } = useUser();
   const navigate = useNavigate();
@@ -348,7 +341,7 @@ export function BookingPage() {
               const cityRaw = item.location || item.venue || "CITY";
               const eventTitle = item.event_title || item.name || "Event Pass";
               
-              // Determine slug navigation target
+
               const eventSlug = item.slug || (eventTitle ? createEventSlug(eventTitle) : item.pass_id ?? item.id);
               const targetUrl = `/events/${eventSlug}`;
 
@@ -358,7 +351,7 @@ export function BookingPage() {
                   className="hz-booking-card"
                   onClick={() => navigate(targetUrl)}
                 >
-                  {/* Left Media Thumbnail */}
+
                   <div className="hz-card-media">
                     <img
                       src={getCityPoster(item)}
@@ -373,7 +366,7 @@ export function BookingPage() {
                     </div>
                   </div>
 
-                  {/* Right Details Section */}
+
                   <div className="hz-card-details">
                     <div className="hz-top-row">
                       <span className="hz-event-datetime">
@@ -422,7 +415,6 @@ export function BookingPage() {
                         Booked on {formatBookingDate(item.booking_date)}
                       </span>
 
-                      {/* e.stopPropagation() prevents card redirection when clicking action buttons */}
                       <div
                         className="hz-action-buttons"
                         onClick={(e) => e.stopPropagation()}
@@ -456,14 +448,14 @@ export function BookingPage() {
         )}
       </main>
 
-      {/* DIGITAL TICKET MODAL */}
+
       <DigitalTicketModal
         isOpen={Boolean(selectedBookingForPass)}
         onClose={() => setSelectedBookingForPass(null)}
         booking={selectedBookingForPass}
       />
 
-      {/* CANCELLATION CONFIRMATION MODAL */}
+
       {selectedBookingForCancel && (
         <div
           className="cancel-modal-overlay"

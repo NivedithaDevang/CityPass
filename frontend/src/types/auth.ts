@@ -4,6 +4,7 @@ export interface User {
   email: string;
   role?: string;
   phone?: string | null;
+  profile_image?: string | null;
   dob?: string | null;
   gender?: "MALE" | "FEMALE" | "OTHER" | null;
   status?: "ACTIVE" | "INACTIVE";

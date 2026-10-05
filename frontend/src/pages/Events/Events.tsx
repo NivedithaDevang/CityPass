@@ -7,10 +7,23 @@ import { type Category, type City, type Events } from "../../types/auth";
 import Navbar from "../../components/Navbar/Navbar";
 import { Footer } from "../../components/Footer/Footer";
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
-import { FaMapPin, FaMicrophone, FaLaughSquint } from "react-icons/fa";
-import { MdSportsFootball, MdTheaterComedy } from "react-icons/md";
+
+import {
+  FaMapPin,
+  FaMicrophone,
+  FaLaughSquint,
+  FaPaintBrush,
+  FaMountain,
+  FaCompass,
+} from "react-icons/fa";
+
+import {
+  MdSportsFootball,
+  MdTheaterComedy,
+} from "react-icons/md";
+
 import { IoFastFoodSharp } from "react-icons/io5";
-import { FaPaintbrush, FaMountain } from "react-icons/fa6";
+
 import type { IconType } from "react-icons";
 
 function Event() {
@@ -23,13 +36,24 @@ function Event() {
     Sports: MdSportsFootball,
     Comedy: MdTheaterComedy,
     Food: IoFastFoodSharp,
-    Art: FaPaintbrush,
+    Art: FaPaintBrush,
     Adventure: FaMountain,
     Entertainment: FaLaughSquint,
   };
 
+  const categoryHeadings: Record<string, string> = {
+    Music: "Turn Up the Volume, Live the Experience",
+    Sports: "Chase the Score, Feel the Roar",
+    Comedy: "Laugh First, Figure Out Life Later",
+    Food: "For the Love of Everything Delicious",
+    Art: "Make Something Only You Could Create",
+    Adventure: "Trade the Ordinary for a Little Adrenaline",
+    Entertainment: "Your Boring Plans Just Got Cancelled",
+  };
+
   const getCategoryIcon = (categoryName?: string | null) => {
     const normalizedCategory = categoryName?.toLowerCase() || "";
+
     if (normalizedCategory.includes("music")) return categoryIcons.Music;
     if (normalizedCategory.includes("sport")) return categoryIcons.Sports;
     if (normalizedCategory.includes("comedy")) return categoryIcons.Comedy;
@@ -37,20 +61,18 @@ function Event() {
     if (normalizedCategory.includes("art")) return categoryIcons.Art;
     if (normalizedCategory.includes("adventure")) return categoryIcons.Adventure;
     if (normalizedCategory.includes("entertainment")) return categoryIcons.Entertainment;
+
     return null;
   };
 
   const [search, setSearch] = useState("");
   const [events, setEvents] = useState<Events[]>([]);
-
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [selectedLocation, setSelectedLocation] = useState<string>("ALL");
   const [sortBy, setSortBy] = useState<string>("date_asc");
-
   const [categories, setCategories] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
 
-  // Sync city & category from URL query parameters
   useEffect(() => {
     const cityParam = searchParams.get("city");
     const categoryParam = searchParams.get("category");
@@ -79,6 +101,7 @@ function Event() {
 
   const handleLocationChange = (loc: string) => {
     setSelectedLocation(loc);
+
     const params = new URLSearchParams(searchParams);
     if (loc === "ALL") {
       params.delete("city");
@@ -90,6 +113,7 @@ function Event() {
 
   const handleCategoryChange = (cat: string) => {
     setSelectedCategory(cat);
+
     const params = new URLSearchParams(searchParams);
     if (cat === "ALL") {
       params.delete("category");
@@ -124,7 +148,7 @@ function Event() {
           .filter((name): name is string => Boolean(name));
         setCategories([...new Set(categoryNames)]);
 
-        const cityList = locRes.data?.city || [];
+        const cityList = locRes.data?.city || locRes.data?.cities || [];
         const cityNames = (cityList as City[])
           .map((city) => city.name?.trim())
           .filter((name): name is string => Boolean(name));
@@ -143,32 +167,43 @@ function Event() {
   const processedEvents = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    const filtered = events.filter((event) => {
-      const matchesGlobalCity =
-        !selectedCity ||
-        selectedCity === ALL_LOCATIONS ||
-        event.location?.trim().toLowerCase() === selectedCity.trim().toLowerCase();
+    const filtered = events.filter((event: any) => {
+      const eventLoc = (event.location || "").trim().toLowerCase();
+      const eventCity = (event.city || "").trim().toLowerCase();
 
-      if (!matchesGlobalCity) return false;
-
-      if (
-        selectedLocation !== "ALL" &&
-        event.location?.trim().toLowerCase() !== selectedLocation.trim().toLowerCase()
-      ) {
-        return false;
+      // 1. Global Navbar location check
+      if (selectedCity && selectedCity !== ALL_LOCATIONS) {
+        const targetCity = selectedCity.trim().toLowerCase();
+        const matchesGlobal =
+          eventCity === targetCity || eventLoc.includes(targetCity);
+        if (!matchesGlobal) return false;
       }
 
+      // 2. Filter toolbar location dropdown
+      if (selectedLocation !== "ALL") {
+        const targetLoc = selectedLocation.trim().toLowerCase();
+        const matchesLoc =
+          eventCity === targetLoc || eventLoc.includes(targetLoc);
+        if (!matchesLoc) return false;
+      }
+
+      // 3. Category dropdown
       if (
         selectedCategory !== "ALL" &&
-        event.category_name?.trim().toLowerCase() !== selectedCategory.trim().toLowerCase()
+        (event.category_name || "").trim().toLowerCase() !==
+          selectedCategory.trim().toLowerCase()
       ) {
         return false;
       }
 
-      if (!normalizedSearch) return true;
-      return [event.name, event.category_name, event.location]
+      // 4. Search input
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      return [event.name, event.category_name, event.location, event.city]
         .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(normalizedSearch));
+        .some((val) => val.toLowerCase().includes(normalizedSearch));
     });
 
     return filtered.sort((a, b) => {
@@ -190,33 +225,176 @@ function Event() {
           return 0;
       }
     });
-  }, [events, selectedCity, selectedLocation, selectedCategory, search, sortBy]);
+  }, [
+    events,
+    selectedCity,
+    selectedLocation,
+    selectedCategory,
+    search,
+    sortBy,
+  ]);
+
+  const categoryOrder = [
+    "Music",
+    "Sports",
+    "Comedy",
+    "Food",
+    "Art",
+    "Adventure",
+    "Entertainment",
+  ];
+
+  const categorizedEvents = useMemo(() => {
+    const result: Record<string, Events[]> = {};
+
+    categoryOrder.forEach((category) => {
+      result[category] = processedEvents.filter(
+        (event) =>
+          event.category_name?.trim().toLowerCase() === category.toLowerCase()
+      );
+    });
+
+    return result;
+  }, [processedEvents]);
 
   const formatEventDate = (eventDate?: string) => {
-    if (!eventDate) return "Date to be announced";
-    return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(eventDate));
+    if (!eventDate) {
+      return "Date to be announced";
+    }
+
+    return new Intl.DateTimeFormat("en-US", {
+      dateStyle: "medium",
+    }).format(new Date(eventDate));
   };
 
   const handleCardClick = (event: Events) => {
-  console.log("Clicked event:", event);
-  if (!event.slug) {
-    console.warn("Event is missing a slug! Event ID:", event.id);
-    return;
-  }
-  navigate(`/events/${event.slug}`);
-};
+    if (!event.slug) {
+      console.warn("Event is missing a slug! Event ID:", event.id);
+      return;
+    }
+
+    navigate(`/events/${event.slug}`);
+  };
+
+  const renderEventCard = (event: Events) => {
+    const CategoryIcon = getCategoryIcon(event.category_name);
+
+    return (
+      <article
+        className="eventpage-card"
+        key={event.id || event.name}
+        onClick={() => handleCardClick(event)}
+        style={{ cursor: "pointer" }}
+      >
+        <div className="eventpage-card-media">
+          <span className="eventpage-badge">
+            {CategoryIcon && (
+              <CategoryIcon className="eventpage-category-icon" />
+            )}
+            {event.category_name || "Event"}
+          </span>
+
+          <p className="eventpage-location">
+            <FaMapPin className="eventpage-location-pin" />
+            {event.location || "Location to be announced"}
+          </p>
+        </div>
+
+        <div className="eventpage-card-content">
+          <span className="eventpage-date">
+            {formatEventDate(event.event_date)}
+          </span>
+
+          <h3>{event.name || "Untitled event"}</h3>
+
+          <div className="eventpage-card-footer">
+            <div>
+              <span className="eventpage-price-label">Starting from</span>
+              <p className="eventpage-price">
+                ₹ {event.price || "Price yet to be announced"}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="eventpage-pass-button"
+              onClick={(clickEvent) => {
+                clickEvent.stopPropagation();
+                handleCardClick(event);
+              }}
+            >
+              Get Tickets
+            </button>
+          </div>
+        </div>
+      </article>
+    );
+  };
+
+  const renderCategorySection = (category: string) => {
+    const categoryEvents = categorizedEvents[category] || [];
+
+    if (categoryEvents.length === 0) {
+      return null;
+    }
+
+    const CategoryIcon = getCategoryIcon(category);
+    const headingTitle = categoryHeadings[category] || category;
+
+    return (
+      <section className="event-category-section" key={category}>
+        <div className="event-category-heading">
+          <div className="event-category-title">
+            {CategoryIcon && (
+              <CategoryIcon className="event-category-icon" />
+            )}
+            <h2>{headingTitle}</h2>
+          </div>
+
+          <button
+            type="button"
+            className="event-category-view-all"
+            onClick={() => handleCategoryChange(category)}
+          >
+            View All
+          </button>
+        </div>
+
+        <div className="event-category-grid">
+          {categoryEvents.slice(0, 6).map(renderEventCard)}
+        </div>
+      </section>
+    );
+  };
 
   return (
     <>
       <Navbar />
-      <div className="section-heading">
-        <h2>Explore events happening in the city</h2>
-        <p>Top-rated concerts, masterclasses, and weekend pop-ups selling fast</p>
+
+      <div className="hero-banner">
+        <div className="events-hero-content">
+          <span className="events-hero-badge">
+            <FaCompass className="hero-badge-icon" />
+            Discover & Explore
+          </span>
+          <h1>
+            {selectedCity && selectedCity !== ALL_LOCATIONS
+              ? `Explore events in ${selectedCity}`
+              : "Explore events happening in the city"}
+          </h1>
+          <p>
+            Top-rated concerts, masterclasses, and weekend pop-ups selling fast across your city.
+          </p>
+        </div>
       </div>
 
       <section className="eventpage-section">
+        {/* Filter Toolbar */}
         <div className="eventpage-filter-toolbar">
-          <form className="eventpage-search" onSubmit={(e) => e.preventDefault()}>
+          <form
+            className="eventpage-search"
+            onSubmit={(e) => e.preventDefault()}
+          >
             <input
               id="eventpage-search-input"
               type="search"
@@ -276,66 +454,29 @@ function Event() {
           </div>
         </div>
 
-        <div className="eventpage-grid">
-          {processedEvents.map((event) => {
-            const CategoryIcon = getCategoryIcon(event.category_name);
-
-            return (
-              <article
-                className="eventpage-card"
-                key={event.id}
-                onClick={() => handleCardClick(event)}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="eventpage-card-media">
-                  <span className="eventpage-badge">
-                    {CategoryIcon && <CategoryIcon className="eventpage-category-icon" />}
-                    {event.category_name || "Event"}
-                  </span>
-                  <p className="eventpage-location">
-                    <FaMapPin className="eventpage-location-pin" />
-                    {event.location || "Location to be announced"}
-                  </p>
-                </div>
-
-                <div className="eventpage-card-content">
-                  <span className="eventpage-date">{formatEventDate(event.event_date)}</span>
-                  <h3>{event.name || "Untitled event"}</h3>
-
-                  <div className="eventpage-card-footer">
-                    <div>
-                      <span className="eventpage-price-label">Starting from</span>
-                      <p className="eventpage-price">
-                        ₹ {event.price || "Price yet to be announced"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="eventpage-pass-button"
-                      onClick={(clickEvent) => {
-                        clickEvent.stopPropagation();
-                        handleCardClick(event);
-                      }}
-                    >
-                      Get Tickets
-                    </button>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-
-          {!processedEvents.length && (
-            <p className="eventpage-empty">
-              {hasActiveFilters
-                ? "No matching events found. Try adjusting or resetting your filters."
-                : selectedCity && selectedCity !== ALL_LOCATIONS
-                ? "Currently no events in this place."
-                : "No upcoming events are available right now."}
-            </p>
-          )}
-        </div>
+        {hasActiveFilters ? (
+          <div className="eventpage-grid">
+            {processedEvents.map(renderEventCard)}
+            {!processedEvents.length && (
+              <p className="eventpage-empty">
+                No matching events found. Try adjusting or resetting your filters.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="event-category-container">
+            {categoryOrder.map((category) => renderCategorySection(category))}
+            {!processedEvents.length && (
+              <p className="eventpage-empty">
+                {selectedCity && selectedCity !== ALL_LOCATIONS
+                  ? `Currently no events in ${selectedCity}.`
+                  : "No upcoming events are available right now."}
+              </p>
+            )}
+          </div>
+        )}
       </section>
+
       <Footer />
     </>
   );

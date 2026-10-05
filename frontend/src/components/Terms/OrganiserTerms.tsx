@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import "./Terms.css";
 
 interface OrganiserTerms {
@@ -48,7 +48,7 @@ export const OrganiserTerms: string[] = [
   "By submitting an event for hosting on CityPass, you confirm that you have read, understood, and agreed to these Organizer Terms & Conditions."
 ];
 
-export const Terms: React.FC<OrganiserTerms> = ({ isOpen, onClose}) => {
+export const Terms = ({ isOpen, onClose}: OrganiserTerms) => {
 
     useEffect(() => {
         if(!isOpen)

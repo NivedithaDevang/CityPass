@@ -44,7 +44,7 @@ function CategorySection() {
 
   return (
     <section className="category-section">
-      <div className="section-heading">
+      <div className="category-section-heading">
         <p>YOUR MOOD</p>
         <h2>Curate Your Vibe</h2>
         <span>Live music, underground comedy, street food, and late-night sets.</span>
