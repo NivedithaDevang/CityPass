@@ -200,10 +200,6 @@ function OrganiserRequests() {
                   </span>
                 </div>
 
-                <p className="req-desc">
-                  {req.description || "No description provided."}
-                </p>
-
                 <div className="req-card-actions">
                   <button 
                     type="button"

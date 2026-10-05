@@ -77,7 +77,7 @@ function CitySection() {
 
   return (
     <section className="city-section">
-      <div className="section-heading">
+      <div className="city-section-heading">
         <p>THE SCENE</p>
         <h2>Hit The Map</h2>
         <span>

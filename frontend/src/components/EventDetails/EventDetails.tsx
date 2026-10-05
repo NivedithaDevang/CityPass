@@ -40,6 +40,11 @@ function EventDetails() {
         const response = await axios.get(
           `${API_BASE_URL}/v1/events/${slug}`
         );
+        console.log("SLUG FROM URL:", slug);
+console.log(
+  "REQUEST URL:",
+  `${API_BASE_URL}/v1/events/${slug}`
+);
 
         const loadedEvent = response.data.event || response.data;
 

@@ -14,9 +14,9 @@ export function OrganiserDetails() {
         const fetchOrganiserDetails = async() => {
             try{
                 const response = await axios.get(
-                    `${API_BASE_URL}/v1/organizers`
+                    `${API_BASE_URL}/v1/organisers`
                 );
-                const organisers = response.data.organizers || [];
+                const organisers = response.data.organisers || [];
                 setOrganiser(organisers[0] || null);
             }
             catch(error){

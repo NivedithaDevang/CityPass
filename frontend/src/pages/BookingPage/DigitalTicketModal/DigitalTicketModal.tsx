@@ -84,26 +84,25 @@ export function DigitalTicketModal({ isOpen, onClose, booking }: DigitalTicketPr
   return (
     <div className="ticket-modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
       <div className="ticket-modal-wrapper" onClick={(e) => e.stopPropagation()}>
-        {/* Floating Close Button */}
+
         <button type="button" className="ticket-close-btn" onClick={onClose} aria-label="Close ticket">
           <FaTimes />
         </button>
 
-        {/* Outer Pass Structure */}
+
         <div className={`digital-ticket-card ${isCancelled ? "ticket-cancelled" : ""}`}>
           
-          {/* Header Banner */}
+
           <div className="ticket-header-band">
             <div className="ticket-brand-row">
               <span className="brand-badge">
                 <IoSparkles className="sparkle-icon" /> CityPass Official
               </span>
-              <span className="ticket-ref-id">PASS #{booking.id.toString().padStart(6, "0")}</span>
             </div>
             <h2 className="ticket-main-heading">CityPass Digital Ticket</h2>
           </div>
 
-          {/* Upper Section: Event Core Info */}
+
           <div className="ticket-body">
             <div className="ticket-title-row">
               <div>
@@ -145,14 +144,14 @@ export function DigitalTicketModal({ isOpen, onClose, booking }: DigitalTicketPr
             </div>
           </div>
 
-          {/* Perforated Tear-Off Divider with Ticket Notches */}
+
           <div className="ticket-divider">
             <div className="notch notch-left" />
             <div className="dashed-line" />
             <div className="notch notch-right" />
           </div>
 
-          {/* Lower Stub Section: QR Code, Barcode & Tagline */}
+
           <div className="ticket-stub">
             <div className="stub-content">
               <div className="qr-box">
@@ -166,7 +165,7 @@ export function DigitalTicketModal({ isOpen, onClose, booking }: DigitalTicketPr
               </div>
             </div>
 
-            {/* Custom UI Tagline Footer */}
+
             <div className="ticket-tagline-container">
               <p className="ticket-tagline">
                 Your city, unlocked. Present this digital pass at the entrance for direct scan-and-enter access.

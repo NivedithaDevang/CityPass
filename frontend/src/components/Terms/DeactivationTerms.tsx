@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+
+import { useEffect } from "react";
 import "./Terms.css";
 
 interface DeactivateTerms {
@@ -17,7 +18,7 @@ const deactivateTerms: string[] = [
     "Your account information may continue to be retained while your account is inactive in accordance with the CityPass Privacy Policy and applicable laws.",
 ];
 
-export const Terms: React.FC<DeactivateTerms> = ({ isOpen, onClose}) => {
+export const Terms = ({ isOpen, onClose }: DeactivateTerms) => {
 
     useEffect(() => {
         if(!isOpen)

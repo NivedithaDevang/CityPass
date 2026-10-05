@@ -2,12 +2,12 @@
     padding: 40px 8%;
 }
 
-.eventsec-section .section-heading {
+.eventsec-section .event-section-heading {
 width: 100%;
 margin: 0 0 28px;
 }
 
-.eventsec-section .section-heading h2 {
+.eventsec-section .event-section-heading h2 {
     margin: 0 0 8px;
     color: #111;
     font-size: 32px;
@@ -16,7 +16,7 @@ margin: 0 0 28px;
     letter-spacing: -0.02em;
 }
 
-.eventsec-section .section-heading p {
+.eventsec-section .event-section-heading p {
     margin: 0 0 8px;
     font-size: 15px;
     line-height: 1.5;
@@ -26,7 +26,7 @@ margin: 0 0 28px;
 
 }
 
-.eventsec-section .section-heading span {
+.eventsec-section .event-section-heading span {
     display: block;
     margin-top: 4px;
     font-size: 15px;

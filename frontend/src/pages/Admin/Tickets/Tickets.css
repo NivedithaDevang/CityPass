@@ -4,7 +4,6 @@
   padding: 0;
 }
 
-/* Header Row & Subhead */
 .ticket-header-row {
   display: flex;
   justify-content: space-between;
@@ -28,7 +27,7 @@
   color: #1e1e2d;
 }
 
-/* Toolbar & Filter Tabs */
+
 .ticket-toolbar {
   display: flex;
   align-items: center;
@@ -97,7 +96,6 @@
   background: #6c4ec9;
 }
 
-/* Notification Banners */
 .ticket-banner {
   border-radius: 12px;
   padding: 10px 16px;
@@ -141,11 +139,16 @@
   color: #999;
 }
 
-/* Card Grid */
 .ticket-list-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 20px;
+}
+
+@media (max-width: 760px) {
+  .ticket-list-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .ticket-item-card {
@@ -260,7 +263,6 @@
   cursor: not-allowed;
 }
 
-/* Modals */
 .modal-backdrop {
   position: fixed;
   inset: 0;

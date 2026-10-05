@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import "./Terms.css";
 
 interface TermsModalProps {
@@ -31,7 +31,7 @@ const TERMS_LIST: string[] = [
   "To ensure a high-quality user experience, the organizer may collect certain information (including personally identifiable information such as name, email address, or phone number) at the time of booking, registration, or payment, in accordance with its Terms and Conditions and Privacy Policy."
 ];
 
-export const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
+export const TermsModal = ({ isOpen, onClose }: TermsModalProps) => {
   useEffect(() => {
     if (!isOpen) return;
 

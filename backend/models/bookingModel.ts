@@ -13,7 +13,7 @@ type Booking = {
 
 type BookingRow = RowDataPacket & Booking;
 
-export const getAllBookings = async () => {
+export const getBookingsByUserId = async (userId: number) => {
   const sql = `
     SELECT 
       b.id,
@@ -33,21 +33,32 @@ export const getAllBookings = async () => {
     LEFT JOIN users u ON b.user_id = u.id
     LEFT JOIN events e ON b.pass_id = e.id
     LEFT JOIN categories c ON e.category_id = c.id
+    WHERE b.user_id = ?
     ORDER BY b.id DESC
   `;
 
-  const [results] = await db.query<RowDataPacket[]>(sql);
+  const [results] = await db.query<RowDataPacket[]>(sql, [userId]);
+
   return results;
 };
 
 export const createBooking = async (book: Booking) => {
   const sql = `
-    INSERT INTO bookings (user_id, pass_id, booking_date, number_of_tickets, total_amount, status)
+    INSERT INTO bookings 
+    (
+      user_id,
+      pass_id,
+      booking_date,
+      number_of_tickets,
+      total_amount,
+      status
+    )
     VALUES (?, ?, ?, ?, ?, ?)
   `;
 
-  // Format to YYYY-MM-DD
-  const formattedDate = new Date(book.booking_date).toISOString().split("T")[0];
+  const formattedDate = new Date(book.booking_date)
+    .toISOString()
+    .split("T")[0];
 
   const [results] = await db.query<ResultSetHeader>(sql, [
     book.user_id,
@@ -73,10 +84,16 @@ export const updateBookingStatus = async (
     WHERE id = ? AND user_id = ?
   `;
 
-  const [result]: any = await db.query(query, [status, bookingId, userId]);
+  const [result] = await db.query<ResultSetHeader>(query, [
+    status,
+    bookingId,
+    userId,
+  ]);
 
   if (result.affectedRows === 0) {
-    throw new Error("Booking not found or you are not authorized to modify it.");
+    throw new Error(
+      "Booking not found or you are not authorized to modify it."
+    );
   }
 
   return result;

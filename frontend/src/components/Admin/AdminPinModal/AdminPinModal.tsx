@@ -1,5 +1,8 @@
 import React, { useState } from "react";
+import { isAxiosError } from "axios";
+import { verifySuperAdminKey } from "../../../services/adminService";
 import "./AdminPinModal.css";
+import { RiAdminLine } from "react-icons/ri";
 
 interface AdminPinModalProps {
   isOpen: boolean;
@@ -7,21 +10,16 @@ interface AdminPinModalProps {
   onCancel: () => void;
 }
 
-const AdminPinModal: React.FC<AdminPinModalProps> = ({
-  isOpen,
-  onSuccess,
-  onCancel,
-}) => {
+const AdminPinModal = ({ isOpen, onSuccess, onCancel }: AdminPinModalProps) => {
   const [secretKey, setSecretKey] = useState("");
   const [error, setError] = useState("");
-
-  const SUPER_ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET_KEY;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) {
     return null;
   }
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
 
@@ -30,13 +28,23 @@ const AdminPinModal: React.FC<AdminPinModalProps> = ({
       return;
     }
 
-    if (secretKey !== SUPER_ADMIN_SECRET) {
-      setError("Invalid secret key. Please try again.");
-      return;
+    setIsSubmitting(true);
+    try {
+      await verifySuperAdminKey(secretKey);
+      setSecretKey("");
+      onSuccess();
+    } catch (verificationError) {
+      const responseMessage = isAxiosError(verificationError)
+        ? verificationError.response?.data?.message
+        : undefined;
+      setError(
+        typeof responseMessage === "string"
+          ? responseMessage
+          : "Unable to verify the secret key. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setSecretKey("");
-    onSuccess();
   };
 
   const handleCancel = () => {
@@ -48,7 +56,10 @@ const AdminPinModal: React.FC<AdminPinModalProps> = ({
   return (
     <div className="admin-pin-overlay">
       <div className="admin-pin-modal">
-        <div className="admin-pin-icon">🔐</div>
+        <div className="admin-pin-icon">
+          <RiAdminLine />
+
+        </div>
 
         <h2>Super Admin Module</h2>
 
@@ -83,12 +94,17 @@ const AdminPinModal: React.FC<AdminPinModalProps> = ({
               type="button"
               className="admin-pin-cancel"
               onClick={handleCancel}
+              disabled={isSubmitting}
             >
               Cancel
             </button>
 
-            <button type="submit" className="admin-pin-submit">
-              Enter Super Admin
+            <button
+              type="submit"
+              className="admin-pin-submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Verifying..." : "Enter Super Admin"}
             </button>
           </div>
         </form>

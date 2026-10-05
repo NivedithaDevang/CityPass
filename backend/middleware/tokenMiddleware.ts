@@ -24,7 +24,5 @@ export const generateUserToken = (userId: number, res: Response, user: any) => {
   };
 
   res.cookie("userToken", token, cookieOptions);
-  res.cookie("token", token, cookieOptions);
 
-  return token;
 };

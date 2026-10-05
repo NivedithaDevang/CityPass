@@ -30,7 +30,7 @@ export const authenticate = async (
 
         if (!token) {
             return res.status(401).json({
-                message: "No token provided"
+                message: "No token provided. Authentication Required"
             });
         }
 
@@ -40,7 +40,7 @@ export const authenticate = async (
         ) as AuthPayLoad;
 
         const [rows] = await db.query<TokenVersionRow[]>(
-            "SELECT token_version FROM users WHERE id = ?",
+            `SELECT token_version FROM users WHERE id = ?`,
             [decoded.id]
         );
 

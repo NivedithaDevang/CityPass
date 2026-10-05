@@ -21,7 +21,8 @@ export const findUserByEmail = async (email: string) => {
             role,
             status,
             city_id,
-            token_version
+            token_version,
+            profile_image
          FROM users
          WHERE email = ?`,
         [email]

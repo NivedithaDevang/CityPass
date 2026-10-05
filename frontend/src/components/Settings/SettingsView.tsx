@@ -1,342 +1,329 @@
-import "./SettingsView.css";
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import Navbar from "../Navbar/Navbar";
-import { IoPerson } from "react-icons/io5";
-import { RiCameraAiFill } from "react-icons/ri";
-import { FaBullhorn } from "react-icons/fa6";
-import { IoIosArrowForward } from "react-icons/io";
-import { FaLock } from "react-icons/fa";
-import { FaUserAltSlash } from "react-icons/fa";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../config/config";
-import { getNumberErrors } from "../../config/numberCheck";
-import { getPasswordErrors } from "../../config/passwordRules";
-import { Terms } from "../Terms/DeactivationTerms";
-import { Terms as OrganiserTerms } from "../Terms/OrganiserTerms";
-import { type City } from "../../types/auth";
+import { useUser } from "../../context/UserContext";
+import Navbar from "../Navbar/Navbar";
+import {
+  FaPlus,
+  FaEye,
+  FaEyeSlash,
+  FaUser,
+  FaLock,
+  FaBullhorn,
+  FaUserSlash,
+  FaChevronRight,
+} from "react-icons/fa6";
+import "./SettingsView.css";
+
+interface City {
+  id: number;
+  name: string;
+}
 
 interface Category {
   id: number;
   name: string;
 }
 
-const TAB_SLUGS = {
-  profile: "profile",
-  password: "password",
-  "host-an-event": "organiser_request",
-  deactivate: "delete",
-} as const;
+interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  city_id: number | "";
+  dob: string;
+  gender: "MALE" | "FEMALE" | "OTHER" | "";
+  profile_image?: string;
+}
 
-type SlugKey = keyof typeof TAB_SLUGS;
-type ActiveTab = (typeof TAB_SLUGS)[SlugKey];
+const MAX_DOB = "2015-12-31";
 
-const DEACTIVATE_REASONS = [
-  "I don't use CityPass anymore",
-  "I'm taking a break",
-  "I'm not satisfied with the experience",
-  "I'm having technical issues",
-  "I'm concerned about privacy or security",
-  "I'm not finding events I'm interested in",
-  "I created this account by mistake",
+const genderOptions = [
+  { value: "FEMALE", label: "Female" },
+  { value: "MALE", label: "Male" },
+  { value: "OTHER", label: "Other" },
+];
+
+const deactivateReasons = [
+  "Not using CityPass anymore",
+  "Privacy concerns",
+  "Too many notifications",
+  "I found another platform",
+  "I had a poor experience",
+  "I am taking a break",
+  "Creating another account",
   "Other",
 ];
 
 function SettingsView() {
-  const { tabSlug } = useParams<{ tabSlug: string }>();
   const navigate = useNavigate();
+  const { user, setUser } = useUser();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const activeTab: ActiveTab =
-    tabSlug && tabSlug in TAB_SLUGS
-      ? TAB_SLUGS[tabSlug as SlugKey]
-      : "profile";
+  const [activeTab, setActiveTab] = useState("profile");
 
-  useEffect(() => {
-    if (!tabSlug || !(tabSlug in TAB_SLUGS)) {
-      navigate("/settings/profile", { replace: true });
-    }
-  }, [tabSlug, navigate]);
-
-  const handleTabChange = (slug: SlugKey) => {
-    navigate(`/settings/${slug}`);
-  };
-
-  const { user, setUser, profileImage, setProfileImage } = useUser();
-  const profileImageInputRef = useRef<HTMLInputElement>(null);
-
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-
-  const [profile, setProfile] = useState({
-    name: user?.name || "",
-    email: user?.email || "",
-    phone: "",
-    dob: "",
-    gender: "",
-  });
-
-  const [initialProfile, setInitialProfile] = useState({
+  const [profile, setProfile] = useState<UserProfile>({
+    id: 0,
     name: "",
     email: "",
     phone: "",
+    city_id: "",
     dob: "",
     gender: "",
+    profile_image: "",
   });
+
+  const [cities, setCities] = useState<City[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
+
+  const [loading, setLoading] = useState(false);
+
+  const [profileMessage, setProfileMessage] = useState("");
+  const [profileError, setProfileError] = useState("");
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Organiser Form State
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
   const [org, setOrg] = useState({
-    organization_name: "",
-    description: "",
+    stageName: "",
     category: "",
     city: "",
     pan_card: "",
     email: user?.email || "",
     phone: user?.phone || "",
+    description: "",
   });
 
-  // Dynamic Options from Backend
-  const [cities, setCities] = useState<City[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [metaLoading, setMetaLoading] = useState(false);
-
-  const [showOrgConfirmPopup, setShowOrgConfirmPopup] = useState(false);
-  const [showOrgTerms, setShowOrgTerms] = useState(false);
-  const [orgSubmitting, setOrgSubmitting] = useState(false);
   const [orgMessage, setOrgMessage] = useState("");
-  const [showOrgSuccessPopup, setShowOrgSuccessPopup] = useState(false);
+  const [orgError, setOrgError] = useState("");
 
-  const [showProfileSuccessPopup, setShowProfileSuccessPopup] = useState(false);
-  const [showPasswordSuccessPopup, setShowPasswordSuccessPopup] = useState(false);
-
-  const [passwordMessage, setPasswordMessage] = useState("");
-  const [passwordSaving, setPasswordSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
-  const [showReloginPopup, setShowReloginPopup] = useState(false);
-  const [reloginLoading, setReloginLoading] = useState(false);
-
-  const [showDeactivatePopup, setShowDeactivatePopup] = useState(false);
-  const [showDeactivateTerms, setShowDeactivateTerms] = useState(false);
-  const [deactivating, setDeactivating] = useState(false);
   const [deactivateReason, setDeactivateReason] = useState("");
-  const [deactivateOtherText, setDeactivateOtherText] = useState("");
+  const [otherDeactivateReason, setOtherDeactivateReason] = useState("");
+
+  const [showDeactivateTerms, setShowDeactivateTerms] = useState(false);
   const [deactivateError, setDeactivateError] = useState("");
 
-  const phoneErrors = profile.phone ? getNumberErrors(profile.phone) : [];
-  const passwordErrors = newPassword ? getPasswordErrors(newPassword) : [];
-
-  const isProfileDirty =
-    Boolean(avatarFile) ||
-    profile.name !== initialProfile.name ||
-    profile.email !== initialProfile.email ||
-    profile.phone !== initialProfile.phone ||
-    profile.dob !== initialProfile.dob ||
-    profile.gender !== initialProfile.gender;
-
-  // Fetch Cities and Categories from Backend
   useEffect(() => {
-    if (activeTab === "organiser_request") {
-      const fetchMetadata = async () => {
-        try {
-          setMetaLoading(true);
-          const [citiesRes, categoriesRes] = await Promise.all([
-            axios.get(`${API_BASE_URL}/v1/cities`),
-            axios.get(`${API_BASE_URL}/v1/categories`),
-          ]);
+    fetchProfile();
+    fetchCities();
+    fetchCategories();
+  }, []);
 
-          const cityList = citiesRes.data?.city || citiesRes.data?.cities || citiesRes.data || [];
-          const categoryList =
-            categoriesRes.data?.categories ||
-            categoriesRes.data?.category ||
-            categoriesRes.data ||
-            [];
-
-          setCities(Array.isArray(cityList) ? cityList : []);
-          setCategories(Array.isArray(categoryList) ? categoryList : []);
-        } catch (err) {
-          console.error("Error fetching cities or categories:", err);
-        } finally {
-          setMetaLoading(false);
-        }
-      };
-
-      fetchMetadata();
+  useEffect(() => {
+    if (user) {
+      setOrg((prev) => ({
+        ...prev,
+        email: prev.email || user.email || "",
+        phone: prev.phone || user.phone || "",
+      }));
     }
-  }, [activeTab]);
+  }, [user]);
 
-  const handleProfileImageChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setMessage("Please choose an image file.");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setMessage("Profile photos must be smaller than 5 MB.");
-      return;
-    }
-
-    setAvatarFile(file);
-
-    const reader = new FileReader();
-    reader.onload = () => setProfileImage(reader.result as string);
-    reader.readAsDataURL(file);
-    event.target.value = "";
-  };
-
-  const handleOrgChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = event.target;
-    setOrg((currentOrg) => ({ ...currentOrg, [name]: value }));
-    setOrgMessage("");
-  };
-
-  const handleInitiateOrgSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (
-      !org.organization_name.trim() ||
-      !org.description.trim() ||
-      !org.category.trim() ||
-      !org.city.trim() ||
-      !org.email.trim()
-    ) {
-      setOrgMessage("Please fill in all required fields.");
-      return;
-    }
-
-    if (org.pan_card.trim() && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(org.pan_card.trim())) {
-      setOrgMessage("Please enter a valid 10-character PAN number (e.g. ABCDE1234F).");
-      return;
-    }
-
-    setOrgMessage("");
-    setShowOrgConfirmPopup(true);
-  };
-
-  const handleConfirmOrgSubmit = async () => {
+  const fetchProfile = async () => {
     try {
-      setOrgSubmitting(true);
-      setOrgMessage("");
-
-      await axios.post(
-        `${API_BASE_URL}/v1/organiser-requests`,
-        {
-          organization_name: org.organization_name.trim(),
-          description: org.description.trim(),
-          category: org.category.trim(),
-          city: org.city.trim(),
-          pan_card: org.pan_card.trim().toUpperCase(),
-          email: org.email.trim(),
-          phone: org.phone.trim(),
-        },
+      const response = await axios.get(
+        `${API_BASE_URL}/v1/users/userdetails`,
         {
           withCredentials: true,
         }
       );
 
-      setShowOrgConfirmPopup(false);
-      setShowOrgSuccessPopup(true);
-      setOrg({
-        organization_name: "",
-        description: "",
-        category: "",
-        city: "",
-        pan_card: "",
-        email: user?.email || "",
-        phone: user?.phone || "",
-      });
-    } catch (error: any) {
-      console.error("Error submitting organiser request:", error);
-      setShowOrgConfirmPopup(false);
+      const userData = response.data?.user || response.data;
 
-      if (error?.response?.status === 401) {
-        setShowReloginPopup(true);
-        return;
+      if (userData) {
+        setProfile({
+          id: userData.id || 0,
+          name: userData.name || "",
+          email: userData.email || "",
+          phone: userData.phone || "",
+          city_id: userData.city_id ?? "",
+          dob: userData.dob ? userData.dob.slice(0, 10) : "",
+          gender: userData.gender || "",
+          profile_image: userData.profile_image || "",
+        });
+
+        setUser({
+          id: String(userData.id || user?.id || ""),
+          name: userData.name || user?.name || "",
+          email: userData.email || user?.email || "",
+          role: userData.role || user?.role,
+          phone: userData.phone ?? user?.phone,
+          profile_image: userData.profile_image || null,
+          status: userData.status || user?.status,
+        });
       }
-
-      setOrgMessage(
-        error?.response?.data?.message ||
-          error?.response?.data?.error ||
-          "Failed to submit application. Please verify server connection."
-      );
-    } finally {
-      setOrgSubmitting(false);
+    } catch (error) {
+      console.error("Failed to load profile:", error);
     }
   };
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await axios.get(
-          `${API_BASE_URL}/v1/users/userdetails`,
-          { withCredentials: true }
-        );
+  const fetchCities = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/v1/cities`);
 
-        const fetchedUser = response.data?.user || response.data;
-        if (!fetchedUser) return;
+      const cityData =
+        response.data?.cities ||
+        response.data?.city ||
+        response.data?.data ||
+        [];
 
-        setUser(fetchedUser);
+      setCities(Array.isArray(cityData) ? cityData : []);
+    } catch (error) {
+      console.error("Failed to load cities:", error);
+    }
+  };
 
-        if (fetchedUser.profile_image) {
-          const fullImageUrl = fetchedUser.profile_image.startsWith("http")
-            ? fetchedUser.profile_image
-            : `${API_BASE_URL}${fetchedUser.profile_image}`;
-          setProfileImage(fullImageUrl);
-        }
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/v1/categories`);
 
-        const loadedProfile = {
-          name: fetchedUser.name || "",
-          email: fetchedUser.email || "",
-          phone: fetchedUser.phone || "",
-          dob: fetchedUser.dob ? fetchedUser.dob.split("T")[0] : "",
-          gender: fetchedUser.gender || "",
-        };
+      const catData =
+        response.data?.categories ||
+        response.data?.category ||
+        response.data?.data ||
+        response.data ||
+        [];
 
-        setProfile(loadedProfile);
-        setInitialProfile(loadedProfile);
+      setCategories(Array.isArray(catData) ? catData : []);
+    } catch (error) {
+      console.error("Failed to load categories:", error);
+    }
+  };
 
-        // Pre-populate email and phone in the organiser form
-        setOrg((prev) => ({
-          ...prev,
-          email: fetchedUser.email || prev.email,
-          phone: fetchedUser.phone || prev.phone,
-        }));
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-      } finally {
-        setLoading(false);
+  // Returns the actual profile image if available.
+  // If no image exists, the JSX will show FaUser instead.
+  const getProfileImage = () => {
+    if (imagePreview) {
+      return imagePreview;
+    }
+
+    if (profile.profile_image) {
+      if (
+        profile.profile_image.startsWith("http://") ||
+        profile.profile_image.startsWith("https://")
+      ) {
+        return profile.profile_image;
       }
-    };
 
-    fetchProfile();
-  }, [setUser, setProfileImage]);
+      return `${API_BASE_URL}${profile.profile_image}`;
+    }
 
-  const handleSaveProfile = async () => {
-    const currentPhoneErrors = getNumberErrors(profile.phone);
-    if (profile.phone && currentPhoneErrors.length > 0) {
+    return "";
+  };
+
+  const handleProfileChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+
+    setProfile((prev) => ({
+      ...prev,
+      [name]: name === "city_id" ? (value ? Number(value) : "") : value,
+    }));
+
+    setProfileMessage("");
+    setProfileError("");
+  };
+
+  const handleGenderChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setProfile((prev) => ({
+      ...prev,
+      gender: e.target.value as UserProfile["gender"],
+    }));
+
+    setProfileMessage("");
+    setProfileError("");
+  };
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setProfileError("Only JPG, PNG and WEBP images are allowed.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setProfileError("Profile image must be less than 5 MB.");
+      return;
+    }
+
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+
+    setSelectedImage(file);
+    setImagePreview(previewUrl);
+    setProfileMessage("");
+    setProfileError("");
+  };
+
+  const handleProfileSave = async (e: FormEvent) => {
+    e.preventDefault();
+
+    setProfileMessage("");
+    setProfileError("");
+
+    if (!profile.name.trim()) {
+      setProfileError("Name is required.");
+      return;
+    }
+
+    if (profile.phone && !/^\d{10}$/.test(profile.phone)) {
+      setProfileError("Phone number must be exactly 10 digits.");
+      return;
+    }
+
+    if (profile.dob && profile.dob > MAX_DOB) {
+      setProfileError(
+        "Date of birth must be 31 December 2015 or earlier."
+      );
       return;
     }
 
     try {
-      setSaving(true);
-      setMessage("");
+      setLoading(true);
 
       const formData = new FormData();
-      formData.append("name", profile.name);
-      formData.append("email", profile.email);
-      formData.append("phone", profile.phone || "");
-      if (profile.dob) formData.append("dob", profile.dob.split("T")[0]);
-      if (profile.gender) formData.append("gender", profile.gender);
 
-      if (avatarFile) {
-        formData.append("avatar", avatarFile);
+      formData.append("name", profile.name.trim());
+      formData.append("phone", profile.phone.trim());
+
+      formData.append(
+        "city_id",
+        profile.city_id === "" ? "" : String(profile.city_id)
+      );
+
+      formData.append("dob", profile.dob);
+
+      if (profile.gender) {
+        formData.append("gender", profile.gender);
+      }
+
+      if (selectedImage) {
+        formData.append("profile_image", selectedImage);
       }
 
       const response = await axios.patch(
@@ -347,222 +334,57 @@ function SettingsView() {
         }
       );
 
-      const updatedUser = response.data.user;
-      setUser(updatedUser);
+      const updatedUser = response.data.user || response.data;
 
-      if (updatedUser?.profile_image) {
-        const fullImageUrl = updatedUser.profile_image.startsWith("http")
-          ? updatedUser.profile_image
-          : `${API_BASE_URL}${updatedUser.profile_image}`;
-        setProfileImage(fullImageUrl);
-      }
-
-      const updatedProfile = {
+      setProfile({
+        id: updatedUser.id,
         name: updatedUser.name || "",
         email: updatedUser.email || "",
         phone: updatedUser.phone || "",
-        dob: updatedUser.dob ? updatedUser.dob.split("T")[0] : "",
+        city_id: updatedUser.city_id ?? "",
+        dob: updatedUser.dob ? updatedUser.dob.slice(0, 10) : "",
         gender: updatedUser.gender || "",
-      };
-
-      setProfile(updatedProfile);
-      setInitialProfile(updatedProfile);
-      setAvatarFile(null);
-      setShowProfileSuccessPopup(true);
-    } catch (error: any) {
-      console.error("Error updating profile:", error);
-
-      if (error.response?.status === 409 || error.response?.status === 404) {
-        setMessage(error.response?.data?.message || "This email is already registered.");
-      } else {
-        setMessage("Unable to update profile.");
-      }
-      if (error.response?.status === 401) {
-        setShowReloginPopup(true);
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleRelogin = async () => {
-    try {
-      setReloginLoading(true);
-      await fetch(`${API_BASE_URL}/v1/auth/logout`, {
-        method: "POST",
-        credentials: "include",
+        profile_image: updatedUser.profile_image || "",
       });
+
+      setUser(updatedUser);
+
+      setSelectedImage(null);
+
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+
+      setImagePreview("");
+
+      setProfileMessage("Profile updated successfully.");
+    } catch (error: any) {
+      setProfileError(
+        error.response?.data?.message || "Unable to update profile."
+      );
     } finally {
-      setUser(null);
-      setShowReloginPopup(false);
-      window.location.href = "/?login=true";
+      setLoading(false);
     }
   };
 
-  const showProfile = () => {
-    if (loading) {
-      return <p>Loading profile...</p>;
-    }
+  const handlePasswordSubmit = async (e: FormEvent) => {
+    e.preventDefault();
 
-    const isSaveDisabled =
-      saving ||
-      !isProfileDirty ||
-      !profile.name.trim() ||
-      !profile.email.trim() ||
-      phoneErrors.length > 0;
+    setPasswordMessage("");
+    setPasswordError("");
 
-    return (
-      <div className="panel-content">
-        <div className="profile-heading">
-          <div className="profile-heading-text">
-            <h2>My Profile</h2>
-            <p className="panel-subtitle">Manage your personal information</p>
-          </div>
-
-          <button
-            className="profile-photo-upload"
-            type="button"
-            onClick={() => profileImageInputRef.current?.click()}
-          >
-            {profileImage ? (
-              <img src={profileImage} alt="Profile" />
-            ) : (
-              <span>{(user?.name || "U").charAt(0).toUpperCase()}</span>
-            )}
-            <span className="profile-photo-plus">
-              <RiCameraAiFill />
-            </span>
-          </button>
-          <input
-            ref={profileImageInputRef}
-            className="profile-image-input"
-            type="file"
-            accept="image/*"
-            onChange={handleProfileImageChange}
-            hidden
-          />
-        </div>
-
-        <div className="form-group">
-          <label>
-            Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            value={profile.name}
-            onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-            placeholder="Enter your name"
-          />
-        </div>
-
-        <div className="form-group">
-          <label>
-            Email <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="email"
-            value={profile.email}
-            onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-            placeholder="Enter your email"
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Phone Number</label>
-          <input
-            type="tel"
-            value={profile.phone}
-            onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-            placeholder="Enter your phone number"
-          />
-          {phoneErrors.length > 0 && (
-            <span className="phone-error" role="alert">
-              {phoneErrors[0]}
-            </span>
-          )}
-        </div>
-
-        <div className="form-group">
-          <label>Date of Birth</label>
-          <input
-            type="date"
-            value={profile.dob}
-            onChange={(e) => setProfile({ ...profile, dob: e.target.value })}
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Gender</label>
-          <select
-            value={profile.gender}
-            onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
-          >
-            <option value="">Select gender</option>
-            <option value="MALE">Male</option>
-            <option value="FEMALE">Female</option>
-            <option value="OTHER">Other</option>
-          </select>
-        </div>
-
-        {message && <p className="profile-message">{message}</p>}
-
-        {showReloginPopup && (
-          <div className="relogin-overlay">
-            <div className="relogin-popup" role="dialog" aria-modal="true">
-              <h2>Session expired</h2>
-              <p>Your session may have expired. Please log in again to update your profile.</p>
-              <div className="relogin-actions">
-                <button
-                  className="cancel-deactivate-btn"
-                  type="button"
-                  onClick={() => setShowReloginPopup(false)}
-                  disabled={reloginLoading}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="confirm-relogin-btn"
-                  type="button"
-                  onClick={handleRelogin}
-                  disabled={reloginLoading}
-                >
-                  {reloginLoading ? "Logging out..." : "Log in again"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <button
-          className="save-btn"
-          onClick={handleSaveProfile}
-          disabled={isSaveDisabled}
-        >
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
-      </div>
-    );
-  };
-
-  const handleChangePassword = async () => {
-    if (!newPassword.trim() || !confirmPassword.trim()) {
-      setPasswordMessage("Please enter both password fields.");
-      return;
-    }
-
-    if (passwordErrors.length > 0) {
-      setPasswordMessage(passwordErrors.join(". "));
+    if (!newPassword || !confirmPassword) {
+      setPasswordError("Both password fields are required.");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordMessage("Passwords do not match.");
+      setPasswordError("Passwords do not match.");
       return;
     }
 
     try {
-      setPasswordSaving(true);
-      setPasswordMessage("");
+      setLoading(true);
 
       await axios.patch(
         `${API_BASE_URL}/v1/users/password`,
@@ -577,459 +399,170 @@ function SettingsView() {
 
       setNewPassword("");
       setConfirmPassword("");
-      setShowPasswordSuccessPopup(true);
+
+      setPasswordMessage("Password updated successfully.");
     } catch (error: any) {
-      console.error("Error updating password:", error);
-      setPasswordMessage(
+      setPasswordError(
         error.response?.data?.message || "Unable to update password."
       );
     } finally {
-      setPasswordSaving(false);
+      setLoading(false);
     }
   };
 
-  const changePassword = () => {
-    const isUpdateDisabled =
-      passwordSaving || !newPassword.trim() || passwordErrors.length > 0;
+  const handleOrgChange = (
+    e: ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
+    const { name, value } = e.target;
 
-    return (
-      <div className="panel-content">
-        <h2>Change Password</h2>
-        <p className="panel-subtitle">Update your account password</p>
+    setOrg((prev) => ({
+      ...prev,
+      [name]: name === "pan_card" ? value.toUpperCase() : value,
+    }));
 
-        <div className="form-group">
-          <label>New Password</label>
-          <input
-            type="password"
-            value={newPassword}
-            onChange={(e) => {
-              setNewPassword(e.target.value);
-              setPasswordMessage("");
-            }}
-            placeholder="Enter new password"
-          />
-          {newPassword && passwordErrors.length > 0 && (
-            <div className="password-errors" role="alert" style={{ marginTop: "6px" }}>
-              {passwordErrors.map((err) => (
-                <div key={err} style={{ color: "#ef4444", fontSize: "0.85rem" }}>
-                  {err}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="form-group">
-          <label>Confirm Password</label>
-          <input
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => {
-              setConfirmPassword(e.target.value);
-              setPasswordMessage("");
-            }}
-            placeholder="Confirm new password"
-          />
-        </div>
-
-        {passwordMessage && <p className="profile-message">{passwordMessage}</p>}
-
-        <button
-          className="save-btn"
-          onClick={handleChangePassword}
-          disabled={isUpdateDisabled}
-        >
-          {passwordSaving ? "Updating..." : "Update Password"}
-        </button>
-      </div>
-    );
+    setOrgMessage("");
+    setOrgError("");
   };
 
-  const showOrganiserRequest = () => {
-    const isOrgSubmitDisabled =
-      orgSubmitting ||
-      !org.organization_name.trim() ||
-      !org.description.trim() ||
+  const handleOrganizerSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    setOrgMessage("");
+    setOrgError("");
+
+    if (
+      !org.stageName.trim() ||
       !org.category.trim() ||
       !org.city.trim() ||
-      !org.email.trim();
+      !org.pan_card.trim() ||
+      !org.email.trim() ||
+      !org.phone.trim() ||
+      !org.description.trim()
+    ) {
+      setOrgError(
+        "All fields are required. Please fill in every field."
+      );
+      return;
+    }
 
-    return (
-      <div className="panel-content">
-        <h2>Become an Organiser</h2>
-        <p className="panel-subtitle">
-          Host and manage your events on CityPass
-        </p>
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 
-        <form onSubmit={handleInitiateOrgSubmit}>
-          <div className="form-group">
-            <label>
-              Organisation Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="organization_name"
-              value={org.organization_name}
-              onChange={handleOrgChange}
-              placeholder="Enter your organisation name"
-              required
-            />
-          </div>
+    if (!panRegex.test(org.pan_card.trim())) {
+      setOrgError(
+        "Invalid PAN format. Must be 10 characters (e.g., ABCDE1234F)."
+      );
+      return;
+    }
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <div className="form-group">
-              <label>
-                Category <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="category"
-                value={org.category}
-                onChange={handleOrgChange}
-                required
-                disabled={metaLoading}
-              >
-                <option value="">
-                  {metaLoading ? "Loading categories..." : "Select category"}
-                </option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.name}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+    if (!/^\d{10}$/.test(org.phone.trim())) {
+      setOrgError("Phone number must be exactly 10 digits.");
+      return;
+    }
 
-            <div className="form-group">
-              <label>
-                City / Location <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="city"
-                value={org.city}
-                onChange={handleOrgChange}
-                required
-                disabled={metaLoading}
-              >
-                <option value="">
-                  {metaLoading ? "Loading cities..." : "Select city"}
-                </option>
-                {cities
-                  .filter((c) => Boolean(c.is_active ?? true))
-                  .map((c) => (
-                    <option key={c.id} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <div className="form-group">
-              <label>
-                Official Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={org.email}
-                onChange={handleOrgChange}
-                placeholder="contact@organisation.com"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Phone Number</label>
-              <input
-                type="tel"
-                name="phone"
-                value={org.phone}
-                onChange={handleOrgChange}
-                placeholder="e.g. +91 9876543210"
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label>PAN Card / Tax ID</label>
-            <input
-              type="text"
-              name="pan_card"
-              value={org.pan_card}
-              onChange={handleOrgChange}
-              placeholder="e.g. ABCDE1234F"
-              maxLength={10}
-              style={{ textTransform: "uppercase" }}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>
-              Description <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              name="description"
-              value={org.description}
-              onChange={handleOrgChange}
-              placeholder="Tell us about the types of events and activities you organise..."
-              rows={4}
-              required
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                borderRadius: "8px",
-                border: "1px solid #e2e8f0",
-                fontSize: "14px",
-                fontFamily: "inherit",
-                resize: "vertical",
-              }}
-            />
-          </div>
-
-          {orgMessage && <p className="profile-message">{orgMessage}</p>}
-
-          <button
-            type="submit"
-            className="save-btn"
-            disabled={isOrgSubmitDisabled}
-            style={{ marginTop: "12px" }}
-          >
-            {orgSubmitting ? "Submitting..." : "Submit Request"}
-          </button>
-        </form>
-
-        {showOrgConfirmPopup && (
-          <div className="deactivate-overlay" role="dialog" aria-modal="true">
-            <div className="deactivate-popup">
-              <h2>Apply to Become an Organiser?</h2>
-              <p>
-                Platform administrators will review your organisation details.
-                Once approved, you'll be granted permission to publish and host
-                events on CityPass.
-              </p>
-
-              <div style={{ marginBottom: "22px" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowOrgTerms(true)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    padding: 0,
-                    color: "#5144ed",
-                    fontSize: "13.5px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    textDecoration: "underline",
-                  }}
-                >
-                  View Organiser Terms & Conditions
-                </button>
-              </div>
-
-              <div className="deactivate-actions">
-                <button
-                  className="cancel-deactivate-btn"
-                  type="button"
-                  onClick={() => setShowOrgConfirmPopup(false)}
-                  disabled={orgSubmitting}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  className="confirm-relogin-btn"
-                  type="button"
-                  onClick={handleConfirmOrgSubmit}
-                  disabled={orgSubmitting}
-                >
-                  {orgSubmitting ? "Submitting..." : "Submit Application"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <OrganiserTerms
-          isOpen={showOrgTerms}
-          onClose={() => setShowOrgTerms(false)}
-        />
-      </div>
-    );
-  };
-
-  const handleDeactivateAccount = async () => {
     try {
-      setDeactivating(true);
+      setLoading(true);
 
-      const finalReason =
-        deactivateReason === "Other"
-          ? `Other: ${deactivateOtherText.trim()}`
-          : deactivateReason;
-
-      await axios.put(
-        `${API_BASE_URL}/v1/users/deactivate`,
-        { reason: finalReason },
+      await axios.post(
+        `${API_BASE_URL}/v1/organiser-requests`,
+        {
+          organization_name: org.stageName.trim(),
+          category: org.category.trim(),
+          city: org.city.trim(),
+          pan_card: org.pan_card.trim().toUpperCase(),
+          email: org.email.trim(),
+          phone: org.phone.trim(),
+          description: org.description.trim(),
+        },
         {
           withCredentials: true,
         }
       );
 
-      setUser(null);
-      setShowDeactivatePopup(false);
-      window.location.href = "/";
+      setOrgMessage("Organizer request submitted successfully!");
+
+      setOrg({
+        stageName: "",
+        category: "",
+        city: "",
+        pan_card: "",
+        email: user?.email || "",
+        phone: user?.phone || "",
+        description: "",
+      });
     } catch (error: any) {
-      console.error("Error deactivating account:", error);
-      alert(
-        error.response?.data?.message || "Unable to deactivate account."
+      setOrgError(
+        error.response?.data?.message ||
+          "Unable to submit organizer request. Please try again."
       );
     } finally {
-      setDeactivating(false);
+      setLoading(false);
     }
   };
 
-  const accountDelete = () => {
-    const handleInitiateDeactivation = () => {
-      if (!deactivateReason) {
-        setDeactivateError("Please select a reason before continuing.");
+  const handleDeactivateReasonChange = (
+    e: ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = e.target.value;
+
+    setDeactivateReason(value);
+    setDeactivateError("");
+
+    if (value !== "Other") {
+      setOtherDeactivateReason("");
+    }
+  };
+
+  const handleDeactivate = async () => {
+    setDeactivateError("");
+
+    if (!deactivateReason) {
+      setDeactivateError("Please select a reason.");
+      return;
+    }
+
+    let finalReason = deactivateReason;
+
+    if (deactivateReason === "Other") {
+      if (!otherDeactivateReason.trim()) {
+        setDeactivateError(
+          "Please tell us why you want to deactivate your account."
+        );
         return;
       }
-      if (deactivateReason === "Other" && !deactivateOtherText.trim()) {
-        setDeactivateError("Please share your feedback in the box provided.");
+
+      if (otherDeactivateReason.trim().length > 300) {
+        setDeactivateError(
+          "Please provide maximum of 300 characters for your reason."
+        );
         return;
       }
-      setDeactivateError("");
-      setShowDeactivatePopup(true);
-    };
 
-    return (
-      <div className="panel-content deactivate-panel">
-        <h2>Deactivate Account</h2>
-        <p className="panel-subtitle">
-          Before you deactivate, please tell us why you're leaving. Your feedback
-          helps us improve CityPass and provide a better experience.
-        </p>
+      finalReason = otherDeactivateReason.trim();
+    }
 
-        <div className="deactivate-feedback-section">
-          <label className="feedback-section-title">
-            Why are you deactivating your account? <span className="text-red-500">*</span>
-          </label>
+    try {
+      setLoading(true);
 
-          <div className="deactivate-radio-group">
-            {DEACTIVATE_REASONS.map((reason) => (
-              <label
-                key={reason}
-                className={`deactivate-radio-card ${
-                  deactivateReason === reason ? "selected" : ""
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="deactivate_reason"
-                  value={reason}
-                  checked={deactivateReason === reason}
-                  onChange={(e) => {
-                    setDeactivateReason(e.target.value);
-                    setDeactivateError("");
-                  }}
-                />
-                <span className="radio-text">{reason}</span>
-              </label>
-            ))}
-          </div>
+      await axios.patch(
+        `${API_BASE_URL}/v1/users/deactivate`,
+        {
+          reason: finalReason,
+        },
+        {
+          withCredentials: true,
+        }
+      );
 
-          {deactivateReason === "Other" && (
-            <div className="deactivate-other-wrapper">
-              <textarea
-                className="deactivate-other-textarea"
-                placeholder="Tell us what went wrong or how we could improve..."
-                maxLength={300}
-                rows={4}
-                value={deactivateOtherText}
-                onChange={(e) => {
-                  setDeactivateOtherText(e.target.value);
-                  setDeactivateError("");
-                }}
-              />
-              <div className="char-counter">
-                {deactivateOtherText.length}/300 characters
-              </div>
-            </div>
-          )}
-
-          {deactivateError && (
-            <p className="deactivate-inline-error">{deactivateError}</p>
-          )}
-
-          <div className="deactivate-action-container">
-            <button
-              type="button"
-              className="deactivate-btn"
-              onClick={handleInitiateDeactivation}
-            >
-              Deactivate Account
-            </button>
-          </div>
-        </div>
-
-        {showDeactivatePopup && (
-          <div className="deactivate-overlay" role="dialog" aria-modal="true">
-            <div className="deactivate-popup">
-              <h2>Deactivate Account?</h2>
-              <p>
-                Are you sure you want to deactivate your account? You can
-                reactivate it later anytime by logging in again.
-              </p>
-
-              <div style={{ marginBottom: "22px" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowDeactivateTerms(true)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    padding: 0,
-                    color: "#5144ed",
-                    fontSize: "13.5px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    textDecoration: "underline",
-                  }}
-                >
-                  View Deactivation Terms & Conditions
-                </button>
-              </div>
-
-              <div className="deactivate-actions">
-                <button
-                  className="cancel-deactivate-btn"
-                  type="button"
-                  onClick={() => setShowDeactivatePopup(false)}
-                  disabled={deactivating}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  className="confirm-deactivate-btn"
-                  type="button"
-                  onClick={handleDeactivateAccount}
-                  disabled={deactivating}
-                >
-                  {deactivating ? "Deactivating..." : "Deactivate"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <Terms
-          isOpen={showDeactivateTerms}
-          onClose={() => setShowDeactivateTerms(false)}
-        />
-      </div>
-    );
+      navigate("/login");
+    } catch (error: any) {
+      setDeactivateError(
+        error.response?.data?.message || "Unable to deactivate account."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -1039,151 +572,720 @@ function SettingsView() {
       <div className="settings-page">
         <div className="settings-header">
           <h1>Settings</h1>
-          <p>Manage your account preferences</p>
+
+          <p>
+            Manage your account preferences and personal information
+          </p>
         </div>
 
         <div className="settings-layout">
-          <div className="settings-container">
+          <aside className="settings-nav">
             <button
-              className={`settings-item ${
+              type="button"
+              className={`nav-item ${
                 activeTab === "profile" ? "active" : ""
               }`}
-              onClick={() => handleTabChange("profile")}
+              onClick={() => setActiveTab("profile")}
             >
-              <div className="settings-icon">
-                <IoPerson />
-              </div>
-
-              <div className="settings-info">
-                <h3>My Profile</h3>
-                <p>Check your account details</p>
-              </div>
-
-              <span className="settings-arrow">
-                <IoIosArrowForward />
+              <span className="nav-icon">
+                <FaUser />
               </span>
+
+              <div className="nav-info">
+                <h3>Profile</h3>
+                <p>Personal info & contact details</p>
+              </div>
+
+              <FaChevronRight className="nav-arrow" />
             </button>
 
             <button
-              className={`settings-item ${
+              type="button"
+              className={`nav-item ${
                 activeTab === "password" ? "active" : ""
               }`}
-              onClick={() => handleTabChange("password")}
+              onClick={() => setActiveTab("password")}
             >
-              <div className="settings-icon">
+              <span className="nav-icon">
                 <FaLock />
-              </div>
+              </span>
 
-              <div className="settings-info">
+              <div className="nav-info">
                 <h3>Change Password</h3>
-                <p>Update your account password</p>
+                <p>Security and authentication</p>
               </div>
 
-              <span className="settings-arrow">
-                <IoIosArrowForward />
-              </span>
+              <FaChevronRight className="nav-arrow" />
             </button>
 
             <button
-              className={`settings-item ${
-                activeTab === "organiser_request" ? "active" : ""
+              type="button"
+              className={`nav-item ${
+                activeTab === "organizer" ? "active" : ""
               }`}
-              onClick={() => handleTabChange("host-an-event")}
+              onClick={() => setActiveTab("organizer")}
             >
-              <div className="settings-icon">
+              <span className="nav-icon">
                 <FaBullhorn />
-              </div>
-
-              <div className="settings-info">
-                <h3>Host an Event</h3>
-                <p>Request to become organiser to host</p>
-              </div>
-
-              <span className="settings-arrow">
-                <IoIosArrowForward />
               </span>
+
+              <div className="nav-info">
+                <h3>Host an Event</h3>
+                <p>Become a verified organiser</p>
+              </div>
+
+              <FaChevronRight className="nav-arrow" />
             </button>
 
             <button
-              className={`settings-item delete-item ${
-                activeTab === "delete" ? "active" : ""
+              type="button"
+              className={`nav-item danger ${
+                activeTab === "deactivate" ? "active" : ""
               }`}
-              onClick={() => handleTabChange("deactivate")}
+              onClick={() => setActiveTab("deactivate")}
             >
-              <div className="settings-icon">
-                <FaUserAltSlash />
-              </div>
-
-              <div className="settings-info">
-                <h3>Deactivate Account</h3>
-                <p>Your account will be set to inactive.</p>
-              </div>
-
-              <span className="settings-arrow">
-                <IoIosArrowForward />
+              <span className="nav-icon">
+                <FaUserSlash />
               </span>
-            </button>
-          </div>
 
-          <div className="settings-panel">
-            {activeTab === "profile" && showProfile()}
-            {activeTab === "password" && changePassword()}
-            {activeTab === "organiser_request" && showOrganiserRequest()}
-            {activeTab === "delete" && accountDelete()}
-          </div>
+              <div className="nav-info">
+                <h3>Deactivate Account</h3>
+                <p>Pause or close your profile</p>
+              </div>
+
+              <FaChevronRight className="nav-arrow" />
+            </button>
+          </aside>
+
+          <main className="settings-panel">
+            {activeTab === "profile" && (
+              <section className="tab-pane">
+                <div className="profile-heading-block">
+                  <div className="avatar-picker">
+                    <div
+                      className="avatar-circle"
+                      onClick={() => fileInputRef.current?.click()}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      {getProfileImage() ? (
+                        <img
+                          src={getProfileImage()}
+                          alt="Profile avatar"
+                          className="avatar-img"
+                        />
+                      ) : (
+                        <div className="default-avatar">
+                          <FaUser />
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        className="avatar-plus-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fileInputRef.current?.click();
+                        }}
+                        aria-label="Upload profile photo"
+                      >
+                        <FaPlus />
+                      </button>
+                    </div>
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden-file-input"
+                      onChange={handleImageChange}
+                    />
+
+                    <span className="avatar-caption">
+                      Click to update photo
+                    </span>
+                  </div>
+
+                  <div className="heading-copy">
+                    <h2>My Profile</h2>
+
+                    <p>
+                      Update your personal information and contact settings
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleProfileSave}>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label htmlFor="name">Full Name</label>
+
+                      <input
+                        id="name"
+                        type="text"
+                        name="name"
+                        value={profile.name}
+                        onChange={handleProfileChange}
+                        placeholder="Enter your name"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="email">Email Address</label>
+
+                      <input
+                        id="email"
+                        type="email"
+                        value={profile.email}
+                        disabled
+                        title="Email cannot be changed"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="phone">Phone Number</label>
+
+                      <input
+                        id="phone"
+                        type="text"
+                        name="phone"
+                        value={profile.phone}
+                        onChange={handleProfileChange}
+                        maxLength={10}
+                        placeholder="10-digit number"
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="city_id">City</label>
+
+                      <select
+                        id="city_id"
+                        name="city_id"
+                        value={profile.city_id}
+                        onChange={handleProfileChange}
+                      >
+                        <option value="">Select your city</option>
+
+                        {cities.map((city) => (
+                          <option key={city.id} value={city.id}>
+                            {city.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="dob">Date of Birth</label>
+
+                      <input
+                        id="dob"
+                        type="date"
+                        name="dob"
+                        value={profile.dob}
+                        onChange={handleProfileChange}
+                        max={MAX_DOB}
+                      />
+
+                      <span className="field-hint">
+                        Only dates up to 31 December 2015 are allowed.
+                      </span>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Gender</label>
+
+                      <div className="gender-pill-group">
+                        {genderOptions.map((option) => (
+                          <label
+                            key={option.value}
+                            className={`gender-pill ${
+                              profile.gender === option.value
+                                ? "selected"
+                                : ""
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="gender"
+                              value={option.value}
+                              checked={
+                                profile.gender === option.value
+                              }
+                              onChange={handleGenderChange}
+                            />
+
+                            <span>{option.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {profileMessage && (
+                    <p className="status-banner success">
+                      {profileMessage}
+                    </p>
+                  )}
+
+                  {profileError && (
+                    <p className="status-banner error">
+                      {profileError}
+                    </p>
+                  )}
+
+                  <div className="action-row">
+                    <button
+                      type="submit"
+                      className="primary-button"
+                      disabled={loading}
+                    >
+                      {loading ? "Saving..." : "Save Changes"}
+                    </button>
+                  </div>
+                </form>
+              </section>
+            )}
+
+            {activeTab === "password" && (
+              <section className="tab-pane">
+                <div className="heading-copy">
+                  <h2>Change Password</h2>
+
+                  <p>
+                    Choose a secure password with at least 8 characters
+                  </p>
+                </div>
+
+                <form
+                  onSubmit={handlePasswordSubmit}
+                  className="narrow-form"
+                >
+                  <div className="form-group">
+                    <label htmlFor="newPassword">New Password</label>
+
+                    <div className="input-with-action">
+                      <input
+                        id="newPassword"
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) =>
+                          setNewPassword(e.target.value)
+                        }
+                        placeholder="Enter new password"
+                      />
+
+                      <button
+                        type="button"
+                        className="toggle-visibility-btn"
+                        onClick={() =>
+                          setShowNewPassword(!showNewPassword)
+                        }
+                      >
+                        {showNewPassword ? (
+                          <FaEyeSlash />
+                        ) : (
+                          <FaEye />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="confirmPassword">
+                      Confirm Password
+                    </label>
+
+                    <div className="input-with-action">
+                      <input
+                        id="confirmPassword"
+                        type={
+                          showConfirmPassword
+                            ? "text"
+                            : "password"
+                        }
+                        value={confirmPassword}
+                        onChange={(e) =>
+                          setConfirmPassword(e.target.value)
+                        }
+                        placeholder="Confirm new password"
+                      />
+
+                      <button
+                        type="button"
+                        className="toggle-visibility-btn"
+                        onClick={() =>
+                          setShowConfirmPassword(
+                            !showConfirmPassword
+                          )
+                        }
+                      >
+                        {showConfirmPassword ? (
+                          <FaEyeSlash />
+                        ) : (
+                          <FaEye />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {passwordMessage && (
+                    <p className="status-banner success">
+                      {passwordMessage}
+                    </p>
+                  )}
+
+                  {passwordError && (
+                    <p className="status-banner error">
+                      {passwordError}
+                    </p>
+                  )}
+
+                  <div className="action-row">
+                    <button
+                      type="submit"
+                      className="primary-button"
+                      disabled={loading}
+                    >
+                      {loading
+                        ? "Updating..."
+                        : "Update Password"}
+                    </button>
+                  </div>
+                </form>
+              </section>
+            )}
+
+            {activeTab === "organizer" && (
+              <section className="tab-pane">
+                <div className="heading-copy">
+                  <h2>Host an Event</h2>
+
+                  <p>
+                    Apply to become an approved organizer and host events
+                    on CityPass
+                  </p>
+                </div>
+
+                <form
+                  onSubmit={handleOrganizerSubmit}
+                  className="org-form-grid"
+                >
+                  <div className="form-group full-width">
+                    <label htmlFor="stageName">
+                      Stage Name *
+                    </label>
+
+                    <input
+                      id="stageName"
+                      type="text"
+                      name="stageName"
+                      value={org.stageName}
+                      onChange={handleOrgChange}
+                      placeholder="e.g. Acme Entertainment / The Acoustic Corner"
+                      maxLength={150}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="orgCategory">
+                      Category *
+                    </label>
+
+                    <select
+                      id="orgCategory"
+                      name="category"
+                      value={org.category}
+                      onChange={handleOrgChange}
+                      required
+                    >
+                      <option value="">Select category</option>
+
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.name}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="orgCity">
+                      City *
+                    </label>
+
+                    <select
+                      id="orgCity"
+                      name="city"
+                      value={org.city}
+                      onChange={handleOrgChange}
+                      required
+                    >
+                      <option value="">Select city</option>
+
+                      {cities.map((city) => (
+                        <option key={city.id} value={city.name}>
+                          {city.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="orgEmail">
+                      Contact Email *
+                    </label>
+
+                    <input
+                      id="orgEmail"
+                      type="email"
+                      name="email"
+                      value={org.email}
+                      onChange={handleOrgChange}
+                      placeholder="contact@yourstage.com"
+                      maxLength={25}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="orgPhone">
+                      Phone Number *
+                    </label>
+
+                    <input
+                      id="orgPhone"
+                      type="text"
+                      name="phone"
+                      value={org.phone}
+                      onChange={handleOrgChange}
+                      placeholder="10-digit contact number"
+                      maxLength={10}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label htmlFor="pan_card">
+                      PAN Card *
+                    </label>
+
+                    <input
+                      id="pan_card"
+                      type="text"
+                      name="pan_card"
+                      value={org.pan_card}
+                      onChange={handleOrgChange}
+                      placeholder="ABCDE1234F"
+                      maxLength={10}
+                      style={{
+                        textTransform: "uppercase",
+                      }}
+                      required
+                    />
+
+                    <span className="field-hint">
+                      10-character PAN format (5 uppercase letters, 4
+                      digits, 1 uppercase letter)
+                    </span>
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label htmlFor="orgDescription">
+                      Description *
+                    </label>
+
+                    <textarea
+                      id="orgDescription"
+                      name="description"
+                      rows={4}
+                      value={org.description}
+                      onChange={handleOrgChange}
+                      placeholder="Tell us about the events, performances, genres, and audience experiences you deliver..."
+                      required
+                    />
+                  </div>
+
+                  {orgMessage && (
+                    <p className="status-banner success full-width">
+                      {orgMessage}
+                    </p>
+                  )}
+
+                  {orgError && (
+                    <p className="status-banner error full-width">
+                      {orgError}
+                    </p>
+                  )}
+
+                  <div className="action-row full-width">
+                    <button
+                      type="submit"
+                      className="primary-button"
+                      disabled={loading}
+                    >
+                      {loading
+                        ? "Submitting..."
+                        : "Submit Application"}
+                    </button>
+                  </div>
+                </form>
+              </section>
+            )}
+
+            {activeTab === "deactivate" && (
+              <section className="tab-pane">
+                <div className="heading-copy">
+                  <h2>Deactivate Account</h2>
+
+                  <p>
+                    Temporarily suspend your CityPass access
+                  </p>
+                </div>
+
+                {!showDeactivateTerms ? (
+                  <div className="deactivate-card">
+                    <h3>Before you proceed</h3>
+
+                    <p>
+                      Deactivating your account will pause your CityPass
+                      access, affect your active bookings, hide your
+                      profile, and log you out across all devices.
+                    </p>
+
+                    <button
+                      type="button"
+                      className="danger-button"
+                      onClick={() =>
+                        setShowDeactivateTerms(true)
+                      }
+                    >
+                      Continue to Deactivation
+                    </button>
+                  </div>
+                ) : (
+                  <div className="deactivate-card">
+                    <div className="deactivate-reason-header">
+                      <h3>Why are you leaving?</h3>
+
+                      <p>
+                        Please select the reason that best describes your
+                        decision.
+                      </p>
+                    </div>
+
+                    <div className="deactivate-reasons">
+                      {deactivateReasons.map((reason) => (
+                        <label
+                          key={reason}
+                          className={`deactivate-reason-option ${
+                            deactivateReason === reason
+                              ? "selected"
+                              : ""
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="deactivateReason"
+                            value={reason}
+                            checked={
+                              deactivateReason === reason
+                            }
+                            onChange={
+                              handleDeactivateReasonChange
+                            }
+                          />
+
+                          <span className="custom-radio"></span>
+
+                          <span className="reason-text">
+                            {reason}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+
+                    {deactivateReason === "Other" && (
+                      <div className="other-reason-box">
+                        <label htmlFor="otherDeactivateReason">
+                          Tell us more
+                        </label>
+
+                        <textarea
+                          id="otherDeactivateReason"
+                          value={otherDeactivateReason}
+                          onChange={(e) => {
+                            setOtherDeactivateReason(
+                              e.target.value
+                            );
+                            setDeactivateError("");
+                          }}
+                          placeholder="Please explain why you want to deactivate your account..."
+                          maxLength={300}
+                          rows={7}
+                        />
+
+                        <div className="character-counter">
+                          <span
+                            className={
+                              otherDeactivateReason.trim()
+                                .length >= 300
+                                ? "valid"
+                                : ""
+                            }
+                          >
+                            {otherDeactivateReason.trim().length}
+                          </span>
+                          / 300 maximum characters
+                        </div>
+                      </div>
+                    )}
+
+                    {deactivateError && (
+                      <p className="status-banner error">
+                        {deactivateError}
+                      </p>
+                    )}
+
+                    <div className="action-buttons-group">
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => {
+                          setShowDeactivateTerms(false);
+                          setDeactivateReason("");
+                          setOtherDeactivateReason("");
+                          setDeactivateError("");
+                        }}
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        type="button"
+                        className="danger-button"
+                        onClick={handleDeactivate}
+                        disabled={
+                          loading ||
+                          !deactivateReason ||
+                          (deactivateReason === "Other" &&
+                            otherDeactivateReason.trim()
+                              .length < 1)
+                        }
+                      >
+                        {loading
+                          ? "Deactivating..."
+                          : "Deactivate Account"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+          </main>
         </div>
       </div>
-
-      {showProfileSuccessPopup && (
-        <div className="org-success-overlay" role="dialog" aria-modal="true">
-          <div className="org-success-popup">
-            <h3>Profile Updated!</h3>
-            <p>Your profile details have been saved successfully.</p>
-            <button
-              className="org-success-done-btn"
-              onClick={() => setShowProfileSuccessPopup(false)}
-            >
-              DONE
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showPasswordSuccessPopup && (
-        <div className="org-success-overlay" role="dialog" aria-modal="true">
-          <div className="org-success-popup">
-            <h3>Password Updated!</h3>
-            <p>Your password has been changed successfully.</p>
-            <button
-              className="org-success-done-btn"
-              onClick={() => setShowPasswordSuccessPopup(false)}
-            >
-              DONE
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showOrgSuccessPopup && (
-        <div className="org-success-overlay" role="dialog" aria-modal="true">
-          <div className="org-success-popup">
-            <h3>Application Submitted!</h3>
-            <p>
-              Thank you for applying. Platform administrators review all
-              organizer applications.
-            </p>
-            <button
-              className="org-success-done-btn"
-              onClick={() => {
-                setShowOrgSuccessPopup(false);
-                handleTabChange("profile");
-              }}
-            >
-              DONE
-            </button>
-          </div>
-        </div>
-      )}
     </>
   );
 }

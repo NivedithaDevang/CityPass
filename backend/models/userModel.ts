@@ -1,104 +1,157 @@
 import { db } from "../config/database.js";
-import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
+import {
+  ResultSetHeader,
+  RowDataPacket,
+} from "mysql2/promise";
 import { AuthPayLoad } from "../types/auth.js";
 
-
-//creating a type
-export type User = RowDataPacket & AuthPayLoad & {
+export type User = RowDataPacket &
+  AuthPayLoad & {
     name: string;
     email: string;
     password?: string;
     status?: string;
-    role: "USER" | "ORGANIZER" | "ADMIN";
+    role:
+      | "USER"
+      | "ORGANIZER"
+      | "ADMIN"
+      | "SUPER_ADMIN";
     token_version: number;
-};
+  };
 
 type UserRow = RowDataPacket & {
-    id: number;
+  id: number;
+  name: string;
+  email: string;
+  role:
+    | "USER"
+    | "ORGANIZER"
+    | "ADMIN"
+    | "SUPER_ADMIN";
+  phone: string | null;
+  city_id: number | null;
+  dob: string | null;
+  gender: "MALE" | "FEMALE" | "OTHER" | null;
+  profile_image: string | null;
+  status: "ACTIVE" | "INACTIVE";
+  token_version: number;
+};
+
+export const getUserById = async (id: number) => {
+  const [results] = await db.query<UserRow[]>(
+    `
+      SELECT
+        id,
+        name,
+        email,
+        role,
+        phone,
+        city_id,
+        dob,
+        gender,
+        profile_image,
+        status,
+        token_version
+      FROM users
+      WHERE id = ?
+    `,
+    [id]
+  );
+
+  return results[0];
+};
+
+export const createUser = async (user: User) => {
+  const sql = `
+    INSERT INTO users (name, email, password, role)
+    VALUES (?, ?, ?, ?)
+  `;
+
+  const [results] = await db.query<ResultSetHeader>(
+    sql,
+    [
+      user.name,
+      user.email,
+      user.password,
+      user.role,
+    ]
+  );
+
+  return results;
+};
+
+export const updatePassword = async (
+  id: number,
+  hashedPassword: string
+) => {
+  const sql = `
+    UPDATE users
+    SET password = ?
+    WHERE id = ?
+  `;
+
+  const [results] = await db.query<ResultSetHeader>(
+    sql,
+    [hashedPassword, id]
+  );
+
+  return results;
+};
+
+export const updateUserProfile = async (
+  id: number,
+  profile: {
     name: string;
-    email: string;
-    role: string;
     phone: string | null;
+    city_id: number | null;
     dob: string | null;
     gender: "MALE" | "FEMALE" | "OTHER" | null;
-    status: "ACTIVE" | "INACTIVE";
-        token_version: number;
+    profile_image: string | null;
+  }
+) => {
+  const sql = `
+    UPDATE users
+    SET
+      name = ?,
+      phone = ?,
+      city_id = ?,
+      dob = ?,
+      gender = ?,
+      profile_image = COALESCE(?, profile_image)
+    WHERE id = ?
+  `;
 
+  const [results] = await db.query<ResultSetHeader>(
+    sql,
+    [
+      profile.name,
+      profile.phone,
+      profile.city_id,
+      profile.dob,
+      profile.gender,
+      profile.profile_image,
+      id,
+    ]
+  );
+
+  return results;
 };
-
-
-//get user by id
-export const getUserById = async (id: number) => {
-    const [results] = await db.query<UserRow[]>(
-        `SELECT id, name, email, role, phone, dob, gender, status, token_version
-         FROM users WHERE id = ?`,
-        [id]
-    );
-
-    return results[0];
-};
-//posting a new user
-export const createUser = async (user: User) => {
-    const sql = `
-        INSERT INTO users (name, email, password, role)
-        VALUES (?, ?, ?, ?)
-    `;
-
-    const [results] = await db.query<ResultSetHeader>(
-        sql,
-        [user.name, user.email, user.password, user.role]
-    );
-    return results;
-};
-
-//updating a user details
-export const updateUser = async (id: number, user: User) => {
-    const sql = `
-        UPDATE users
-        SET name = ?, email = ?, password = ?, role = ?
-        WHERE id = ?
-    `;
-
-    const [results] = await db.query<ResultSetHeader>(
-        sql,
-        [user.name, user.email, user.password, user.role, id]
-    );
-    return results;
-};
-
-
-
-//update password
-export const updatePassword = async(id: number, hashedPassword: string) => {
-    const sql = `
-    update users set password = ? where id = ?`;
-    const [results] = await db.query<ResultSetHeader>(
-        sql, [hashedPassword, id]
-    );
-
-    return results;
-}
-
 
 export const getAllUsers = async () => {
-    const sql = `
-        SELECT
-            id,
-            name,
-            email,
-            phone,
-            role,
-            status,
-            city_id
-        FROM users
-        ORDER BY id DESC
-    `;
+  const sql = `
+    SELECT
+      id,
+      name,
+      email,
+      phone,
+      role,
+      status,
+      city_id
+    FROM users
+    ORDER BY id DESC
+  `;
 
-    const [results] = await db.query(sql);
+  const [results] = await db.query(sql);
 
-    return results;
+  return results;
 };
-
-
-
-

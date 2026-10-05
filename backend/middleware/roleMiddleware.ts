@@ -66,3 +66,17 @@ export const checkCityAccess = (
 
     next();
 };
+
+export const checkOrganiserRole = (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    const role = req.user?.role?.toUpperCase();
+    if (role !== "ORGANISER") {
+        return res.status(403).json({
+            message: "You do not have permission to access this action."
+        });
+    }
+    next();
+};

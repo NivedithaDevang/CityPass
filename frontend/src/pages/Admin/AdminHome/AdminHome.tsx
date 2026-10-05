@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 import { HiUsers } from "react-icons/hi";
 import {
@@ -20,14 +19,6 @@ import {
   updateEventStatus,
 } from "../../../services/adminService";
 
-import Cities from "../Cities/Cities";
-import Categories from "../Categories/Categories";
-import Users from "../Users/Users";
-import Events from "../Events/Events";
-import Organisers from "../Organisers/Organisers";
-import OrganiserRequests from "../OrganiserRequests/OrganiserRequests";
-import Tickets from "../Tickets/Tickets";
-
 import "./AdminHome.css";
 
 interface OrgRequest {
@@ -46,57 +37,22 @@ interface EventItem {
 }
 
 function AdminHome() {
-  const { section } = useParams<{ section?: string }>();
-
-  if (section === "cities") {
-    return <Cities />;
-  }
-
-  if (section === "categories") {
-    return <Categories />;
-  }
-
-  if (section === "users") {
-    return <Users />;
-  }
-
-  if (section === "events") {
-    return <Events />;
-  }
-
-  if (section === "organisers") {
-    return <Organisers />;
-  }
-
-  if (section === "organiser-requests") {
-    return <OrganiserRequests />;
-  }
-
-  if (section === "tickets") {
-    return <Tickets />;
-  }
-
-  return <AdminDashboard />;
-}
-
-function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   const [totalUsers, setTotalUsers] = useState(0);
+  const [totalOrganisers, setTotalOrganisers] = useState(0);
 
   const [events, setEvents] = useState<EventItem[]>([]);
-
   const [requests, setRequests] = useState<OrgRequest[]>([]);
 
   const [citiesCount, setCitiesCount] = useState(0);
-
   const [categoriesCount, setCategoriesCount] = useState(0);
 
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionError, setActionError] =
+    useState<string | null>(null);
 
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
-
-  const [totalOrganisers, setTotalOrganisers] = useState(0);
+  const [actionLoading, setActionLoading] =
+    useState<number | null>(null);
 
   const loadDashboardData = async () => {
     try {
@@ -119,6 +75,7 @@ function AdminDashboard() {
         fetchAdminCategories(),
       ]);
 
+      // Users
       if (usersRes.status === "fulfilled") {
         setTotalUsers(
           Array.isArray(usersRes.value.users)
@@ -127,6 +84,7 @@ function AdminDashboard() {
         );
       }
 
+      // Organisers
       if (organisersRes.status === "fulfilled") {
         setTotalOrganisers(
           Array.isArray(organisersRes.value.organisers)
@@ -135,6 +93,7 @@ function AdminDashboard() {
         );
       }
 
+      // Events
       if (eventsRes.status === "fulfilled") {
         setEvents(
           Array.isArray(eventsRes.value.events)
@@ -143,6 +102,7 @@ function AdminDashboard() {
         );
       }
 
+      // Organiser requests
       if (reqRes.status === "fulfilled") {
         setRequests(
           Array.isArray(reqRes.value.requests)
@@ -151,10 +111,12 @@ function AdminDashboard() {
         );
       } else {
         console.error(
-          "Failed to load requests:",
+          "Failed to load organiser requests:",
           reqRes.reason
         );
       }
+
+      // Cities
       if (citiesRes.status === "fulfilled") {
         setCitiesCount(
           Array.isArray(citiesRes.value.cities)
@@ -163,6 +125,7 @@ function AdminDashboard() {
         );
       }
 
+      // Categories
       if (categoriesRes.status === "fulfilled") {
         setCategoriesCount(
           Array.isArray(categoriesRes.value.categories)
@@ -170,7 +133,6 @@ function AdminDashboard() {
             : 0
         );
       }
-
     } catch (error) {
       console.error(
         "Dashboard fetch error:",
@@ -194,7 +156,6 @@ function AdminDashboard() {
   ) => {
     try {
       setActionError(null);
-
       setActionLoading(eventId);
 
       await updateEventStatus(
@@ -212,7 +173,6 @@ function AdminDashboard() {
             : event
         )
       );
-
     } catch (error) {
       console.error(
         "Event approval error:",
@@ -222,11 +182,11 @@ function AdminDashboard() {
       setActionError(
         "Failed to approve event. Please try again."
       );
-
     } finally {
       setActionLoading(null);
     }
   };
+
 
   const pendingEvents = events.filter(
     (event) =>
@@ -238,8 +198,10 @@ function AdminDashboard() {
       request.status?.toUpperCase() === "PENDING"
   );
 
+
   return (
     <>
+
       {actionError && (
         <div
           className="cmd-error-banner"
@@ -284,11 +246,15 @@ function AdminDashboard() {
             actionLoading !== null
           }
         >
-          Refresh Dashboard
+          {loading
+            ? "Refreshing..."
+            : "Refresh Dashboard"}
         </button>
       </div>
+
       <div className="cmd-stats-grid">
 
+        {/* Users */}
         <div className="cmd-stat-card">
           <div className="cmd-stat-header">
             <span>TOTAL USERS</span>
@@ -307,6 +273,7 @@ function AdminDashboard() {
           </div>
         </div>
 
+        {/* Organisers */}
         <div className="cmd-stat-card">
           <div className="cmd-stat-header">
             <span>TOTAL ORGANISERS</span>
@@ -325,6 +292,7 @@ function AdminDashboard() {
           </div>
         </div>
 
+        {/* Pending Events */}
         <div className="cmd-stat-card">
           <div className="cmd-stat-header">
             <span>PENDING EVENTS</span>
@@ -343,6 +311,7 @@ function AdminDashboard() {
           </div>
         </div>
 
+        {/* Host Requests */}
         <div className="cmd-stat-card">
           <div className="cmd-stat-header">
             <span>HOST REQUESTS</span>
@@ -360,6 +329,8 @@ function AdminDashboard() {
             Awaiting organizer approval
           </div>
         </div>
+
+        {/* Cities */}
         <div className="cmd-stat-card">
           <div className="cmd-stat-header">
             <span>CITIES</span>
@@ -378,6 +349,7 @@ function AdminDashboard() {
           </div>
         </div>
 
+        {/* Categories */}
         <div className="cmd-stat-card">
           <div className="cmd-stat-header">
             <span>CATEGORIES</span>
@@ -399,7 +371,6 @@ function AdminDashboard() {
       </div>
 
       <div className="cmd-queues-grid">
-
         <div className="cmd-queue-card">
 
           <div className="queue-card-head">
@@ -436,7 +407,6 @@ function AdminDashboard() {
                 >
 
                   <div>
-
                     <div className="org-applicant-name">
                       {event.name}
                     </div>
@@ -447,7 +417,6 @@ function AdminDashboard() {
                         event.price || 0
                       ).toLocaleString("en-IN")}
                     </div>
-
                   </div>
 
                   <button
@@ -474,7 +443,6 @@ function AdminDashboard() {
           )}
 
         </div>
-
       </div>
     </>
   );

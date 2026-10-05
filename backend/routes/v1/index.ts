@@ -26,7 +26,6 @@ router.use("/v1/organiser-requests", orgRequestRouter);
 router.use("/v1/tickets", ticketRouter);
 router.use("/v1/users", userRouter);
 router.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
-
 router.use(errorHandler);
 
 export default router;
