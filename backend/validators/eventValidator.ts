@@ -13,8 +13,7 @@ export const validateEvent = (
         location,
         event_date,
         price,
-        capacity,
-        status
+        capacity
     } = req.body;
 
     // Required fields
@@ -50,6 +49,14 @@ export const validateEvent = (
     if (typeof name !== "string" || name.trim().length < 3) {
         return res.status(400).json({
             message: "Event name must contain at least 3 characters"
+        });
+    }
+    
+
+    if (name.trim().length > 150) {
+        return res.status(400).json({
+            message:
+                "Event name cannot exceed 150 characters"
         });
     }
 
@@ -105,18 +112,5 @@ export const validateEvent = (
             message: "Capacity must be a positive whole number"
         });
     }
-
-    // Validate status
-    const allowedStatuses = ["PENDING", "APPROVED", "REJECTED"];
-
-    if (
-        status !== undefined &&
-        !allowedStatuses.includes(status)
-    ) {
-        return res.status(400).json({
-            message: "Invalid event status"
-        });
-    }
-
     next();
-};
+}

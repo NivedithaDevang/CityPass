@@ -5,13 +5,12 @@ import {
   getUsers,
   updateProfile,
   changePassword,
-  reactivateAccount,
   deactivateAccount,
   reactivateAndLogin,
 } from "../../controllers/userController.js";
 
 import { authenticate } from "../../middleware/authMiddleware.js";
-import { uploadAvatar } from "../../middleware/upload.js";
+import upload from "../../middleware/upload.js";
 
 const userRouter = express.Router();
 
@@ -24,7 +23,7 @@ userRouter.get(
 userRouter.patch(
   "/userdetails",
   authenticate,
-  uploadAvatar.single("profile_image"),
+  upload.single("profile_image"),
   updateProfile
 );
 
@@ -39,12 +38,6 @@ userRouter.patch(
   authenticate,
   deactivateAccount
 );
-
-userRouter.patch(
-  "/reactivate/:id",
-  reactivateAccount
-);
-
 userRouter.post(
   "/reactivate-login",
   reactivateAndLogin

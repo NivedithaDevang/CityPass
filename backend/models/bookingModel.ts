@@ -13,6 +13,18 @@ type Booking = {
 
 type BookingRow = RowDataPacket & Booking;
 
+export type OrganiserBooking = RowDataPacket & {
+  booking_id: number;
+  event_id: number;
+  event_name: string;
+  user_name: string | null;
+  user_email: string | null;
+  number_of_tickets: number;
+  total_amount: number;
+  booking_date: string | Date;
+  booking_status: string | null;
+};
+
 export const getBookingsByUserId = async (userId: number) => {
   const sql = `
     SELECT 
@@ -39,6 +51,31 @@ export const getBookingsByUserId = async (userId: number) => {
 
   const [results] = await db.query<RowDataPacket[]>(sql, [userId]);
 
+  return results;
+};
+
+export const getBookingsByOrganiserId = async (
+  organiserId: number
+): Promise<OrganiserBooking[]> => {
+  const sql = `
+    SELECT
+      b.id AS booking_id,
+      e.id AS event_id,
+      e.name AS event_name,
+      u.name AS user_name,
+      u.email AS user_email,
+      b.number_of_tickets,
+      b.total_amount,
+      b.booking_date,
+      b.status AS booking_status
+    FROM bookings b
+    INNER JOIN events e ON e.id = b.pass_id
+    INNER JOIN users u ON u.id = b.user_id
+    WHERE e.organizer_id = ?
+    ORDER BY b.booking_date DESC, b.id DESC
+  `;
+
+  const [results] = await db.query<OrganiserBooking[]>(sql, [organiserId]);
   return results;
 };
 
