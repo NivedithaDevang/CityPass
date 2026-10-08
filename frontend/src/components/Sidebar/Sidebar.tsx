@@ -48,6 +48,8 @@ export function Sidebar({
     normalizedRole === "SUPER_ADMIN" ||
     normalizedRole === "SUPERADMIN";
 
+  const isOrganiser = normalizedRole === "ORGANISER" || normalizedRole === "ORGANIZER";
+
   const getInitial = () => {
     if (user?.name) {
       return user.name
@@ -57,17 +59,6 @@ export function Sidebar({
 
     return "U";
   };
-
-  /*
-   * Convert the stored profile image path
-   * into a complete URL.
-   *
-   * Example:
-   * /uploads/avatars/abc.jpg
-   *
-   * becomes:
-   * http://localhost:5000/uploads/avatars/abc.jpg
-   */
   const getProfileImage = () => {
     if (!user?.profile_image) {
       return "";
@@ -94,6 +85,8 @@ export function Sidebar({
 
     if (isAdmin) {
       navigate("/admin");
+    } else if (isOrganiser) {
+      navigate("/organiser");
     } else {
       navigate("/settings/profile");
     }
@@ -184,14 +177,26 @@ export function Sidebar({
               <span className="profile-icon">
                 <MdSpaceDashboard />
               </span>
-
-              <span>
-                Admin Dashboard
-              </span>
+              <span>Admin Dashboard</span>
             </button>
           )}
 
-          {/* My Account */}
+          {isOrganiser && (
+            <button
+              type="button"
+              className="sidebar-menu-item admin-item"
+              onClick={() => {
+                onClose();
+                navigate("/organiser");
+              }}
+            >
+              <span className="profile-icon">
+                <MdSpaceDashboard />
+              </span>
+              <span>Organiser Dashboard</span>
+            </button>
+          )}
+
           <button
             type="button"
             className="sidebar-menu-item"
@@ -200,12 +205,8 @@ export function Sidebar({
             <span className="profile-icon">
               <IoPersonCircle />
             </span>
-
-            <span>
-              My Account
-            </span>
+            <span>My Account</span>
           </button>
-
           {/* My Bookings */}
           <div className="booking-section">
             <button

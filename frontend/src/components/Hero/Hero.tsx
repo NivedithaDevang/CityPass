@@ -150,7 +150,7 @@ function Hero() {
               <div className="showcase-nav-header">
 
                 <span className="showcase-label">
-                  FEATURED PASSES
+                  UPCOMING EVENTS
                 </span>
 
                 <div className="showcase-controls">

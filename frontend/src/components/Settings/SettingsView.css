@@ -1,7 +1,8 @@
 .settings-page {
   min-height: calc(100vh - 72px);
   background-color: #f8fafc;
-  padding: 40px 24px 80px;
+  padding: 45px;
+  margin-top: 60px;
   box-sizing: border-box;
   font-family: inherit;
 }
@@ -27,6 +28,7 @@
 
 .settings-layout {
   display: flex;
+  position: relative;
   gap: 28px;
   max-width: 1140px;
   margin: 0 auto;
@@ -301,7 +303,7 @@
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 16px;
 }
 
 .form-group label {

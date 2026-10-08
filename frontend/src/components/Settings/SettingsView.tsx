@@ -1,3 +1,4 @@
+
 import {
   useEffect,
   useRef,
@@ -23,11 +24,6 @@ import {
 import "./SettingsView.css";
 
 interface City {
-  id: number;
-  name: string;
-}
-
-interface Category {
   id: number;
   name: string;
 }
@@ -61,10 +57,37 @@ const deactivateReasons = [
   "Creating another account",
   "Other",
 ];
-
+const idProofOptions = [
+  {
+    value: "pan",
+    label: "PAN Card",
+    placeholder: "Enter 10-character PAN number",
+  },
+  {
+    value: "aadhar",
+    label: "Aadhaar Card",
+    placeholder: "Enter 12-digit Aadhaar number",
+  },
+  {
+    value: "passport",
+    label: "Passport",
+    placeholder: "Enter passport number",
+  },
+  {
+    value: "driving_license",
+    label: "Driving License",
+    placeholder: "Enter driving license number",
+  },
+  {
+    value: "voter_id",
+    label: "Voter ID",
+    placeholder: "Enter Voter ID number",
+  },
+];
 function SettingsView() {
   const navigate = useNavigate();
-  const { user, setUser } = useUser();
+  const { user, setUser, clearUser } = useUser();
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [activeTab, setActiveTab] = useState("profile");
@@ -81,7 +104,6 @@ function SettingsView() {
   });
 
   const [cities, setCities] = useState<City[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
 
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
@@ -101,10 +123,13 @@ function SettingsView() {
   const [passwordError, setPasswordError] = useState("");
 
   const [org, setOrg] = useState({
+    fullName: "",
     stageName: "",
     category: "",
     city: "",
-    pan_card: "",
+    id_proof_type: "",
+    id_proof: "",
+
     email: user?.email || "",
     phone: user?.phone || "",
     description: "",
@@ -122,7 +147,6 @@ function SettingsView() {
   useEffect(() => {
     fetchProfile();
     fetchCities();
-    fetchCategories();
   }, []);
 
   useEffect(() => {
@@ -189,25 +213,6 @@ function SettingsView() {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/v1/categories`);
-
-      const catData =
-        response.data?.categories ||
-        response.data?.category ||
-        response.data?.data ||
-        response.data ||
-        [];
-
-      setCategories(Array.isArray(catData) ? catData : []);
-    } catch (error) {
-      console.error("Failed to load categories:", error);
-    }
-  };
-
-  // Returns the actual profile image if available.
-  // If no image exists, the JSX will show FaUser instead.
   const getProfileImage = () => {
     if (imagePreview) {
       return imagePreview;
@@ -288,6 +293,11 @@ function SettingsView() {
 
     if (!profile.name.trim()) {
       setProfileError("Name is required.");
+      return;
+    }
+
+    if (!/^[a-zA-Z\s]+$/.test(profile.name.trim())) {
+      setProfileError("Name can only contain letters and spaces.");
       return;
     }
 
@@ -417,13 +427,74 @@ function SettingsView() {
   ) => {
     const { name, value } = e.target;
 
-    setOrg((prev) => ({
-      ...prev,
-      [name]: name === "pan_card" ? value.toUpperCase() : value,
-    }));
+    if (name === "id_proof_type") {
+      setOrg((prev) => ({
+        ...prev,
+
+        id_proof_type: value,
+
+        id_proof: "",
+      }));
+    } else if (name === "id_proof") {
+      setOrg((prev) => ({
+        ...prev,
+
+        id_proof: value.toUpperCase(),
+      }));
+    } else {
+      setOrg((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
 
     setOrgMessage("");
     setOrgError("");
+  };
+
+  const selectedIdProof = idProofOptions.find(
+    (option) => option.value === org.id_proof_type
+  );
+
+  const validateIdProof = () => {
+    const idProof = org.id_proof.trim().toUpperCase();
+
+    switch (org.id_proof_type) {
+      case "pan":
+        if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(idProof)) {
+          return "Enter a valid PAN number. Example: ABCDE1234F";
+        }
+        break;
+
+      case "aadhar":
+        if (!/^\d{12}$/.test(idProof)) {
+          return "Aadhaar number must contain exactly 12 digits.";
+        }
+        break;
+
+      case "passport":
+        if (!/^[A-Z][0-9]{7}$/.test(idProof)) {
+          return "Enter a valid passport number. Example: A1234567";
+        }
+        break;
+
+      case "driving_license":
+        if (!/^[A-Z0-9-]{8,20}$/.test(idProof)) {
+          return "Enter a valid driving license number.";
+        }
+        break;
+
+      case "voter_id":
+        if (!/^[A-Z]{3}[0-9]{7}$/.test(idProof)) {
+          return "Enter a valid Voter ID. Example: ABC1234567";
+        }
+        break;
+
+      default:
+        return "Please select an ID proof type.";
+    }
+
+    return "";
   };
 
   const handleOrganizerSubmit = async (e: FormEvent) => {
@@ -436,7 +507,8 @@ function SettingsView() {
       !org.stageName.trim() ||
       !org.category.trim() ||
       !org.city.trim() ||
-      !org.pan_card.trim() ||
+      !org.id_proof_type.trim() ||
+      !org.id_proof.trim() ||
       !org.email.trim() ||
       !org.phone.trim() ||
       !org.description.trim()
@@ -447,17 +519,15 @@ function SettingsView() {
       return;
     }
 
-    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-
-    if (!panRegex.test(org.pan_card.trim())) {
-      setOrgError(
-        "Invalid PAN format. Must be 10 characters (e.g., ABCDE1234F)."
-      );
+    if (!/^\d{10}$/.test(org.phone.trim())) {
+      setOrgError("Phone number must be exactly 10 digits.");
       return;
     }
 
-    if (!/^\d{10}$/.test(org.phone.trim())) {
-      setOrgError("Phone number must be exactly 10 digits.");
+    const idProofError = validateIdProof();
+
+    if (idProofError) {
+      setOrgError(idProofError);
       return;
     }
 
@@ -468,11 +538,19 @@ function SettingsView() {
         `${API_BASE_URL}/v1/organiser-requests`,
         {
           organization_name: org.stageName.trim(),
+
           category: org.category.trim(),
+
           city: org.city.trim(),
-          pan_card: org.pan_card.trim().toUpperCase(),
+
+          id_proof_type: org.id_proof_type,
+
+          id_proof: org.id_proof.trim().toUpperCase(),
+
           email: org.email.trim(),
+
           phone: org.phone.trim(),
+
           description: org.description.trim(),
         },
         {
@@ -480,13 +558,17 @@ function SettingsView() {
         }
       );
 
-      setOrgMessage("Organizer request submitted successfully!");
+      setOrgMessage(
+        "Organizer request submitted successfully!"
+      );
 
       setOrg({
+        fullName: "",
         stageName: "",
         category: "",
         city: "",
-        pan_card: "",
+        id_proof_type: "",
+        id_proof: "",
         email: user?.email || "",
         phone: user?.phone || "",
         description: "",
@@ -555,10 +637,12 @@ function SettingsView() {
         }
       );
 
+      clearUser();
       navigate("/login");
     } catch (error: any) {
       setDeactivateError(
-        error.response?.data?.message || "Unable to deactivate account."
+        error.response?.data?.message ||
+          "Unable to deactivate account."
       );
     } finally {
       setLoading(false);
@@ -570,6 +654,7 @@ function SettingsView() {
       <Navbar />
 
       <div className="settings-page">
+
         <div className="settings-header">
           <h1>Settings</h1>
 
@@ -580,6 +665,7 @@ function SettingsView() {
 
         <div className="settings-layout">
           <aside className="settings-nav">
+
             <button
               type="button"
               className={`nav-item ${
@@ -655,19 +741,27 @@ function SettingsView() {
 
               <FaChevronRight className="nav-arrow" />
             </button>
+
           </aside>
 
           <main className="settings-panel">
+
             {activeTab === "profile" && (
               <section className="tab-pane">
+
                 <div className="profile-heading-block">
+
                   <div className="avatar-picker">
+
                     <div
                       className="avatar-circle"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() =>
+                        fileInputRef.current?.click()
+                      }
                       role="button"
                       tabIndex={0}
                     >
+
                       {getProfileImage() ? (
                         <img
                           src={getProfileImage()}
@@ -691,6 +785,7 @@ function SettingsView() {
                       >
                         <FaPlus />
                       </button>
+
                     </div>
 
                     <input
@@ -704,21 +799,32 @@ function SettingsView() {
                     <span className="avatar-caption">
                       Click to update photo
                     </span>
+
                   </div>
 
                   <div className="heading-copy">
                     <h2>My Profile</h2>
 
                     <p>
-                      Update your personal information and contact settings
+                      Update your personal information and contact
+                      settings
                     </p>
                   </div>
+
                 </div>
 
-                <form onSubmit={handleProfileSave}>
+                <form
+                  onSubmit={handleProfileSave}
+                  noValidate
+                >
+
                   <div className="form-grid">
+
                     <div className="form-group">
-                      <label htmlFor="name">Full Name</label>
+
+                      <label htmlFor="name">
+                        Full Name
+                      </label>
 
                       <input
                         id="name"
@@ -728,22 +834,31 @@ function SettingsView() {
                         onChange={handleProfileChange}
                         placeholder="Enter your name"
                       />
+
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="email">Email Address</label>
+
+                      <label htmlFor="email">
+                        Email Address
+                      </label>
 
                       <input
                         id="email"
                         type="email"
+                        name="email"
                         value={profile.email}
-                        disabled
-                        title="Email cannot be changed"
+                        onChange={handleProfileChange}
+                        placeholder="Enter your email address"
                       />
+
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="phone">Phone Number</label>
+
+                      <label htmlFor="phone">
+                        Phone Number
+                      </label>
 
                       <input
                         id="phone"
@@ -754,10 +869,14 @@ function SettingsView() {
                         maxLength={10}
                         placeholder="10-digit number"
                       />
+
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="city_id">City</label>
+
+                      <label htmlFor="city_id">
+                        City
+                      </label>
 
                       <select
                         id="city_id"
@@ -765,18 +884,29 @@ function SettingsView() {
                         value={profile.city_id}
                         onChange={handleProfileChange}
                       >
-                        <option value="">Select your city</option>
+
+                        <option value="">
+                          Select your city
+                        </option>
 
                         {cities.map((city) => (
-                          <option key={city.id} value={city.id}>
+                          <option
+                            key={city.id}
+                            value={city.id}
+                          >
                             {city.name}
                           </option>
                         ))}
+
                       </select>
+
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="dob">Date of Birth</label>
+
+                      <label htmlFor="dob">
+                        Date of Birth
+                      </label>
 
                       <input
                         id="dob"
@@ -784,18 +914,18 @@ function SettingsView() {
                         name="dob"
                         value={profile.dob}
                         onChange={handleProfileChange}
-                        max={MAX_DOB}
                       />
 
-                      <span className="field-hint">
-                        Only dates up to 31 December 2015 are allowed.
-                      </span>
                     </div>
 
                     <div className="form-group">
-                      <label>Gender</label>
+
+                      <label>
+                        Gender
+                      </label>
 
                       <div className="gender-pill-group">
+
                         {genderOptions.map((option) => (
                           <label
                             key={option.value}
@@ -805,21 +935,29 @@ function SettingsView() {
                                 : ""
                             }`}
                           >
+
                             <input
                               type="radio"
                               name="gender"
                               value={option.value}
                               checked={
-                                profile.gender === option.value
+                                profile.gender ===
+                                option.value
                               }
                               onChange={handleGenderChange}
                             />
 
-                            <span>{option.label}</span>
+                            <span>
+                              {option.label}
+                            </span>
+
                           </label>
                         ))}
+
                       </div>
+
                     </div>
+
                   </div>
 
                   {profileMessage && (
@@ -835,39 +973,58 @@ function SettingsView() {
                   )}
 
                   <div className="action-row">
+
                     <button
                       type="submit"
                       className="primary-button"
                       disabled={loading}
                     >
-                      {loading ? "Saving..." : "Save Changes"}
+                      {loading
+                        ? "Saving..."
+                        : "Save Changes"}
                     </button>
+
                   </div>
+
                 </form>
+
               </section>
             )}
 
             {activeTab === "password" && (
               <section className="tab-pane">
+
                 <div className="heading-copy">
+
                   <h2>Change Password</h2>
 
                   <p>
-                    Choose a secure password with at least 8 characters
+                    Choose a secure password with at least 8
+                    characters
                   </p>
+
                 </div>
 
                 <form
                   onSubmit={handlePasswordSubmit}
                   className="narrow-form"
                 >
+
                   <div className="form-group">
-                    <label htmlFor="newPassword">New Password</label>
+
+                    <label htmlFor="newPassword">
+                      New Password
+                    </label>
 
                     <div className="input-with-action">
+
                       <input
                         id="newPassword"
-                        type={showNewPassword ? "text" : "password"}
+                        type={
+                          showNewPassword
+                            ? "text"
+                            : "password"
+                        }
                         value={newPassword}
                         onChange={(e) =>
                           setNewPassword(e.target.value)
@@ -879,7 +1036,9 @@ function SettingsView() {
                         type="button"
                         className="toggle-visibility-btn"
                         onClick={() =>
-                          setShowNewPassword(!showNewPassword)
+                          setShowNewPassword(
+                            !showNewPassword
+                          )
                         }
                       >
                         {showNewPassword ? (
@@ -888,15 +1047,21 @@ function SettingsView() {
                           <FaEye />
                         )}
                       </button>
+
                     </div>
+
                   </div>
 
+                  <br />
+
                   <div className="form-group">
+
                     <label htmlFor="confirmPassword">
                       Confirm Password
                     </label>
 
                     <div className="input-with-action">
+
                       <input
                         id="confirmPassword"
                         type={
@@ -906,7 +1071,9 @@ function SettingsView() {
                         }
                         value={confirmPassword}
                         onChange={(e) =>
-                          setConfirmPassword(e.target.value)
+                          setConfirmPassword(
+                            e.target.value
+                          )
                         }
                         placeholder="Confirm new password"
                       />
@@ -926,7 +1093,9 @@ function SettingsView() {
                           <FaEye />
                         )}
                       </button>
+
                     </div>
+
                   </div>
 
                   {passwordMessage && (
@@ -942,6 +1111,7 @@ function SettingsView() {
                   )}
 
                   <div className="action-row">
+
                     <button
                       type="submit"
                       className="primary-button"
@@ -951,29 +1121,47 @@ function SettingsView() {
                         ? "Updating..."
                         : "Update Password"}
                     </button>
+
                   </div>
+
                 </form>
+
               </section>
             )}
 
             {activeTab === "organizer" && (
               <section className="tab-pane">
+
                 <div className="heading-copy">
+
                   <h2>Host an Event</h2>
 
                   <p>
-                    Apply to become an approved organizer and host events
-                    on CityPass
+                    Apply to become an approved organizer and
+                    host events on CityPass
                   </p>
+
                 </div>
 
                 <form
                   onSubmit={handleOrganizerSubmit}
                   className="org-form-grid"
+                  noValidate
                 >
-                  <div className="form-group full-width">
+                  <div className="form-group">
+                    <label htmlFor="fullName">
+                      Full Name *
+                    </label>
+                    <input 
+                    id="fullName" type="text" name="fullName"
+                    value = {org.stageName}
+                    onChange={handleOrgChange}
+                    placeholder="Enter your full name"
+                    required />
+                  </div>
+                    <div className="form-group full-width">
                     <label htmlFor="stageName">
-                      Stage Name *
+                      Organisation Name *
                     </label>
 
                     <input
@@ -986,31 +1174,10 @@ function SettingsView() {
                       maxLength={150}
                       required
                     />
+
                   </div>
-
                   <div className="form-group">
-                    <label htmlFor="orgCategory">
-                      Category *
-                    </label>
 
-                    <select
-                      id="orgCategory"
-                      name="category"
-                      value={org.category}
-                      onChange={handleOrgChange}
-                      required
-                    >
-                      <option value="">Select category</option>
-
-                      {categories.map((cat) => (
-                        <option key={cat.id} value={cat.name}>
-                          {cat.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-group">
                     <label htmlFor="orgCity">
                       City *
                     </label>
@@ -1022,19 +1189,28 @@ function SettingsView() {
                       onChange={handleOrgChange}
                       required
                     >
-                      <option value="">Select city</option>
+
+                      <option value="">
+                        Select city
+                      </option>
 
                       {cities.map((city) => (
-                        <option key={city.id} value={city.name}>
+                        <option
+                          key={city.id}
+                          value={city.name}
+                        >
                           {city.name}
                         </option>
                       ))}
+
                     </select>
+
                   </div>
 
                   <div className="form-group">
+
                     <label htmlFor="orgEmail">
-                      Contact Email *
+                      Email *
                     </label>
 
                     <input
@@ -1042,14 +1218,17 @@ function SettingsView() {
                       type="email"
                       name="email"
                       value={org.email}
+                      disabled
                       onChange={handleOrgChange}
                       placeholder="contact@yourstage.com"
-                      maxLength={25}
+                      maxLength={100}
                       required
                     />
+
                   </div>
 
                   <div className="form-group">
+
                     <label htmlFor="orgPhone">
                       Phone Number *
                     </label>
@@ -1064,34 +1243,80 @@ function SettingsView() {
                       maxLength={10}
                       required
                     />
-                  </div>
 
+                  </div>
                   <div className="form-group full-width">
-                    <label htmlFor="pan_card">
-                      PAN Card *
+
+                    <label htmlFor="id_proof_type">
+                      Valid ID Proof *
                     </label>
 
-                    <input
-                      id="pan_card"
-                      type="text"
-                      name="pan_card"
-                      value={org.pan_card}
+                    <select
+                      id="id_proof_type"
+                      name="id_proof_type"
+                      value={org.id_proof_type}
                       onChange={handleOrgChange}
-                      placeholder="ABCDE1234F"
-                      maxLength={10}
-                      style={{
-                        textTransform: "uppercase",
-                      }}
                       required
-                    />
+                    >
 
-                    <span className="field-hint">
-                      10-character PAN format (5 uppercase letters, 4
-                      digits, 1 uppercase letter)
-                    </span>
+                      <option value="">
+                        Select ID proof
+                      </option>
+
+                      {idProofOptions.map((option) => (
+                        <option
+                          key={option.value}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </option>
+                      ))}
+
+                    </select>
+
                   </div>
 
+                  {org.id_proof_type && (
+                    <div className="form-group full-width">
+
+                      <label htmlFor="id_proof">
+                        {selectedIdProof?.label} Number *
+                      </label>
+
+                      <input
+                        id="id_proof"
+                        type="text"
+                        name="id_proof"
+                        value={org.id_proof}
+                        onChange={handleOrgChange}
+                        placeholder={
+                          selectedIdProof?.placeholder ||
+                          "Enter ID proof number"
+                        }
+                        maxLength={
+                          org.id_proof_type === "aadhar"
+                            ? 12
+                            : org.id_proof_type === "pan"
+                            ? 10
+                            : 20
+                        }
+                        required
+                      />
+                      {org.id_proof_type === "pan" }
+
+                      {org.id_proof_type === "aadhar"}
+
+                      {org.id_proof_type === "passport" }
+
+                      {org.id_proof_type === "driving_license" }
+
+                      {org.id_proof_type === "voter_id" }
+
+                    </div>
+                  )}
+
                   <div className="form-group full-width">
+
                     <label htmlFor="orgDescription">
                       Description *
                     </label>
@@ -1105,6 +1330,7 @@ function SettingsView() {
                       placeholder="Tell us about the events, performances, genres, and audience experiences you deliver..."
                       required
                     />
+
                   </div>
 
                   {orgMessage && (
@@ -1120,6 +1346,7 @@ function SettingsView() {
                   )}
 
                   <div className="action-row full-width">
+
                     <button
                       type="submit"
                       className="primary-button"
@@ -1129,29 +1356,37 @@ function SettingsView() {
                         ? "Submitting..."
                         : "Submit Application"}
                     </button>
+
                   </div>
+
                 </form>
+
               </section>
             )}
 
             {activeTab === "deactivate" && (
               <section className="tab-pane">
+
                 <div className="heading-copy">
+
                   <h2>Deactivate Account</h2>
 
                   <p>
                     Temporarily suspend your CityPass access
                   </p>
+
                 </div>
 
                 {!showDeactivateTerms ? (
                   <div className="deactivate-card">
+
                     <h3>Before you proceed</h3>
 
                     <p>
-                      Deactivating your account will pause your CityPass
-                      access, affect your active bookings, hide your
-                      profile, and log you out across all devices.
+                      Deactivating your account will pause your
+                      CityPass access, affect your active bookings,
+                      hide your profile, and log you out across all
+                      devices.
                     </p>
 
                     <button
@@ -1163,19 +1398,24 @@ function SettingsView() {
                     >
                       Continue to Deactivation
                     </button>
+
                   </div>
                 ) : (
                   <div className="deactivate-card">
+
                     <div className="deactivate-reason-header">
+
                       <h3>Why are you leaving?</h3>
 
                       <p>
-                        Please select the reason that best describes your
-                        decision.
+                        Please select the reason that best describes
+                        your decision.
                       </p>
+
                     </div>
 
                     <div className="deactivate-reasons">
+
                       {deactivateReasons.map((reason) => (
                         <label
                           key={reason}
@@ -1185,6 +1425,7 @@ function SettingsView() {
                               : ""
                           }`}
                         >
+
                           <input
                             type="radio"
                             name="deactivateReason"
@@ -1202,12 +1443,15 @@ function SettingsView() {
                           <span className="reason-text">
                             {reason}
                           </span>
+
                         </label>
                       ))}
+
                     </div>
 
                     {deactivateReason === "Other" && (
                       <div className="other-reason-box">
+
                         <label htmlFor="otherDeactivateReason">
                           Tell us more
                         </label>
@@ -1227,6 +1471,7 @@ function SettingsView() {
                         />
 
                         <div className="character-counter">
+
                           <span
                             className={
                               otherDeactivateReason.trim()
@@ -1235,10 +1480,16 @@ function SettingsView() {
                                 : ""
                             }
                           >
-                            {otherDeactivateReason.trim().length}
+                            {
+                              otherDeactivateReason.trim()
+                                .length
+                            }
                           </span>
+
                           / 300 maximum characters
+
                         </div>
+
                       </div>
                     )}
 
@@ -1249,6 +1500,7 @@ function SettingsView() {
                     )}
 
                     <div className="action-buttons-group">
+
                       <button
                         type="button"
                         className="secondary-button"
@@ -1278,12 +1530,17 @@ function SettingsView() {
                           ? "Deactivating..."
                           : "Deactivate Account"}
                       </button>
+
                     </div>
+
                   </div>
                 )}
+
               </section>
             )}
+
           </main>
+
         </div>
       </div>
     </>

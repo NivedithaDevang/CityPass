@@ -10,12 +10,13 @@ import { FaMapMarkerAlt } from "react-icons/fa";
 import { FaTag } from "react-icons/fa6";
 import { IoPerson } from "react-icons/io5";
 
-import { fetchAdminOrganiserRequests } from "../../../services/adminService";
+import { fetchAdminEventRequests, fetchAdminOrganiserRequests } from "../../../services/adminService";
 
 import "./AdminLayout.css";
 
 function AdminLayout() {
   const [pendingReqCount, setPendingReqCount] = useState(0);
+  const [pendingEventCount, setPendingEventCount] = useState(0);
 
   useEffect(() => {
     const getBadgeCount = async () => {
@@ -27,7 +28,7 @@ function AdminLayout() {
           : res?.requests || res?.data || [];
 
         const pending = list.filter(
-          (request: any) =>
+          (request: { status?: string }) =>
             request.status?.toUpperCase() === "PENDING"
         );
 
@@ -38,6 +39,20 @@ function AdminLayout() {
     };
 
     void getBadgeCount();
+  }, []);
+
+  useEffect(() => {
+    const getPendingEventCount = async () => {
+      try {
+        const response = await fetchAdminEventRequests();
+        const events = Array.isArray(response?.events) ? response.events : [];
+        setPendingEventCount(events.filter((event: { status?: string }) => event.status?.toUpperCase() === "PENDING").length);
+      } catch (error) {
+        console.error("Failed to load event request count:", error);
+      }
+    };
+
+    void getPendingEventCount();
   }, []);
 
   return (
@@ -109,8 +124,13 @@ function AdminLayout() {
             </div>
 
             <span className="sidebar-label">
-              Manage Events
+              Event Requests
             </span>
+            {pendingEventCount > 0 && (
+              <span className="sidebar-count-tag">
+                {pendingEventCount}
+              </span>
+            )}
           </NavLink>
 
           <NavLink
@@ -161,6 +181,23 @@ function AdminLayout() {
 
             <span className="sidebar-label">
               Users
+            </span>
+          </NavLink>
+
+          <NavLink
+            to="/admin/tickets"
+            className={({ isActive }) =>
+              isActive
+                ? "sidebar-nav-item active"
+                : "sidebar-nav-item"
+            }
+          >
+            <div className="nav-icon-wrapper">
+              <IoPerson className="sidebar-icon" />
+            </div>
+
+            <span className="sidebar-label">
+              Tickets
             </span>
           </NavLink>
 

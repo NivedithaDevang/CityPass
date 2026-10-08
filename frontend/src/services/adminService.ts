@@ -23,6 +23,11 @@ export const fetchAdminEvents = async () => {
   return response.data;
 };
 
+export const fetchAdminEventRequests = async () => {
+  const response = await adminApi.get("/event-requests");
+  return response.data;
+};
+
 export const fetchAdminOrganiserRequests = async (
   status?: string
 ) => {
