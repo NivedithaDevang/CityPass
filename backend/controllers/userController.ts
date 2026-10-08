@@ -3,13 +3,16 @@ import {
   getAllUsers,
   updatePassword,
   updateUserProfile,
+  getUserAuthByEmail,
+  reactivateUser
 } from "../models/userModel.js";
+import cloudinary from "../config/cloudinary.js";
 import {
   NextFunction,
   Request,
   Response,
 } from "express";
-import { ResultSetHeader, RowDataPacket } from "mysql2";
+import { ResultSetHeader } from "mysql2";
 import bcrypt from "bcrypt";
 import { saltRounds } from "../config/env.js";
 import { db } from "../config/database.js";
@@ -176,19 +179,48 @@ export const updateProfile = async (
         });
       }
     }
+    let profileImage: string | null = null;
 
-    const profileImage = req.file
-      ? `/uploads/profileImages/${req.file.filename}`
-      : null;
+    const uploadedFile = req.file;
 
-    const result = await updateUserProfile(userId, {
-      name: trimmedName,
-      phone: phone || null,
-      city_id: parsedCityId,
-      dob: dob || null,
-      gender: gender || null,
-      profile_image: profileImage,
-    });
+    if (uploadedFile) {
+      const cloudinaryResult = await new Promise<any>(
+        (resolve, reject) => {
+          const stream =
+            cloudinary.uploader.upload_stream(
+              {
+                folder: "citypass/profile-images",
+                public_id: `user_${userId}`,
+                overwrite: true,
+                resource_type: "image",
+              },
+              (error, result) => {
+                if (error) {
+                  reject(error);
+                } else {
+                  resolve(result);
+                }
+              }
+            );
+
+          stream.end(uploadedFile.buffer);
+        }
+      );
+
+      profileImage = cloudinaryResult.secure_url;
+    }
+
+    const result = await updateUserProfile(
+      userId,
+      {
+        name: trimmedName,
+        phone: phone || null,
+        city_id: parsedCityId,
+        dob: dob || null,
+        gender: gender || null,
+        profile_image: profileImage,
+      }
+    );
 
     if (result.affectedRows === 0) {
       return res.status(404).json({
@@ -208,6 +240,7 @@ export const updateProfile = async (
       message: "Profile updated successfully",
       user: updatedUser,
     });
+
   } catch (err: unknown) {
     if (
       typeof err === "object" &&
@@ -216,7 +249,7 @@ export const updateProfile = async (
       err.code === "ER_DUP_ENTRY"
     ) {
       return res.status(409).json({
-        message: "Email already exists",
+        message: "Phone number already exists",
       });
     }
 
@@ -273,48 +306,6 @@ export const changePassword = async (
 
     return res.status(200).json({
       message: "Password updated successfully",
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const reactivateAccount = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const userId = Number(req.params.id);
-
-    if (!Number.isInteger(userId) || userId <= 0) {
-      return res.status(400).json({
-        message: "A valid user id is required",
-      });
-    }
-
-    const sql = `
-      UPDATE users
-      SET
-        status = 'ACTIVE',
-        deactivated_at = NULL
-      WHERE id = ?
-    `;
-
-    const [result] =
-      await db.query<ResultSetHeader>(
-        sql,
-        [userId]
-      );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
-
-    return res.status(200).json({
-      message: "Account reactivated successfully",
     });
   } catch (err) {
     next(err);
@@ -410,21 +401,7 @@ export const reactivateAndLogin = async (
       });
     }
 
-    const [rows] = await db.query<
-      (RowDataPacket & {
-        id: number;
-        email: string;
-        password: string;
-        role: string;
-        status: string;
-        token_version: number;
-      })[]
-    >(
-      `SELECT id, email, password, role, status, token_version FROM users WHERE email = ?`,
-      [email]
-    );
-
-    const user = rows[0];
+    const user = await getUserAuthByEmail(email);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -435,20 +412,11 @@ export const reactivateAndLogin = async (
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    if (user.status !== "INACTIVE") {
+    if (user.status == "ACTIVE") {
       return res.status(400).json({ message: "Account is already active" });
     }
 
-    await db.query(
-      `UPDATE users SET status = 'ACTIVE', deactivated_at = NULL, token_version = token_version + 1 WHERE id = ?`,
-      [user.id]
-    );
-
-    const [updatedRows] = await db.query<
-      (RowDataPacket & { token_version: number })[]
-    >(`SELECT token_version FROM users WHERE id = ?`, [user.id]);
-
-    const updatedTokenVersion = updatedRows[0]?.token_version;
+    const { token_version: updatedTokenVersion } = await reactivateUser(user.id);
 
     generateUserToken(user.id, res, {
       id: user.id,

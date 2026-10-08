@@ -10,7 +10,7 @@ const OrganiserHeader = () => {
     return (
         <header className="organiser-header">
 
-            <div>
+            <div className="organiser-container">
                 <h1>Organizer Dashboard</h1>
                 <p>Manage your events and attendees</p>
             </div>

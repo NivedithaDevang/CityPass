@@ -68,6 +68,7 @@ export interface Events {
   description?: string;
   location?: string;
   event_date?: string;
+  event_time?: string;
   price?: string;
   capacity?: number;
   status?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | "COMPLETED";

@@ -37,14 +37,7 @@ export function OrganiserDetails() {
             ) : organiser ? (
                 <>
                     <div className="organiser-avatar">
-                        {organiser.profile_image ? (
-                            <img
-                                src={organiser.profile_image}
-                                alt={`${organiser.organization_name} profile`}
-                            />
-                        ) : (
                             <FaUserCircle aria-hidden="true" />
-                        )}
                     </div>
                     <h3>{organiser.organization_name}</h3>
                 </>

@@ -73,7 +73,7 @@ export const checkOrganiserRole = (
     next: NextFunction
 ) => {
     const role = req.user?.role?.toUpperCase();
-    if (role !== "ORGANISER") {
+    if (role !== "ORGANISER" && role !== "ORGANIZER") {
         return res.status(403).json({
             message: "You do not have permission to access this action."
         });

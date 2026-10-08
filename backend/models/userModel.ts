@@ -1,8 +1,5 @@
 import { db } from "../config/database.js";
-import {
-  ResultSetHeader,
-  RowDataPacket,
-} from "mysql2/promise";
+import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { AuthPayLoad } from "../types/auth.js";
 
 export type User = RowDataPacket &
@@ -11,23 +8,15 @@ export type User = RowDataPacket &
     email: string;
     password?: string;
     status?: string;
-    role:
-      | "USER"
-      | "ORGANIZER"
-      | "ADMIN"
-      | "SUPER_ADMIN";
+    role: "USER" | "ORGANIZER" | "ADMIN" | "SUPER_ADMIN";
     token_version: number;
   };
 
-type UserRow = RowDataPacket & {
+export type UserRow = RowDataPacket & {
   id: number;
   name: string;
   email: string;
-  role:
-    | "USER"
-    | "ORGANIZER"
-    | "ADMIN"
-    | "SUPER_ADMIN";
+  role: "USER" | "ORGANIZER" | "ADMIN" | "SUPER_ADMIN";
   phone: string | null;
   city_id: number | null;
   dob: string | null;
@@ -37,7 +26,16 @@ type UserRow = RowDataPacket & {
   token_version: number;
 };
 
-export const getUserById = async (id: number) => {
+export type UserAuthRow = RowDataPacket & {
+  id: number;
+  email: string;
+  password: string;
+  role: "USER" | "ORGANIZER" | "ADMIN" | "SUPER_ADMIN";
+  status: "ACTIVE" | "INACTIVE";
+  token_version: number;
+};
+
+export const getUserById = async (id: number): Promise<UserRow | undefined> => {
   const [results] = await db.query<UserRow[]>(
     `
       SELECT
@@ -61,21 +59,47 @@ export const getUserById = async (id: number) => {
   return results[0];
 };
 
+export const getUserAuthByEmail = async (
+  email: string
+): Promise<UserAuthRow | undefined> => {
+  const [results] = await db.query<UserAuthRow[]>(
+    `SELECT id, email, password, role, status, token_version FROM users WHERE email = ?`,
+    [email]
+  );
+
+  return results[0];
+};
+
+export const reactivateUser = async (
+  id: number
+): Promise<{ token_version: number }> => {
+  await db.query(
+    `UPDATE users 
+     SET status = 'ACTIVE', deactivated_at = NULL, token_version = token_version + 1 
+     WHERE id = ?`,
+    [id]
+  );
+
+  const [rows] = await db.query<(RowDataPacket & { token_version: number })[]>(
+    `SELECT token_version FROM users WHERE id = ?`,
+    [id]
+  );
+
+  return { token_version: rows[0].token_version };
+};
+
 export const createUser = async (user: User) => {
   const sql = `
     INSERT INTO users (name, email, password, role)
     VALUES (?, ?, ?, ?)
   `;
 
-  const [results] = await db.query<ResultSetHeader>(
-    sql,
-    [
-      user.name,
-      user.email,
-      user.password,
-      user.role,
-    ]
-  );
+  const [results] = await db.query<ResultSetHeader>(sql, [
+    user.name,
+    user.email,
+    user.password,
+    user.role,
+  ]);
 
   return results;
 };
@@ -90,10 +114,10 @@ export const updatePassword = async (
     WHERE id = ?
   `;
 
-  const [results] = await db.query<ResultSetHeader>(
-    sql,
-    [hashedPassword, id]
-  );
+  const [results] = await db.query<ResultSetHeader>(sql, [
+    hashedPassword,
+    id,
+  ]);
 
   return results;
 };
@@ -121,18 +145,15 @@ export const updateUserProfile = async (
     WHERE id = ?
   `;
 
-  const [results] = await db.query<ResultSetHeader>(
-    sql,
-    [
-      profile.name,
-      profile.phone,
-      profile.city_id,
-      profile.dob,
-      profile.gender,
-      profile.profile_image,
-      id,
-    ]
-  );
+  const [results] = await db.query<ResultSetHeader>(sql, [
+    profile.name,
+    profile.phone,
+    profile.city_id,
+    profile.dob,
+    profile.gender,
+    profile.profile_image,
+    id,
+  ]);
 
   return results;
 };

@@ -349,15 +349,14 @@ function Event() {
               <CategoryIcon className="event-category-icon" />
             )}
             <h2>{headingTitle}</h2>
-          </div>
-
-          <button
+            <button
             type="button"
             className="event-category-view-all"
             onClick={() => handleCategoryChange(category)}
           >
             View All
           </button>
+          </div>
         </div>
 
         <div className="event-category-grid">
@@ -371,7 +370,7 @@ function Event() {
     <>
       <Navbar />
 
-      <div className="hero-banner">
+      <div className="events-hero-banner">
         <div className="events-hero-content">
           <span className="events-hero-badge">
             <FaCompass className="hero-badge-icon" />

@@ -5,9 +5,7 @@ import {
   FaMapMarkerAlt, 
   FaCalendarAlt, 
   FaTicketAlt, 
-  FaUser, 
-  FaQrcode, 
-  FaBarcode 
+  FaUser
 } from "react-icons/fa";
 import { IoSparkles } from "react-icons/io5";
 import "./DigitalTicketModal.css";
@@ -82,95 +80,75 @@ export function DigitalTicketModal({ isOpen, onClose, booking }: DigitalTicketPr
   };
 
   return (
-    <div className="ticket-modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="ticket-modal-wrapper" onClick={(e) => e.stopPropagation()}>
-
-        <button type="button" className="ticket-close-btn" onClick={onClose} aria-label="Close ticket">
-          <FaTimes />
-        </button>
-
-
-        <div className={`digital-ticket-card ${isCancelled ? "ticket-cancelled" : ""}`}>
-          
-
-          <div className="ticket-header-band">
-            <div className="ticket-brand-row">
-              <span className="brand-badge">
-                <IoSparkles className="sparkle-icon" /> CityPass Official
+    <div className="book-ticket-modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="book-ticket-modal-wrapper" onClick={(e) => e.stopPropagation()}>
+        <div className={`book-digital-ticket-card ${isCancelled ? "book-ticket-cancelled" : ""}`}>
+          <div className="book-ticket-header-band">
+            <div className="book-ticket-brand-row">
+              <span className="book-brand-badge">
+                <IoSparkles className="book-sparkle-icon" /> CityPass Official
               </span>
             </div>
-            <h2 className="ticket-main-heading">CityPass Digital Ticket</h2>
+            <h2 className="book-ticket-main-heading">CityPass Digital Ticket</h2>
+            <button
+              type="button"
+              className="book-ticket-close-btn"
+              onClick={onClose}
+              aria-label="Close ticket"
+            >
+              <FaTimes />
+            </button>
           </div>
 
-
-          <div className="ticket-body">
-            <div className="ticket-title-row">
+          <div className="book-ticket-body">
+            <div className="book-ticket-title-row">
               <div>
-                <span className="ticket-event-label">ADMIT ONE PASS</span>
-                <h3 className="ticket-event-name">{eventTitle}</h3>
+                <span className="book-ticket-event-label">ADMIT ONE PASS</span>
+                <h3 className="book-ticket-event-name">{eventTitle}</h3>
               </div>
-              <span className={`ticket-status-tag ${isCancelled ? "tag-cancelled" : "tag-active"}`}>
+              <span className={`book-ticket-status-tag ${isCancelled ? "book-tag-cancelled" : "book-tag-active"}`}>
                 {isCancelled ? "VOID / CANCELLED" : "VERIFIED PASS"}
               </span>
             </div>
 
-            <div className="ticket-grid">
-              <div className="ticket-cell">
-                <span className="cell-label"><FaCalendarAlt /> DATE & TIME</span>
-                <span className="cell-value">{formatEventDate(booking.event_date || booking.booking_date)}</span>
-                <span className="cell-subvalue">{formatEventTime(booking.event_date || booking.booking_date)}</span>
+            <div className="book-ticket-grid">
+              <div className="book-ticket-cell">
+                <span className="book-cell-label"><FaCalendarAlt /> DATE & TIME</span>
+                <span className="book-cell-value">{formatEventDate(booking.event_date || booking.booking_date)}</span>
+                <span className="book-cell-subvalue">{formatEventTime(booking.event_date || booking.booking_date)}</span>
               </div>
 
-              <div className="ticket-cell">
-                <span className="cell-label"><FaMapMarkerAlt /> VENUE & CITY</span>
-                <span className="cell-value">{venueLocation}</span>
-                <span className="cell-subvalue">Gate opens 1 hr prior</span>
+              <div className="book-ticket-cell">
+                <span className="book-cell-label"><FaMapMarkerAlt /> VENUE & CITY</span>
+                <span className="book-cell-value">{venueLocation}</span>
+                <span className="book-cell-subvalue">Gate opens 1 hr prior</span>
               </div>
 
-              <div className="ticket-cell">
-                <span className="cell-label"><FaUser /> PASS HOLDER</span>
-                <span className="cell-value">{booking.user_name || booking.user_email || "Authorized Holder"}</span>
+              <div className="book-ticket-cell">
+                <span className="book-cell-label"><FaUser /> PASS HOLDER</span>
+                <span className="book-cell-value">{booking.user_name || booking.user_email || "Authorized Holder"}</span>
               </div>
 
-              <div className="ticket-cell">
-                <span className="cell-label"><FaTicketAlt /> TICKETS & TOTAL</span>
-                <span className="cell-value">
+              <div className="book-ticket-cell">
+                <span className="book-cell-label"><FaTicketAlt /> TICKETS & TOTAL</span>
+                <span className="book-cell-value">
                   {booking.number_of_tickets || 1} Person{(booking.number_of_tickets || 1) > 1 ? "s" : ""}
                 </span>
-                <span className="cell-subvalue total-price">
+                <span className="book-cell-subvalue total-price">
                   ₹{Number(booking.total_amount || 0).toLocaleString()} Paid
                 </span>
               </div>
             </div>
           </div>
 
-
-          <div className="ticket-divider">
-            <div className="notch notch-left" />
-            <div className="dashed-line" />
-            <div className="notch notch-right" />
+          <div className="book-ticket-divider">
+            <div className="book-dashed-line" />
           </div>
 
-
-          <div className="ticket-stub">
-            <div className="stub-content">
-              <div className="qr-box">
-                <FaQrcode className="qr-icon" />
-                <span>SCAN AT ENTRY</span>
-              </div>
-              
-              <div className="barcode-box">
-                <FaBarcode className="barcode-svg" />
-                <span className="barcode-digits">CP-{booking.id}-2026-X8</span>
-              </div>
-            </div>
-
-
-            <div className="ticket-tagline-container">
-              <p className="ticket-tagline">
-                Your city, unlocked. Present this digital pass at the entrance for direct scan-and-enter access.
-              </p>
-            </div>
+          <div className="book-ticket-tagline-container">
+            <p className="book-ticket-tagline">
+              Your city, unlocked. Present this digital pass at the entrance for direct scan-and-enter access.
+            </p>
           </div>
         </div>
       </div>

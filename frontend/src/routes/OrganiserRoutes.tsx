@@ -4,10 +4,12 @@ import OrganiserAttendees from "../pages/Organiser/OrganiserAttendees/OrganiserA
 import OrganiserEvents from "../pages/Organiser/OrganiserEvents/OrganiserEvents";
 import OrganiserHome from "../pages/Organiser/OrganiserHome/OrganiserHome";
 
+import { OrganiserLayout } from "../components/Organiser/OrganiserLayout/OrganiserLayout";
 const ORGANISER_SUB_ROUTES = [
   { index: true, element: <OrganiserHome /> },
   { path: "attendees", element: <OrganiserAttendees /> },
   { path: "events", element: <OrganiserEvents /> },
+
 ]
 
 
@@ -16,7 +18,7 @@ export default function OrganiserRoutes() {
     <>
     <Navbar />
     <Routes>
-      <Route path="/" element={<OrganiserHome />}>
+      <Route path="/" element={<OrganiserLayout />}>
         {ORGANISER_SUB_ROUTES.map((route, i) =>
           route.index ? (
             <Route key="index" index element={route.element} />

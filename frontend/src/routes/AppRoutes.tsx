@@ -21,32 +21,51 @@ function AppRoutes() {
     <BrowserRouter>
       <Routes>
 
-        <Route path="/" element={<Home />} />
-
         <Route
-          path="/settings"
-          element={<Navigate to="/settings/profile" replace />}
+          path="/"
+          element={<Home />}
         />
 
-        <Route
-          path="/settings/:tabSlug"
-          element={<Settings />}
-        />
+          <Route
+            path="/settings"
+            element={
+              <Navigate
+                to="/settings/profile"
+                replace
+              />
+            }
+          />
 
-        <Route
-          path="/events"
-          element={<Event />}
-        />
+          <Route
+            path="/settings/:tabSlug"
+            element={<Settings />}
+          />
 
-        <Route
-          path="/events/:slug"
-          element={<EventDetails />}
-        />
+          <Route
+            path="/events"
+            element={<Event />}
+          />
 
-        <Route
-          path="/bookings"
-          element={<BookingPage />}
-        />
+          <Route
+            path="/events/:slug"
+            element={<EventDetails />}
+          />
+
+          <Route
+            path="/bookings"
+            element={<BookingPage />}
+          />
+
+          <Route
+            path="/terms"
+            element={<TermsConditions />}
+          />
+
+          <Route
+            path="/privacy"
+            element={<PrivacyPolicy />}
+          />
+
 
         <Route element={<OrganiserProtectedRoute />}>
           <Route
@@ -56,23 +75,17 @@ function AppRoutes() {
         </Route>
 
         <Route
-          path="/terms"
-          element={<TermsConditions />}
-        />
-
-        <Route
-          path="/privacy"
-          element={<PrivacyPolicy />}
-        />
-
-        <Route
           path="/admin/*"
           element={<AdminRoutes />}
         />
-
         <Route
           path="*"
-          element={<Navigate to="/" replace />}
+          element={
+            <Navigate
+              to="/"
+              replace
+            />
+          }
         />
 
       </Routes>

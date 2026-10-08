@@ -21,7 +21,7 @@ interface OrganiserRequest {
   status: string;
   category?: string;
   city?: string;
-  pan_card?: string;
+  id_proof?: string;
   email?: string;
   phone?: string;
 }
@@ -109,7 +109,7 @@ function OrganiserRequests() {
       const city = (r.city || "").toLowerCase();
       const category = (r.category || "").toLowerCase();
       const email = (r.email || "").toLowerCase();
-      const pan = (r.pan_card || "").toLowerCase();
+      const id_proof = (r.id_proof || "").toLowerCase();
       const query = search.trim().toLowerCase();
 
       const matchSearch =
@@ -118,7 +118,7 @@ function OrganiserRequests() {
         city.includes(query) ||
         category.includes(query) ||
         email.includes(query) ||
-        pan.includes(query);
+        id_proof.includes(query);
 
       const itemStatus = (r.status || "").trim().toUpperCase();
       const matchFilter = filter === "ALL" || itemStatus === filter;
@@ -253,7 +253,7 @@ function OrganiserRequests() {
               </div>
               <div><strong>Category:</strong> {viewingRequest.category || "N/A"}</div>
               <div><strong>City:</strong> {viewingRequest.city || "N/A"}</div>
-              <div><strong>PAN Card:</strong> {viewingRequest.pan_card || "N/A"}</div>
+              <div><strong>PAN Card:</strong> {viewingRequest.id_proof || "N/A"}</div>
               <div><strong>Email:</strong> {viewingRequest.email || "N/A"}</div>
               <div><strong>Phone:</strong> {viewingRequest.phone || "N/A"}</div>
             </div>

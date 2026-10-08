@@ -220,17 +220,17 @@ function AdminHome() {
         </div>
       )}
 
-      <div className="cmd-header-card">
+      <div className="header-card">
         <div>
-          <span className="cmd-badge">
+          <span className="badge">
             PLATFORM OVERVIEW
           </span>
 
-          <h2 className="cmd-title">
+          <h2 className="title">
             SuperAdmin Command Center
           </h2>
 
-          <p className="cmd-subtitle">
+          <p className="subtitle">
             Monitor users, event approvals,
             organizer applications, and active
             cities across CityPass.
@@ -252,128 +252,128 @@ function AdminHome() {
         </button>
       </div>
 
-      <div className="cmd-stats-grid">
+      <div className="stats-grid">
 
         {/* Users */}
-        <div className="cmd-stat-card">
-          <div className="cmd-stat-header">
+        <div className="stat-card">
+          <div className="stat-header">
             <span>TOTAL USERS</span>
 
             <span>
-              <HiUsers className="cmd-stat-icon" />
+              <HiUsers className="stat-icon" />
             </span>
           </div>
 
-          <div className="cmd-stat-value">
+          <div className="stat-value">
             {totalUsers}
           </div>
 
-          <div className="cmd-stat-subtext">
+          <div className="stat-subtext">
             Registered accounts
           </div>
         </div>
 
         {/* Organisers */}
-        <div className="cmd-stat-card">
-          <div className="cmd-stat-header">
+        <div className="stat-card">
+          <div className="stat-header">
             <span>TOTAL ORGANISERS</span>
 
             <span>
-              <HiUsers className="cmd-stat-icon" />
+              <HiUsers className="stat-icon" />
             </span>
           </div>
 
-          <div className="cmd-stat-value">
+          <div className="stat-value">
             {totalOrganisers}
           </div>
 
-          <div className="cmd-stat-subtext">
+          <div className="stat-subtext">
             Registered organisers
           </div>
         </div>
 
         {/* Pending Events */}
-        <div className="cmd-stat-card">
-          <div className="cmd-stat-header">
+        <div className="stat-card">
+          <div className="stat-header">
             <span>PENDING EVENTS</span>
 
             <span>
-              <FaClock className="cmd-stat-icon" />
+              <FaClock className="stat-icon" />
             </span>
           </div>
 
-          <div className="cmd-stat-value">
+          <div className="stat-value">
             {pendingEvents.length}
           </div>
 
-          <div className="cmd-stat-subtext">
+          <div className="stat-subtext">
             Awaiting review
           </div>
         </div>
 
         {/* Host Requests */}
-        <div className="cmd-stat-card">
-          <div className="cmd-stat-header">
+        <div className="stat-card">
+          <div className="stat-header">
             <span>HOST REQUESTS</span>
 
             <span>
-              <FaUsers className="cmd-stat-icon" />
+              <FaUsers className="stat-icon" />
             </span>
           </div>
 
-          <div className="cmd-stat-value">
+          <div className="stat-value">
             {pendingRequests.length}
           </div>
 
-          <div className="cmd-stat-subtext">
+          <div className="stat-subtext">
             Awaiting organizer approval
           </div>
         </div>
 
         {/* Cities */}
-        <div className="cmd-stat-card">
-          <div className="cmd-stat-header">
+        <div className="stat-card">
+          <div className="stat-header">
             <span>CITIES</span>
 
             <span>
-              <FaMapPin className="cmd-stat-icon" />
+              <FaMapPin className="stat-icon" />
             </span>
           </div>
 
-          <div className="cmd-stat-value">
+          <div className="stat-value">
             {citiesCount}
           </div>
 
-          <div className="cmd-stat-subtext">
+          <div className="stat-subtext">
             Configured cities
           </div>
         </div>
 
         {/* Categories */}
-        <div className="cmd-stat-card">
-          <div className="cmd-stat-header">
+        <div className="stat-card">
+          <div className="stat-header">
             <span>CATEGORIES</span>
 
             <span>
-              <PiTagChevronFill className="cmd-stat-icon" />
+              <PiTagChevronFill className="stat-icon" />
             </span>
           </div>
 
-          <div className="cmd-stat-value">
+          <div className="stat-value">
             {categoriesCount}
           </div>
 
-          <div className="cmd-stat-subtext">
+          <div className="stat-subtext">
             Configured categories
           </div>
         </div>
 
       </div>
 
-      <div className="cmd-queues-grid">
-        <div className="cmd-queue-card">
+      <div className="queues-grid">
+        <div className="queue-card">
 
-          <div className="queue-card-head">
+          <div className="card-head">
             <div>
               <h3 className="queue-title">
                 Pending Event Submissions
@@ -389,7 +389,7 @@ function AdminHome() {
             <div className="queue-empty-state">
 
               <span className="empty-icon">
-                <FaCalendarDay className="cmd-stat-icon" />
+                <FaCalendarDay className="tat-icon" />
               </span>
 
               <p>

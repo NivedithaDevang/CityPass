@@ -139,6 +139,8 @@ console.log(
                 <div>
                   <span className="meta-label">Date & Time</span>
                   <p className="meta-value">{formatEventDate(event.event_date)}</p>
+                  <p className="meta-value">{(event.event_time)}</p>
+
                 </div>
               </div>
 

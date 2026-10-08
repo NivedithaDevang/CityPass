@@ -1,13 +1,17 @@
 import {
+    getEventById,
     getAllEvents,
     getAllActivities,
     getAllConcerts,
     getEventBySlug,
+    getAdminEventRequests as getAdminEventRequestsModel,
     createEvent,
     updateEvent as updateEventModel,
     updateEventStatus as updateEventStatusModel,
-    checkSlugExists
+    checkSlugExists,
+    type UpdateEvent
 } from "../models/eventModel.js";
+import cloudinary from "../config/cloudinary.js";
 import { getOrganiserByUserId } from "../models/organiserModel.js";
 import { Request, Response, NextFunction } from "express";
 
@@ -29,7 +33,6 @@ const generateUniqueSlug = async (name: string, excludeId?: number): Promise<str
     let candidateSlug = baseSlug;
     let counter = 1;
 
-    // Loop until we find a slug that does not exist in the database
     while (await checkSlugExists(candidateSlug, excludeId)) {
         candidateSlug = `${baseSlug}-${counter}`;
         counter++;
@@ -38,20 +41,13 @@ const generateUniqueSlug = async (name: string, excludeId?: number): Promise<str
     return candidateSlug;
 };
 
-//getting event by slug
-// Controller to fetch a single event using its slug.
 export const getEventDetailsBySlug = async (
     req: Request,
     res: Response,
     next: NextFunction
 ) => {
     try {
-        // Get the event slug from the URL parameters.
         const { slug } = req.params;
-
-
-// Validate that the slug is a string.
-// Stop execution if an invalid slug is provided.
         if (typeof slug !== "string") {
             return res.status(400).json({
                 message: "A valid event slug is required"
@@ -85,6 +81,22 @@ export const getEvents = async (req: Request, res: Response, next: NextFunction)
         res.status(200).json({
             message: "Events fetched successfully",
             events: results
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const getAdminEventRequests = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const events = await getAdminEventRequestsModel();
+        res.status(200).json({
+            message: "Event requests fetched successfully",
+            events
         });
     } catch (err) {
         next(err);
@@ -126,6 +138,8 @@ export const addEvent = async (
     next: NextFunction
 ) => {
 
+    let uploadedPublicId : string | null = null;
+
     try {
 
         const {
@@ -149,7 +163,14 @@ export const addEvent = async (
                 message: "Unauthorized"
             });
         }
+         
+        const imageFile = req.file;
 
+        if(!imageFile) {
+            return res.status(400).json ({
+                message: "Event image is required"
+            })
+        }
 
         // Find organiser using user_id
         const organiser = await getOrganiserByUserId(userId);
@@ -181,20 +202,43 @@ export const addEvent = async (
         // Generate unique slug
         const slug = await generateUniqueSlug(name);
 
+        // Upload image to Cloudinary 
+const uploadResult = await new Promise<{ 
+    secure_url: string; 
+    public_id: string; }>((resolve, reject) => { 
+        const uploadStream = cloudinary.uploader.upload_stream( { 
+            folder: "citypass/events", 
+            resource_type: "image" }, 
+            (error, result) => { 
+                if (error || !result) 
+                    { 
+                        return reject( error || new Error( "Cloudinary upload failed" ) 
+                    ); 
+                } 
+                resolve({
+                     secure_url: result.secure_url, 
+                     public_id: result.public_id }); 
+                    } 
+                ); 
+                uploadStream.end(imageFile.buffer); 
+            }); 
+            
+            uploadedPublicId = uploadResult.public_id;
 
         // Create event
         const result = await createEvent({
             organizer_id: organiser.id,
-            city_id,
-            category_id,
-            name,
+            city_id: Number(city_id),
+            category_id: Number(category_id),
+            name: name.trim(),
+            image: uploadResult.secure_url,
             slug,
-            description,
-            location,
+            description: description?.trim() || null,
+            location: location?.trim() || null,
             event_date,
             time,
-            price,
-            capacity,
+            price: Number(price),
+            capacity: Number(capacity),
 
             // Organizer cannot approve their own event
             status: "PENDING"
@@ -203,22 +247,57 @@ export const addEvent = async (
 
         res.status(201).json({
             message: "Event created successfully",
-            eventId: result.insertId,
-            slug,
-            status: "PENDING"
+            event: {
+                id: result.insertId,
+                organizer_id: organiser.id,
+                city_id: Number(city_id),
+                category_id: Number(category_id),
+                name: name.trim(),
+                image: uploadResult.secure_url,
+                slug,
+                description:
+                    description?.trim() || null,
+                location:
+                    location?.trim() || null,
+                event_date,
+                time,
+                price: Number(price),
+                capacity: Number(capacity),
+                status: "PENDING"
+            }
         });
 
     } catch (err) {
+
+        if(uploadedPublicId){
+            try{
+                await cloudinary.uploader.destroy(
+                    uploadedPublicId,
+                    {
+                        resource_type: "image"
+                    }
+                );
+            } catch{
+                //ignore cleanup failure
+            }
+        }
+
+
         next(err);
     }
 };
 
 
 //for updating event details
-export const updateEvent = async (req: Request, res: Response, next: NextFunction) => {
+export const updateEvent = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    let uploadedPublicId: string | null = null;
+
     try {
         const eventId = Number(req.params.id);
-        const { organizer_id, name, description, city_id, category_id, location, event_date, time, price, capacity, status } = req.body;
 
         if (!Number.isInteger(eventId) || eventId <= 0) {
             return res.status(400).json({
@@ -226,18 +305,8 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
             });
         }
 
-        if (!name || city_id === undefined || category_id === undefined || !event_date || !time || price === undefined || capacity === undefined || !status) {
-            return res.status(400).json({
-                message: "Name, city_id, category_id, event_date, price, capacity and status are required"
-            });
-        }
-
-        // Pass eventId to exclude self during collision check
-        const slug = await generateUniqueSlug(name, eventId);
-
-        const result = await updateEventModel(eventId, {
+        const {
             name,
-            slug,
             description,
             city_id,
             category_id,
@@ -246,22 +315,198 @@ export const updateEvent = async (req: Request, res: Response, next: NextFunctio
             time,
             price,
             capacity,
-            status,
-            organizer_id: organizer_id || 0
-        });
+            status
+        } = req.body;
+
+        const imageFile = req.file;
+        const existingEvent = await getEventById(eventId);
+
+if (existingEvent.length === 0) {
+    return res.status(404).json({
+        message: "Event not found"
+    });
+}
+        let slug: string | undefined;
+
+        if (name !== undefined) {
+            slug = await generateUniqueSlug(
+                name.trim(),
+                eventId
+            );
+        }
+
+        let newImageUrl: string | undefined;
+        let newPublicId: string | undefined;
+
+        if (imageFile) {
+            const uploadResult = await new Promise<{
+                secure_url: string;
+                public_id: string;
+            }>((resolve, reject) => {
+                const uploadStream =
+                    cloudinary.uploader.upload_stream(
+                        {
+                            folder: "citypass/events",
+                            resource_type: "image"
+                        },
+                        (error, result) => {
+                            if (error || !result) {
+                                return reject(
+                                    error ||
+                                        new Error(
+                                            "Cloudinary upload failed"
+                                        )
+                                );
+                            }
+
+                            resolve({
+                                secure_url: result.secure_url,
+                                public_id: result.public_id
+                            });
+                        }
+                    );
+
+                uploadStream.end(imageFile.buffer);
+            });
+
+            newImageUrl = uploadResult.secure_url;
+            newPublicId = uploadResult.public_id;
+
+            uploadedPublicId = newPublicId;
+        }
+const updatePayload: UpdateEvent = {};
+
+        if (name !== undefined) {
+            updatePayload.name = name.trim();
+        }
+
+        if (slug !== undefined) {
+            updatePayload.slug = slug;
+        }
+
+        if (description !== undefined) {
+            updatePayload.description =
+                description?.trim() || null;
+        }
+
+        if (location !== undefined) {
+            updatePayload.location =
+                location?.trim() || null;
+        }
+
+        if (city_id !== undefined) {
+            updatePayload.city_id = Number(city_id);
+        }
+
+        if (category_id !== undefined) {
+            updatePayload.category_id = Number(category_id);
+        }
+
+        if (event_date !== undefined) {
+            updatePayload.event_date = event_date;
+        }
+
+        if (time !== undefined) {
+            updatePayload.time = time;
+        }
+
+        if (price !== undefined) {
+            updatePayload.price = Number(price);
+        }
+
+        if (capacity !== undefined) {
+            updatePayload.capacity = Number(capacity);
+        }
+
+        if (status !== undefined) {
+            updatePayload.status = status;
+        }
+        if (newImageUrl) {
+            updatePayload.image = newImageUrl;
+        }
+        const result = await updateEventModel(
+            eventId,
+            updatePayload
+        );
 
         if (result.affectedRows === 0) {
+            
+            if (uploadedPublicId) {
+                try {
+                    await cloudinary.uploader.destroy(
+                        uploadedPublicId,
+                        {
+                            resource_type: "image"
+                        }
+                    );
+                } catch {
+
+                }
+            }
+
             return res.status(404).json({
                 message: "Event not found"
             });
         }
+        if (imageFile && existingEvent.length > 0) {
+            const oldImageUrl = existingEvent[0].image;
 
-        res.status(200).json({
+            if (oldImageUrl) {
+                try {
+                    const uploadIndex =
+                        oldImageUrl.indexOf("/upload/");
+
+                    if (uploadIndex !== -1) {
+                        let publicId = oldImageUrl.substring(
+                            uploadIndex + 8
+                        );
+
+                        // Remove version number
+                        publicId = publicId.replace(
+                            /^v\d+\//,
+                            ""
+                        );
+
+                        // Remove extension
+                        publicId = publicId.replace(
+                            /\.[^/.]+$/,
+                            ""
+                        );
+
+                        await cloudinary.uploader.destroy(
+                            publicId,
+                            {
+                                resource_type: "image"
+                            }
+                        );
+                    }
+                } catch {
+                    
+                }
+            }
+        }
+        return res.status(200).json({
             message: "Event updated successfully",
             eventId,
-            slug
+            slug,
+            image: newImageUrl || undefined
         });
+
     } catch (err) {
+
+        if (uploadedPublicId) {
+            try {
+                await cloudinary.uploader.destroy(
+                    uploadedPublicId,
+                    {
+                        resource_type: "image"
+                    }
+                );
+            } catch {
+
+            }
+        }
+
         next(err);
     }
 };

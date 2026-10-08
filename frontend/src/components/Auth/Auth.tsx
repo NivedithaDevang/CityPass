@@ -62,6 +62,17 @@ function Auth({
   const isConfirmValid =
     confirmPassword.length > 0 && confirmPassword === password;
 
+  // Clears all input fields, focus trackers, and error messages
+  const resetFormFields = () => {
+    setName("");
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setPasswordFocused(false);
+    setConfirmFocused(false);
+    setError(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
@@ -106,38 +117,23 @@ function Auth({
 
       const loggedUser = response.data.user;
 
-setUser(loggedUser);
+      setUser(loggedUser);
+      onSuccess(loggedUser);
 
-onSuccess(loggedUser);
+      resetFormFields();
+      onClose();
 
-setName("");
-setEmail("");
-setPassword("");
-setConfirmPassword("");
-setPasswordFocused(false);
-setConfirmFocused(false);
+      const isAdmin =
+        loggedUser.role === "SUPER_ADMIN" ||
+        loggedUser.role === "ADMIN";
 
-onClose();
-
-
-const isAdmin =
-  loggedUser.role === "SUPER_ADMIN" ||
-  loggedUser.role === "ADMIN";
-
-
-if (loggedUser.role === "ORGANIZER") {
-
-  navigate("/organiser/home");
-
-} else if (isAdmin) {
-
-  navigate("/admin");
-
-} else if (redirectOnSuccess) {
-
-  navigate("/");
-
-}
+      if (loggedUser.role === "ORGANIZER") {
+        navigate("/organiser/home");
+      } else if (isAdmin) {
+        navigate("/admin");
+      } else if (redirectOnSuccess) {
+        navigate("/");
+      }
     } catch (err) {
       const axiosError = err as AxiosError<ApiErrorResponse>;
       const serverMessage =
@@ -172,7 +168,6 @@ if (loggedUser.role === "ORGANIZER") {
     setError(null);
 
     try {
-      // Call your reactivation API endpoint
       const response = await axios.post<ApiResponse>(
         `${API_BASE_URL}/v1/users/reactivate-login`,
         { email, password },
@@ -186,10 +181,10 @@ if (loggedUser.role === "ORGANIZER") {
       }
 
       setShowReactivatePrompt(false);
+      resetFormFields();
       onClose();
 
-      // Redirect user directly to their account page
-      navigate("/account"); // or "/profile", update to your account route
+      navigate("/settings/profile");
     } catch (err) {
       const axiosError = err as AxiosError<ApiErrorResponse>;
       setError(
@@ -214,7 +209,6 @@ if (loggedUser.role === "ORGANIZER") {
         </button>
 
         {showReactivatePrompt ? (
-          /* Confirmation Dialog for Reactivation */
           <div className="reactivate-modal-body">
             <h2>Account Deactivated</h2>
             <p>
@@ -242,7 +236,6 @@ if (loggedUser.role === "ORGANIZER") {
             </div>
           </div>
         ) : (
-          /* Standard Auth Form */
           <>
             <h2>{isLogin ? "Welcome back" : "Create your account"}</h2>
 
@@ -374,8 +367,8 @@ if (loggedUser.role === "ORGANIZER") {
                   <button
                     type="button"
                     onClick={() => {
+                      resetFormFields();
                       setIsLogin(false);
-                      setError(null);
                     }}
                   >
                     Register
@@ -387,8 +380,8 @@ if (loggedUser.role === "ORGANIZER") {
                   <button
                     type="button"
                     onClick={() => {
+                      resetFormFields();
                       setIsLogin(true);
-                      setError(null);
                     }}
                   >
                     Login

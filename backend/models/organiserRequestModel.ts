@@ -1,15 +1,22 @@
+
 import { db } from "../config/database.js";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
-export type OrganizerRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type OrganizerRequestStatus =
+    | "PENDING"
+    | "APPROVED"
+    | "REJECTED";
 
 export type OrgReq = {
     user_id?: number;
     organization_name: string;
     description: string;
-    category?: string;
-    city?: string;
-    pan_card?: string;
+
+    // Foreign key IDs
+    category_id?: number;
+    city_id?: number;
+
+    id_proof?: string;
     email?: string;
     phone?: string;
     status?: OrganizerRequestStatus;
@@ -22,74 +29,113 @@ export type OrgReqRow = RowDataPacket & {
     description: string;
     status: OrganizerRequestStatus;
     slug?: string;
+
+    // IDs
+    category_id?: number;
+    city_id?: number;
+
+    // Names returned through JOIN
     category?: string;
     city?: string;
-    pan_card?: string;
+
+    id_proof?: string;
     email?: string;
     phone?: string;
 };
 
-// Check if user already submitted a pending or approved request
 export const getActiveRequestByUserId = async (
     userId: number
 ): Promise<OrgReqRow | undefined> => {
     const sql = `
-        SELECT id, user_id, status 
-        FROM organizer_requests 
-        WHERE user_id = ? AND status IN ('PENDING', 'APPROVED')
+        SELECT
+            o.id,
+            o.user_id,
+            o.organization_name,
+            o.description,
+            o.status,
+            o.slug,
+            o.category_id,
+            o.city_id,
+            c.name AS category,
+            ci.name AS city,
+            o.id_proof,
+            o.email,
+            o.phone
+        FROM organizer_requests o
+        LEFT JOIN categories c
+            ON o.category_id = c.id
+        LEFT JOIN cities ci
+            ON o.city_id = ci.id
+        WHERE o.user_id = ?
+          AND o.status IN ('PENDING', 'APPROVED')
         LIMIT 1
     `;
+
     const [rows] = await db.query<OrgReqRow[]>(sql, [userId]);
+
     return rows[0];
 };
 
-// Get all requests
 export const getAllRequests = async (): Promise<OrgReqRow[]> => {
     const sql = `
         SELECT
-            id,
-            user_id,
-            organization_name,
-            description,
-            status,
-            slug,
-            category,
-            city,
-            pan_card,
-            email,
-            phone
-        FROM organizer_requests
-        ORDER BY id DESC
+            o.id,
+            o.user_id,
+            o.organization_name,
+            o.description,
+            o.status,
+            o.slug,
+            o.category_id,
+            o.city_id,
+            c.name AS category,
+            ci.name AS city,
+            o.id_proof,
+            o.email,
+            o.phone
+        FROM organizer_requests o
+        LEFT JOIN categories c
+            ON o.category_id = c.id
+        LEFT JOIN cities ci
+            ON o.city_id = ci.id
+        ORDER BY o.id DESC
     `;
+
     const [results] = await db.query<OrgReqRow[]>(sql);
+
     return results;
 };
 
-// Get organizer request by ID
 export const getOrganizerRequestById = async (
     id: number
 ): Promise<OrgReqRow | undefined> => {
     const sql = `
         SELECT
-            id,
-            user_id,
-            organization_name,
-            description,
-            status,
-            slug,
-            category,
-            city,
-            pan_card,
-            email,
-            phone
-        FROM organizer_requests
-        WHERE id = ?
+            o.id,
+            o.user_id,
+            o.organization_name,
+            o.description,
+            o.status,
+            o.slug,
+            o.category_id,
+            o.city_id,
+            c.name AS category,
+            ci.name AS city,
+            o.id_proof,
+            o.email,
+            o.phone
+        FROM organizer_requests o
+        LEFT JOIN categories c
+            ON o.category_id = c.id
+        LEFT JOIN cities ci
+            ON o.city_id = ci.id
+        WHERE o.id = ?
     `;
+
     const [results] = await db.query<OrgReqRow[]>(sql, [id]);
+
     return results[0];
 };
 
-// Create organizer request with auto slug
 export const createRequest = async (
     request: OrgReq
 ): Promise<ResultSetHeader> => {
@@ -107,9 +153,9 @@ export const createRequest = async (
             organization_name,
             description,
             slug,
-            category,
-            city,
-            pan_card,
+            category_id,
+            city_id,
+            id_proof,
             email,
             phone,
             status
@@ -122,79 +168,13 @@ export const createRequest = async (
         request.organization_name,
         request.description,
         slug,
-        request.category ?? null,
-        request.city ?? null,
-        request.pan_card ?? null,
+        request.category_id ?? null,
+        request.city_id ?? null,
+        request.id_proof ?? null,
         request.email ?? null,
         request.phone ?? null,
-        request.status ?? "PENDING"
+        request.status ?? "PENDING",
     ]);
 
-    return result;
-};
-
-// Transaction: Approve request, create organizer profile, elevate user role
-export const approveOrganizerTransaction = async (
-    request: OrgReqRow
-): Promise<void> => {
-    const connection = await db.getConnection();
-    try {
-        await connection.beginTransaction();
-
-        // Update request status to APPROVED
-        await connection.execute(
-            `UPDATE organizer_requests SET status = 'APPROVED' WHERE id = ?`,
-            [request.id]
-        );
-
-        // Insert into organizers table
-        await connection.execute(
-            `INSERT INTO organizers (
-                user_id,
-                organization_name,
-                category,
-                city,
-                pan_card,
-                email,
-                phone,
-                description
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-                request.user_id,
-                request.organization_name,
-                request.category ?? null,
-                request.city ?? null,
-                request.pan_card ?? null,
-                request.email ?? null,
-                request.phone ?? null,
-                request.description
-            ]
-        );
-
-        // Update user role to ORGANIZER
-        await connection.execute(
-            `UPDATE users SET role = 'ORGANIZER' WHERE id = ?`,
-            [request.user_id]
-        );
-
-        await connection.commit();
-    } catch (error) {
-        await connection.rollback();
-        throw error;
-    } finally {
-        connection.release();
-    }
-};
-
-// Reject request
-export const rejectOrganizerRequest = async (
-    id: number
-): Promise<ResultSetHeader> => {
-    const sql = `
-        UPDATE organizer_requests
-        SET status = 'REJECTED'
-        WHERE id = ?
-    `;
-    const [result] = await db.execute<ResultSetHeader>(sql, [id]);
     return result;
 };

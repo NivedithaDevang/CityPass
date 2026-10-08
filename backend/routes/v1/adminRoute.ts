@@ -3,7 +3,7 @@ import { verifySuperAdminKey, approveOrganiser } from "../../controllers/adminCo
 import { getUsers } from "../../controllers/userController.js";
 import { getCategories, addCategory, editCategory } from "../../controllers/categoryController.js";
 import { getCities, addCity, editCity } from "../../controllers/cityController.js";
-import { getEvents, updateEventStatus } from "../../controllers/eventController.js";
+import { getAdminEventRequests, getEvents, updateEventStatus } from "../../controllers/eventController.js";
 import { getOrganisers } from "../../controllers/organiserController.js";
 import { getRequests } from "../../controllers/organiserRequestController.js";
 import { getTickets, addTicket, deleteTicket } from "../../controllers/ticketController.js";
@@ -20,6 +20,7 @@ adminRouter.get( "/users", getUsers );
 adminRouter.get( "/categories", getCategories );
 adminRouter.get( "/cities", getCities );
 adminRouter.get( "/events", getEvents);
+adminRouter.get( "/event-requests", getAdminEventRequests);
 adminRouter.get( "/organisers", getOrganisers );
 adminRouter.get( "/organiser-requests", getRequests );
 adminRouter.get( "/tickets", getTickets);
