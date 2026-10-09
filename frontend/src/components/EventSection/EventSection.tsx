@@ -11,6 +11,32 @@ import { FaPaintbrush, FaMountain } from "react-icons/fa6";
 import type { IconType } from "react-icons";
 import "./EventSection.css";
 
+const isUpcomingEvent = (event: Events): boolean => {
+  if (!event.event_date) return false;
+
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(event.event_date);
+  const eventDate = dateOnly
+    ? new Date(`${event.event_date}T00:00:00`)
+    : new Date(event.event_date);
+
+  if (Number.isNaN(eventDate.getTime())) return false;
+
+  const eventTime = event.time?.trim();
+  const timeMatch = eventTime?.match(/^(\d{1,2}):(\d{2})/);
+  if (timeMatch) {
+    eventDate.setHours(Number(timeMatch[1]), Number(timeMatch[2]), 0, 0);
+    return eventDate.getTime() >= Date.now();
+  }
+
+  if (dateOnly) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return eventDate.getTime() >= today.getTime();
+  }
+
+  return eventDate.getTime() >= Date.now();
+};
+
 function EventSection() {
   const navigate = useNavigate();
   const { selectedCity } = useCity(); // Access current selected city
@@ -73,6 +99,8 @@ function EventSection() {
 
   // Filter events by selected city (supports event.city or matches inside event.location)
   const filteredEvents = events.filter((event: any) => {
+    if (!isUpcomingEvent(event)) return false;
+
     if (!selectedCity || selectedCity === ALL_LOCATIONS) {
       return true;
     }
@@ -105,6 +133,17 @@ function EventSection() {
       <div className="eventsec-grid">
         {displayedEvents.map((event) => {
           const CategoryIcon = getCategoryIcon(event.category_name);
+          const eventBackgrounds = [
+            "/eventBG/image1.png",
+            "/eventBG/image2.png",
+            "/eventBG/image3.png",
+          ];
+          const fallbackImage = eventBackgrounds[event.id % eventBackgrounds.length];
+          const eventImage =
+            (event as any).poster_url ||
+            (event as any).image_url ||
+            (event as any).image ||
+            fallbackImage;
 
           return (
             <article
@@ -114,13 +153,28 @@ function EventSection() {
               style={{ cursor: "pointer" }}
             >
               <div className="eventsec-card-media">
+                <img
+                  src={eventImage}
+                  alt={event.name || "Event"}
+                  className="eventsec-card-poster"
+                  loading="lazy"
+                  onError={(error) => {
+                    const image = error.currentTarget;
+                    if (image.dataset.fallbackApplied !== "true") {
+                      image.dataset.fallbackApplied = "true";
+                      image.src = fallbackImage;
+                    } else {
+                      image.style.visibility = "hidden";
+                    }
+                  }}
+                />
                 <span className="eventsec-badge">
                   {CategoryIcon && <CategoryIcon className="eventsec-category-icon" />}
                   {event.category_name || "Event"}
                 </span>
                 <p className="eventsec-location">
                   <FaMapPin className="eventsec-location-pin" />
-                  {event.location || "Location to be announced"}
+                  {event.location || (event as any).city_name || "Location to be announced"}
                 </p>
               </div>
 

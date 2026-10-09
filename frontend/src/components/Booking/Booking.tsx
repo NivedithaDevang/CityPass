@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
@@ -32,6 +33,21 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
   // Final Success Confirmation Modal State
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [confirmedBookingId, setConfirmedBookingId] = useState<number | null>(null);
+  const isConfirmationOpen = showReviewModal || showSuccessModal;
+
+  useEffect(() => {
+    if (!isConfirmationOpen) return;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousDocumentOverflow;
+    };
+  }, [isConfirmationOpen]);
 
   const unitPrice = Number(event.price || 0);
   const totalAmount = unitPrice * ticketQuantity;
@@ -162,14 +178,21 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
       </div>
 
       {/* 1. REVIEW CONFIRMATION MODAL */}
-      {showReviewModal && (
-        <div className="booking-modal-overlay">
-          <div className="booking-modal-card review-modal">
+      {isConfirmationOpen && createPortal(
+        <>
+          {showReviewModal && (
+            <div className="booking-modal-overlay">
+              <div
+                className="booking-modal-card review-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="booking-review-title"
+              >
             <div className="review-icon-wrapper">
               <FaQuestionCircle />
             </div>
 
-            <h3>Confirm Your Booking</h3>
+            <h3 id="booking-review-title">Confirm Your Booking</h3>
             <p className="booking-modal-sub">
               Do you confirm that you want to book this event? Please review your reservation details below.
             </p>
@@ -225,19 +248,24 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
                 {isSubmitting ? "Securing Pass..." : "Yes, Confirm Booking"}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+              </div>
+            </div>
+          )}
 
       {/* 2. SUCCESS CONFIRMATION MODAL */}
-      {showSuccessModal && (
-        <div className="booking-modal-overlay">
-          <div className="booking-modal-card">
+          {showSuccessModal && (
+            <div className="booking-modal-overlay">
+              <div
+                className="booking-modal-card"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="booking-success-title"
+              >
             <div className="booking-success-icon-wrapper">
               <FaCheckCircle />
             </div>
 
-            <h3>Booking Confirmed!</h3>
+            <h3 id="booking-success-title">Booking Confirmed!</h3>
             <p className="booking-modal-sub">
               Your tickets for <strong>{event.name}</strong> have been secured successfully.
             </p>
@@ -270,8 +298,11 @@ export function Booking({ isOpen, onClose, event, onRequireAuth }: BookingProps)
             >
               View My Bookings &rarr;
             </button>
-          </div>
-        </div>
+              </div>
+            </div>
+          )}
+        </>,
+        document.body
       )}
     </>
   );

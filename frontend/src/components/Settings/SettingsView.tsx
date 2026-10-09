@@ -1,4 +1,3 @@
-
 import {
   useEffect,
   useRef,
@@ -57,6 +56,7 @@ const deactivateReasons = [
   "Creating another account",
   "Other",
 ];
+
 const idProofOptions = [
   {
     value: "pan",
@@ -84,13 +84,176 @@ const idProofOptions = [
     placeholder: "Enter Voter ID number",
   },
 ];
+
+interface StyledDropdownOption {
+  value: string;
+  label: string;
+}
+
+interface StyledDropdownProps {
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  options: StyledDropdownOption[];
+  onChange: (value: string) => void;
+}
+
+function StyledDropdown({
+  id,
+  label,
+  value,
+  placeholder,
+  options,
+  onChange,
+}: StyledDropdownProps) {
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const [isOpen, setIsOpen] = useState(false);
+
+  const selectedOption = options.find(
+    (option) => option.value === value
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!dropdownRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+
+    const selectedIndex = options.findIndex(
+      (option) => option.value === value
+    );
+
+    optionRefs.current[
+      selectedIndex >= 0 ? selectedIndex : 0
+    ]?.focus();
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [isOpen, options, value]);
+
+  const handleOptionKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    optionIndex: number
+  ) => {
+    let nextIndex: number | null = null;
+
+    if (event.key === "ArrowDown") {
+      nextIndex = (optionIndex + 1) % options.length;
+    }
+
+    if (event.key === "ArrowUp") {
+      nextIndex =
+        (optionIndex - 1 + options.length) % options.length;
+    }
+
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = options.length - 1;
+
+    if (nextIndex !== null) {
+      event.preventDefault();
+      optionRefs.current[nextIndex]?.focus();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setIsOpen(false);
+      buttonRef.current?.focus();
+    }
+  };
+
+  return (
+    <div className="city-dropdown" ref={dropdownRef}>
+      <button
+        ref={buttonRef}
+        id={id}
+        type="button"
+        className={`city-select ${selectedOption ? "has-value" : ""}`}
+        role="combobox"
+        aria-label={label}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls={`${id}-options`}
+        aria-required="true"
+        onClick={() => setIsOpen((open) => !open)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" && !isOpen) {
+            event.preventDefault();
+            setIsOpen(true);
+          }
+        }}
+      >
+        <span className="city-select-label">
+          {selectedOption?.label || placeholder}
+        </span>
+
+        <FaChevronRight
+          className={`city-select-chevron ${isOpen ? "open" : ""}`}
+          aria-hidden="true"
+        />
+      </button>
+
+      {isOpen && (
+        <div
+          id={`${id}-options`}
+          className="city-options"
+          role="listbox"
+          aria-label={label}
+        >
+          {options.map((option, index) => (
+            <button
+              key={option.value}
+              type="button"
+              role="option"
+              aria-selected={value === option.value}
+              className={`city-option ${
+                value === option.value ? "selected" : ""
+              }`}
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+                buttonRef.current?.focus();
+              }}
+              onKeyDown={(event) =>
+                handleOptionKeyDown(event, index)
+              }
+              ref={(element) => {
+                optionRefs.current[index] = element;
+              }}
+            >
+              <span>{option.label}</span>
+
+              {value === option.value && (
+                <span className="city-option-check" aria-hidden="true">
+                  ✓
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SettingsView() {
   const navigate = useNavigate();
   const { user, setUser, clearUser } = useUser();
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cityDropdownRef = useRef<HTMLDivElement | null>(null);
+  const cityDropdownButtonRef = useRef<HTMLButtonElement | null>(null);
+  const cityOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const [activeTab, setActiveTab] = useState("profile");
+  const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
 
   const [profile, setProfile] = useState<UserProfile>({
     id: 0,
@@ -104,10 +267,8 @@ function SettingsView() {
   });
 
   const [cities, setCities] = useState<City[]>([]);
-
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
-
   const [loading, setLoading] = useState(false);
 
   const [profileMessage, setProfileMessage] = useState("");
@@ -115,10 +276,8 @@ function SettingsView() {
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const [passwordMessage, setPasswordMessage] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
@@ -129,7 +288,6 @@ function SettingsView() {
     city: "",
     id_proof_type: "",
     id_proof: "",
-
     email: user?.email || "",
     phone: user?.phone || "",
     description: "",
@@ -140,7 +298,6 @@ function SettingsView() {
 
   const [deactivateReason, setDeactivateReason] = useState("");
   const [otherDeactivateReason, setOtherDeactivateReason] = useState("");
-
   const [showDeactivateTerms, setShowDeactivateTerms] = useState(false);
   const [deactivateError, setDeactivateError] = useState("");
 
@@ -159,13 +316,35 @@ function SettingsView() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!isCityDropdownOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!cityDropdownRef.current?.contains(event.target as Node)) {
+        setIsCityDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+
+    const selectedIndex = cities.findIndex(
+      (city) => city.id === profile.city_id
+    );
+
+    cityOptionRefs.current[
+      selectedIndex >= 0 ? selectedIndex + 1 : 0
+    ]?.focus();
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [isCityDropdownOpen, cities, profile.city_id]);
+
   const fetchProfile = async () => {
     try {
       const response = await axios.get(
         `${API_BASE_URL}/v1/users/userdetails`,
-        {
-          withCredentials: true,
-        }
+        { withCredentials: true }
       );
 
       const userData = response.data?.user || response.data;
@@ -214,9 +393,7 @@ function SettingsView() {
   };
 
   const getProfileImage = () => {
-    if (imagePreview) {
-      return imagePreview;
-    }
+    if (imagePreview) return imagePreview;
 
     if (profile.profile_image) {
       if (
@@ -246,6 +423,43 @@ function SettingsView() {
     setProfileError("");
   };
 
+  const handleCitySelect = (cityId: number | "") => {
+    setProfile((prev) => ({ ...prev, city_id: cityId }));
+    setIsCityDropdownOpen(false);
+    setProfileMessage("");
+    setProfileError("");
+  };
+
+  const handleCityOptionKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    optionIndex: number
+  ) => {
+    const totalOptions = cities.length + 1;
+    if (totalOptions <= 0) return;
+
+    let nextIndex: number | null = null;
+
+    if (event.key === "ArrowDown") {
+      nextIndex = (optionIndex + 1) % totalOptions;
+    }
+
+    if (event.key === "ArrowUp") {
+      nextIndex = (optionIndex - 1 + totalOptions) % totalOptions;
+    }
+
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = totalOptions - 1;
+
+    if (nextIndex !== null) {
+      event.preventDefault();
+      cityOptionRefs.current[nextIndex]?.focus();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      setIsCityDropdownOpen(false);
+      cityDropdownButtonRef.current?.focus();
+    }
+  };
+
   const handleGenderChange = (e: ChangeEvent<HTMLInputElement>) => {
     setProfile((prev) => ({
       ...prev,
@@ -258,10 +472,7 @@ function SettingsView() {
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       setProfileError("Only JPG, PNG and WEBP images are allowed.");
@@ -273,12 +484,9 @@ function SettingsView() {
       return;
     }
 
-    if (imagePreview) {
-      URL.revokeObjectURL(imagePreview);
-    }
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
 
     const previewUrl = URL.createObjectURL(file);
-
     setSelectedImage(file);
     setImagePreview(previewUrl);
     setProfileMessage("");
@@ -287,7 +495,6 @@ function SettingsView() {
 
   const handleProfileSave = async (e: FormEvent) => {
     e.preventDefault();
-
     setProfileMessage("");
     setProfileError("");
 
@@ -315,33 +522,23 @@ function SettingsView() {
 
     try {
       setLoading(true);
-
       const formData = new FormData();
 
       formData.append("name", profile.name.trim());
       formData.append("phone", profile.phone.trim());
-
       formData.append(
         "city_id",
         profile.city_id === "" ? "" : String(profile.city_id)
       );
-
       formData.append("dob", profile.dob);
 
-      if (profile.gender) {
-        formData.append("gender", profile.gender);
-      }
-
-      if (selectedImage) {
-        formData.append("profile_image", selectedImage);
-      }
+      if (profile.gender) formData.append("gender", profile.gender);
+      if (selectedImage) formData.append("profile_image", selectedImage);
 
       const response = await axios.patch(
         `${API_BASE_URL}/v1/users/userdetails`,
         formData,
-        {
-          withCredentials: true,
-        }
+        { withCredentials: true }
       );
 
       const updatedUser = response.data.user || response.data;
@@ -358,13 +555,9 @@ function SettingsView() {
       });
 
       setUser(updatedUser);
-
       setSelectedImage(null);
 
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview);
-      }
-
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
       setImagePreview("");
 
       setProfileMessage("Profile updated successfully.");
@@ -379,7 +572,6 @@ function SettingsView() {
 
   const handlePasswordSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
     setPasswordMessage("");
     setPasswordError("");
 
@@ -398,18 +590,12 @@ function SettingsView() {
 
       await axios.patch(
         `${API_BASE_URL}/v1/users/password`,
-        {
-          newPassword,
-          confirmPassword,
-        },
-        {
-          withCredentials: true,
-        }
+        { newPassword, confirmPassword },
+        { withCredentials: true }
       );
 
       setNewPassword("");
       setConfirmPassword("");
-
       setPasswordMessage("Password updated successfully.");
     } catch (error: any) {
       setPasswordError(
@@ -430,22 +616,16 @@ function SettingsView() {
     if (name === "id_proof_type") {
       setOrg((prev) => ({
         ...prev,
-
         id_proof_type: value,
-
         id_proof: "",
       }));
     } else if (name === "id_proof") {
       setOrg((prev) => ({
         ...prev,
-
         id_proof: value.toUpperCase(),
       }));
     } else {
-      setOrg((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      setOrg((prev) => ({ ...prev, [name]: value }));
     }
 
     setOrgMessage("");
@@ -499,7 +679,6 @@ function SettingsView() {
 
   const handleOrganizerSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
     setOrgMessage("");
     setOrgError("");
 
@@ -513,9 +692,7 @@ function SettingsView() {
       !org.phone.trim() ||
       !org.description.trim()
     ) {
-      setOrgError(
-        "All fields are required. Please fill in every field."
-      );
+      setOrgError("All fields are required. Please fill in every field.");
       return;
     }
 
@@ -538,29 +715,18 @@ function SettingsView() {
         `${API_BASE_URL}/v1/organiser-requests`,
         {
           organization_name: org.stageName.trim(),
-
           category: org.category.trim(),
-
           city: org.city.trim(),
-
           id_proof_type: org.id_proof_type,
-
           id_proof: org.id_proof.trim().toUpperCase(),
-
           email: org.email.trim(),
-
           phone: org.phone.trim(),
-
           description: org.description.trim(),
         },
-        {
-          withCredentials: true,
-        }
+        { withCredentials: true }
       );
 
-      setOrgMessage(
-        "Organizer request submitted successfully!"
-      );
+      setOrgMessage("Organizer request submitted successfully!");
 
       setOrg({
         fullName: "",
@@ -587,13 +753,10 @@ function SettingsView() {
     e: ChangeEvent<HTMLInputElement>
   ) => {
     const value = e.target.value;
-
     setDeactivateReason(value);
     setDeactivateError("");
 
-    if (value !== "Other") {
-      setOtherDeactivateReason("");
-    }
+    if (value !== "Other") setOtherDeactivateReason("");
   };
 
   const handleDeactivate = async () => {
@@ -629,20 +792,15 @@ function SettingsView() {
 
       await axios.patch(
         `${API_BASE_URL}/v1/users/deactivate`,
-        {
-          reason: finalReason,
-        },
-        {
-          withCredentials: true,
-        }
+        { reason: finalReason },
+        { withCredentials: true }
       );
 
       clearUser();
       navigate("/login");
     } catch (error: any) {
       setDeactivateError(
-        error.response?.data?.message ||
-          "Unable to deactivate account."
+        error.response?.data?.message || "Unable to deactivate account."
       );
     } finally {
       setLoading(false);
@@ -654,114 +812,83 @@ function SettingsView() {
       <Navbar />
 
       <div className="settings-page">
-
         <div className="settings-header">
           <h1>Settings</h1>
-
-          <p>
-            Manage your account preferences and personal information
-          </p>
+          <p>Manage your account preferences and personal information</p>
         </div>
 
         <div className="settings-layout">
           <aside className="settings-nav">
-
             <button
               type="button"
-              className={`nav-item ${
-                activeTab === "profile" ? "active" : ""
-              }`}
+              className={`nav-item ${activeTab === "profile" ? "active" : ""}`}
               onClick={() => setActiveTab("profile")}
             >
-              <span className="nav-icon">
-                <FaUser />
-              </span>
-
+              <span className="nav-icon"><FaUser /></span>
               <div className="nav-info">
                 <h3>Profile</h3>
-                <p>Personal info & contact details</p>
+                <p>Personal info &amp; contact details</p>
               </div>
-
               <FaChevronRight className="nav-arrow" />
             </button>
 
             <button
               type="button"
-              className={`nav-item ${
-                activeTab === "password" ? "active" : ""
-              }`}
+              className={`nav-item ${activeTab === "password" ? "active" : ""}`}
               onClick={() => setActiveTab("password")}
             >
-              <span className="nav-icon">
-                <FaLock />
-              </span>
-
+              <span className="nav-icon"><FaLock /></span>
               <div className="nav-info">
                 <h3>Change Password</h3>
                 <p>Security and authentication</p>
               </div>
-
               <FaChevronRight className="nav-arrow" />
             </button>
 
             <button
               type="button"
-              className={`nav-item ${
-                activeTab === "organizer" ? "active" : ""
-              }`}
+              className={`nav-item ${activeTab === "organizer" ? "active" : ""}`}
               onClick={() => setActiveTab("organizer")}
             >
-              <span className="nav-icon">
-                <FaBullhorn />
-              </span>
-
+              <span className="nav-icon"><FaBullhorn /></span>
               <div className="nav-info">
                 <h3>Host an Event</h3>
                 <p>Become a verified organiser</p>
               </div>
-
               <FaChevronRight className="nav-arrow" />
             </button>
 
             <button
               type="button"
-              className={`nav-item danger ${
-                activeTab === "deactivate" ? "active" : ""
-              }`}
+              className={`nav-item danger ${activeTab === "deactivate" ? "active" : ""}`}
               onClick={() => setActiveTab("deactivate")}
             >
-              <span className="nav-icon">
-                <FaUserSlash />
-              </span>
-
+              <span className="nav-icon"><FaUserSlash /></span>
               <div className="nav-info">
                 <h3>Deactivate Account</h3>
                 <p>Pause or close your profile</p>
               </div>
-
               <FaChevronRight className="nav-arrow" />
             </button>
-
           </aside>
 
           <main className="settings-panel">
-
             {activeTab === "profile" && (
               <section className="tab-pane">
-
                 <div className="profile-heading-block">
-
                   <div className="avatar-picker">
-
                     <div
                       className="avatar-circle"
-                      onClick={() =>
-                        fileInputRef.current?.click()
-                      }
+                      onClick={() => fileInputRef.current?.click()}
                       role="button"
                       tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          fileInputRef.current?.click();
+                        }
+                      }}
                     >
-
                       {getProfileImage() ? (
                         <img
                           src={getProfileImage()}
@@ -769,23 +896,20 @@ function SettingsView() {
                           className="avatar-img"
                         />
                       ) : (
-                        <div className="default-avatar">
-                          <FaUser />
-                        </div>
+                        <div className="default-avatar"><FaUser /></div>
                       )}
 
                       <button
                         type="button"
                         className="avatar-plus-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                        onClick={(event) => {
+                          event.stopPropagation();
                           fileInputRef.current?.click();
                         }}
                         aria-label="Upload profile photo"
                       >
                         <FaPlus />
                       </button>
-
                     </div>
 
                     <input
@@ -796,36 +920,19 @@ function SettingsView() {
                       onChange={handleImageChange}
                     />
 
-                    <span className="avatar-caption">
-                      Click to update photo
-                    </span>
-
+                    <span className="avatar-caption">Click to update photo</span>
                   </div>
 
                   <div className="heading-copy">
                     <h2>My Profile</h2>
-
-                    <p>
-                      Update your personal information and contact
-                      settings
-                    </p>
+                    <p>Update your personal information and contact settings</p>
                   </div>
-
                 </div>
 
-                <form
-                  onSubmit={handleProfileSave}
-                  noValidate
-                >
-
+                <form onSubmit={handleProfileSave} noValidate>
                   <div className="form-grid">
-
                     <div className="form-group">
-
-                      <label htmlFor="name">
-                        Full Name
-                      </label>
-
+                      <label htmlFor="name">Full Name</label>
                       <input
                         id="name"
                         type="text"
@@ -834,15 +941,10 @@ function SettingsView() {
                         onChange={handleProfileChange}
                         placeholder="Enter your name"
                       />
-
                     </div>
 
                     <div className="form-group">
-
-                      <label htmlFor="email">
-                        Email Address
-                      </label>
-
+                      <label htmlFor="email">Email Address</label>
                       <input
                         id="email"
                         type="email"
@@ -851,15 +953,10 @@ function SettingsView() {
                         onChange={handleProfileChange}
                         placeholder="Enter your email address"
                       />
-
                     </div>
 
                     <div className="form-group">
-
-                      <label htmlFor="phone">
-                        Phone Number
-                      </label>
-
+                      <label htmlFor="phone">Phone Number</label>
                       <input
                         id="phone"
                         type="text"
@@ -869,45 +966,110 @@ function SettingsView() {
                         maxLength={10}
                         placeholder="10-digit number"
                       />
-
                     </div>
 
                     <div className="form-group">
+                      <label htmlFor="city_id">City</label>
 
-                      <label htmlFor="city_id">
-                        City
-                      </label>
+                      <div className="city-dropdown" ref={cityDropdownRef}>
+                        <button
+                          ref={cityDropdownButtonRef}
+                          id="city_id"
+                          type="button"
+                          className={`city-select ${
+                            profile.city_id !== "" ? "has-value" : ""
+                          }`}
+                          role="combobox"
+                          aria-label="City"
+                          aria-haspopup="listbox"
+                          aria-expanded={isCityDropdownOpen}
+                          aria-controls="profile-city-options"
+                          onClick={() =>
+                            setIsCityDropdownOpen((open) => !open)
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "ArrowDown" && !isCityDropdownOpen) {
+                              event.preventDefault();
+                              setIsCityDropdownOpen(true);
+                            }
+                          }}
+                        >
+                          <span className="city-select-label">
+                            {cities.find(
+                              (city) => city.id === profile.city_id
+                            )?.name || "Select your city"}
+                          </span>
 
-                      <select
-                        id="city_id"
-                        name="city_id"
-                        value={profile.city_id}
-                        onChange={handleProfileChange}
-                      >
+                          <FaChevronRight
+                            className={`city-select-chevron ${
+                              isCityDropdownOpen ? "open" : ""
+                            }`}
+                            aria-hidden="true"
+                          />
+                        </button>
 
-                        <option value="">
-                          Select your city
-                        </option>
-
-                        {cities.map((city) => (
-                          <option
-                            key={city.id}
-                            value={city.id}
+                        {isCityDropdownOpen && (
+                          <div
+                            id="profile-city-options"
+                            className="city-options"
+                            role="listbox"
+                            aria-label="Choose a city"
                           >
-                            {city.name}
-                          </option>
-                        ))}
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={profile.city_id === ""}
+                              className={`city-option ${
+                                profile.city_id === "" ? "selected" : ""
+                              }`}
+                              onClick={() => handleCitySelect("")}
+                              onKeyDown={(event) =>
+                                handleCityOptionKeyDown(event, 0)
+                              }
+                              ref={(element) => {
+                                cityOptionRefs.current[0] = element;
+                              }}
+                            >
+                              <span>Select your city</span>
+                              {profile.city_id === "" && (
+                                <span className="city-option-check" aria-hidden="true">
+                                  ✓
+                                </span>
+                              )}
+                            </button>
 
-                      </select>
-
+                            {cities.map((city, index) => (
+                              <button
+                                key={city.id}
+                                type="button"
+                                role="option"
+                                aria-selected={profile.city_id === city.id}
+                                className={`city-option ${
+                                  profile.city_id === city.id ? "selected" : ""
+                                }`}
+                                onClick={() => handleCitySelect(city.id)}
+                                onKeyDown={(event) =>
+                                  handleCityOptionKeyDown(event, index + 1)
+                                }
+                                ref={(element) => {
+                                  cityOptionRefs.current[index + 1] = element;
+                                }}
+                              >
+                                <span>{city.name}</span>
+                                {profile.city_id === city.id && (
+                                  <span className="city-option-check" aria-hidden="true">
+                                    ✓
+                                  </span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="form-group">
-
-                      <label htmlFor="dob">
-                        Date of Birth
-                      </label>
-
+                      <label htmlFor="dob">Date of Birth</label>
                       <input
                         id="dob"
                         type="date"
@@ -915,232 +1077,140 @@ function SettingsView() {
                         value={profile.dob}
                         onChange={handleProfileChange}
                       />
-
                     </div>
 
                     <div className="form-group">
-
-                      <label>
-                        Gender
-                      </label>
-
+                      <label>Gender</label>
                       <div className="gender-pill-group">
-
                         {genderOptions.map((option) => (
                           <label
                             key={option.value}
                             className={`gender-pill ${
-                              profile.gender === option.value
-                                ? "selected"
-                                : ""
+                              profile.gender === option.value ? "selected" : ""
                             }`}
                           >
-
                             <input
                               type="radio"
                               name="gender"
                               value={option.value}
-                              checked={
-                                profile.gender ===
-                                option.value
-                              }
+                              checked={profile.gender === option.value}
                               onChange={handleGenderChange}
                             />
-
-                            <span>
-                              {option.label}
-                            </span>
-
+                            <span>{option.label}</span>
                           </label>
                         ))}
-
                       </div>
-
                     </div>
-
                   </div>
 
                   {profileMessage && (
-                    <p className="status-banner success">
-                      {profileMessage}
-                    </p>
+                    <p className="status-banner success">{profileMessage}</p>
                   )}
 
                   {profileError && (
-                    <p className="status-banner error">
-                      {profileError}
-                    </p>
+                    <p className="status-banner error">{profileError}</p>
                   )}
 
                   <div className="action-row">
-
                     <button
                       type="submit"
                       className="primary-button"
                       disabled={loading}
                     >
-                      {loading
-                        ? "Saving..."
-                        : "Save Changes"}
+                      {loading ? "Saving..." : "Save Changes"}
                     </button>
-
                   </div>
-
                 </form>
-
               </section>
             )}
 
             {activeTab === "password" && (
               <section className="tab-pane">
-
                 <div className="heading-copy">
-
                   <h2>Change Password</h2>
-
-                  <p>
-                    Choose a secure password with at least 8
-                    characters
-                  </p>
-
+                  <p>Choose a secure password with at least 8 characters</p>
                 </div>
 
-                <form
-                  onSubmit={handlePasswordSubmit}
-                  className="narrow-form"
-                >
-
+                <form onSubmit={handlePasswordSubmit} className="narrow-form">
                   <div className="form-group">
-
-                    <label htmlFor="newPassword">
-                      New Password
-                    </label>
-
+                    <label htmlFor="newPassword">New Password</label>
                     <div className="input-with-action">
-
                       <input
                         id="newPassword"
-                        type={
-                          showNewPassword
-                            ? "text"
-                            : "password"
-                        }
+                        type={showNewPassword ? "text" : "password"}
                         value={newPassword}
-                        onChange={(e) =>
-                          setNewPassword(e.target.value)
-                        }
+                        onChange={(event) => setNewPassword(event.target.value)}
                         placeholder="Enter new password"
                       />
-
                       <button
                         type="button"
                         className="toggle-visibility-btn"
-                        onClick={() =>
-                          setShowNewPassword(
-                            !showNewPassword
-                          )
-                        }
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        aria-label={showNewPassword ? "Hide password" : "Show password"}
                       >
-                        {showNewPassword ? (
-                          <FaEyeSlash />
-                        ) : (
-                          <FaEye />
-                        )}
+                        {showNewPassword ? <FaEyeSlash /> : <FaEye />}
                       </button>
-
                     </div>
-
                   </div>
 
                   <br />
 
                   <div className="form-group">
-
-                    <label htmlFor="confirmPassword">
-                      Confirm Password
-                    </label>
-
+                    <label htmlFor="confirmPassword">Confirm Password</label>
                     <div className="input-with-action">
-
                       <input
                         id="confirmPassword"
-                        type={
-                          showConfirmPassword
-                            ? "text"
-                            : "password"
-                        }
+                        type={showConfirmPassword ? "text" : "password"}
                         value={confirmPassword}
-                        onChange={(e) =>
-                          setConfirmPassword(
-                            e.target.value
-                          )
+                        onChange={(event) =>
+                          setConfirmPassword(event.target.value)
                         }
                         placeholder="Confirm new password"
                       />
-
                       <button
                         type="button"
                         className="toggle-visibility-btn"
                         onClick={() =>
-                          setShowConfirmPassword(
-                            !showConfirmPassword
-                          )
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        aria-label={
+                          showConfirmPassword ? "Hide password" : "Show password"
                         }
                       >
-                        {showConfirmPassword ? (
-                          <FaEyeSlash />
-                        ) : (
-                          <FaEye />
-                        )}
+                        {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                       </button>
-
                     </div>
-
                   </div>
 
                   {passwordMessage && (
-                    <p className="status-banner success">
-                      {passwordMessage}
-                    </p>
+                    <p className="status-banner success">{passwordMessage}</p>
                   )}
 
                   {passwordError && (
-                    <p className="status-banner error">
-                      {passwordError}
-                    </p>
+                    <p className="status-banner error">{passwordError}</p>
                   )}
 
                   <div className="action-row">
-
                     <button
                       type="submit"
                       className="primary-button"
                       disabled={loading}
                     >
-                      {loading
-                        ? "Updating..."
-                        : "Update Password"}
+                      {loading ? "Updating..." : "Update Password"}
                     </button>
-
                   </div>
-
                 </form>
-
               </section>
             )}
 
             {activeTab === "organizer" && (
               <section className="tab-pane">
-
                 <div className="heading-copy">
-
                   <h2>Host an Event</h2>
-
                   <p>
-                    Apply to become an approved organizer and
-                    host events on CityPass
+                    Apply to become an approved organizer and host events on
+                    CityPass
                   </p>
-
                 </div>
 
                 <form
@@ -1149,21 +1219,20 @@ function SettingsView() {
                   noValidate
                 >
                   <div className="form-group">
-                    <label htmlFor="fullName">
-                      Full Name *
-                    </label>
-                    <input 
-                    id="fullName" type="text" name="fullName"
-                    value = {org.stageName}
-                    onChange={handleOrgChange}
-                    placeholder="Enter your full name"
-                    required />
+                    <label htmlFor="fullName">Full Name *</label>
+                    <input
+                      id="fullName"
+                      type="text"
+                      name="fullName"
+                      value={org.fullName}
+                      onChange={handleOrgChange}
+                      placeholder="Enter your full name"
+                      required
+                    />
                   </div>
-                    <div className="form-group full-width">
-                    <label htmlFor="stageName">
-                      Organisation Name *
-                    </label>
 
+                  <div className="form-group full-width">
+                    <label htmlFor="stageName">Organisation Name *</label>
                     <input
                       id="stageName"
                       type="text"
@@ -1174,45 +1243,29 @@ function SettingsView() {
                       maxLength={150}
                       required
                     />
-
                   </div>
+
                   <div className="form-group">
-
-                    <label htmlFor="orgCity">
-                      City *
-                    </label>
-
-                    <select
+                    <label htmlFor="orgCity">City *</label>
+                    <StyledDropdown
                       id="orgCity"
-                      name="city"
+                      label="City"
                       value={org.city}
-                      onChange={handleOrgChange}
-                      required
-                    >
-
-                      <option value="">
-                        Select city
-                      </option>
-
-                      {cities.map((city) => (
-                        <option
-                          key={city.id}
-                          value={city.name}
-                        >
-                          {city.name}
-                        </option>
-                      ))}
-
-                    </select>
-
+                      placeholder="Select city"
+                      options={cities.map((city) => ({
+                        value: city.name,
+                        label: city.name,
+                      }))}
+                      onChange={(city) =>
+                        handleOrgChange({
+                          target: { name: "city", value: city },
+                        } as ChangeEvent<HTMLSelectElement>)
+                      }
+                    />
                   </div>
 
                   <div className="form-group">
-
-                    <label htmlFor="orgEmail">
-                      Email *
-                    </label>
-
+                    <label htmlFor="orgEmail">Email *</label>
                     <input
                       id="orgEmail"
                       type="email"
@@ -1224,15 +1277,10 @@ function SettingsView() {
                       maxLength={100}
                       required
                     />
-
                   </div>
 
                   <div className="form-group">
-
-                    <label htmlFor="orgPhone">
-                      Phone Number *
-                    </label>
-
+                    <label htmlFor="orgPhone">Phone Number *</label>
                     <input
                       id="orgPhone"
                       type="text"
@@ -1243,46 +1291,32 @@ function SettingsView() {
                       maxLength={10}
                       required
                     />
-
                   </div>
+
                   <div className="form-group full-width">
-
-                    <label htmlFor="id_proof_type">
-                      Valid ID Proof *
-                    </label>
-
-                    <select
+                    <label htmlFor="id_proof_type">Valid ID Proof *</label>
+                    <StyledDropdown
                       id="id_proof_type"
-                      name="id_proof_type"
+                      label="Valid ID Proof"
                       value={org.id_proof_type}
-                      onChange={handleOrgChange}
-                      required
-                    >
-
-                      <option value="">
-                        Select ID proof
-                      </option>
-
-                      {idProofOptions.map((option) => (
-                        <option
-                          key={option.value}
-                          value={option.value}
-                        >
-                          {option.label}
-                        </option>
-                      ))}
-
-                    </select>
-
+                      placeholder="Select ID proof"
+                      options={idProofOptions}
+                      onChange={(proofType) =>
+                        handleOrgChange({
+                          target: {
+                            name: "id_proof_type",
+                            value: proofType,
+                          },
+                        } as ChangeEvent<HTMLSelectElement>)
+                      }
+                    />
                   </div>
 
                   {org.id_proof_type && (
                     <div className="form-group full-width">
-
                       <label htmlFor="id_proof">
                         {selectedIdProof?.label} Number *
                       </label>
-
                       <input
                         id="id_proof"
                         type="text"
@@ -1302,25 +1336,11 @@ function SettingsView() {
                         }
                         required
                       />
-                      {org.id_proof_type === "pan" }
-
-                      {org.id_proof_type === "aadhar"}
-
-                      {org.id_proof_type === "passport" }
-
-                      {org.id_proof_type === "driving_license" }
-
-                      {org.id_proof_type === "voter_id" }
-
                     </div>
                   )}
 
                   <div className="form-group full-width">
-
-                    <label htmlFor="orgDescription">
-                      Description *
-                    </label>
-
+                    <label htmlFor="orgDescription">Description *</label>
                     <textarea
                       id="orgDescription"
                       name="description"
@@ -1330,7 +1350,6 @@ function SettingsView() {
                       placeholder="Tell us about the events, performances, genres, and audience experiences you deliver..."
                       required
                     />
-
                   </div>
 
                   {orgMessage && (
@@ -1346,161 +1365,108 @@ function SettingsView() {
                   )}
 
                   <div className="action-row full-width">
-
                     <button
                       type="submit"
                       className="primary-button"
                       disabled={loading}
                     >
-                      {loading
-                        ? "Submitting..."
-                        : "Submit Application"}
+                      {loading ? "Submitting..." : "Submit Application"}
                     </button>
-
                   </div>
-
                 </form>
-
               </section>
             )}
 
             {activeTab === "deactivate" && (
               <section className="tab-pane">
-
                 <div className="heading-copy">
-
                   <h2>Deactivate Account</h2>
-
-                  <p>
-                    Temporarily suspend your CityPass access
-                  </p>
-
+                  <p>Temporarily suspend your CityPass access</p>
                 </div>
 
                 {!showDeactivateTerms ? (
                   <div className="deactivate-card">
-
                     <h3>Before you proceed</h3>
-
                     <p>
-                      Deactivating your account will pause your
-                      CityPass access, affect your active bookings,
-                      hide your profile, and log you out across all
-                      devices.
+                      Deactivating your account will pause your CityPass access,
+                      affect your active bookings, hide your profile, and log
+                      you out across all devices.
                     </p>
-
                     <button
                       type="button"
                       className="danger-button"
-                      onClick={() =>
-                        setShowDeactivateTerms(true)
-                      }
+                      onClick={() => setShowDeactivateTerms(true)}
                     >
                       Continue to Deactivation
                     </button>
-
                   </div>
                 ) : (
                   <div className="deactivate-card">
-
                     <div className="deactivate-reason-header">
-
                       <h3>Why are you leaving?</h3>
-
                       <p>
-                        Please select the reason that best describes
-                        your decision.
+                        Please select the reason that best describes your
+                        decision.
                       </p>
-
                     </div>
 
                     <div className="deactivate-reasons">
-
                       {deactivateReasons.map((reason) => (
                         <label
                           key={reason}
                           className={`deactivate-reason-option ${
-                            deactivateReason === reason
-                              ? "selected"
-                              : ""
+                            deactivateReason === reason ? "selected" : ""
                           }`}
                         >
-
                           <input
                             type="radio"
                             name="deactivateReason"
                             value={reason}
-                            checked={
-                              deactivateReason === reason
-                            }
-                            onChange={
-                              handleDeactivateReasonChange
-                            }
+                            checked={deactivateReason === reason}
+                            onChange={handleDeactivateReasonChange}
                           />
-
-                          <span className="custom-radio"></span>
-
-                          <span className="reason-text">
-                            {reason}
-                          </span>
-
+                          <span className="custom-radio" />
+                          <span className="reason-text">{reason}</span>
                         </label>
                       ))}
-
                     </div>
 
                     {deactivateReason === "Other" && (
                       <div className="other-reason-box">
-
                         <label htmlFor="otherDeactivateReason">
                           Tell us more
                         </label>
-
                         <textarea
                           id="otherDeactivateReason"
                           value={otherDeactivateReason}
-                          onChange={(e) => {
-                            setOtherDeactivateReason(
-                              e.target.value
-                            );
+                          onChange={(event) => {
+                            setOtherDeactivateReason(event.target.value);
                             setDeactivateError("");
                           }}
                           placeholder="Please explain why you want to deactivate your account..."
                           maxLength={300}
                           rows={7}
                         />
-
                         <div className="character-counter">
-
                           <span
                             className={
-                              otherDeactivateReason.trim()
-                                .length >= 300
+                              otherDeactivateReason.trim().length >= 300
                                 ? "valid"
                                 : ""
                             }
                           >
-                            {
-                              otherDeactivateReason.trim()
-                                .length
-                            }
+                            {otherDeactivateReason.trim().length}
                           </span>
-
                           / 300 maximum characters
-
                         </div>
-
                       </div>
                     )}
 
                     {deactivateError && (
-                      <p className="status-banner error">
-                        {deactivateError}
-                      </p>
+                      <p className="status-banner error">{deactivateError}</p>
                     )}
 
                     <div className="action-buttons-group">
-
                       <button
                         type="button"
                         className="secondary-button"
@@ -1522,25 +1488,17 @@ function SettingsView() {
                           loading ||
                           !deactivateReason ||
                           (deactivateReason === "Other" &&
-                            otherDeactivateReason.trim()
-                              .length < 1)
+                            otherDeactivateReason.trim().length < 1)
                         }
                       >
-                        {loading
-                          ? "Deactivating..."
-                          : "Deactivate Account"}
+                        {loading ? "Deactivating..." : "Deactivate Account"}
                       </button>
-
                     </div>
-
                   </div>
                 )}
-
               </section>
             )}
-
           </main>
-
         </div>
       </div>
     </>

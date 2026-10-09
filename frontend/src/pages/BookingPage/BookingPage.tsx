@@ -34,8 +34,14 @@ interface BookingItem {
   venue?: string;
   location?: string;
   event_date?: string;
+  city_name?: string;
+  time?: string;
+  event_time?: string;
   category_name?: string;
   image_url?: string;
+  poster_url?: string;
+  banner_image?: string;
+  image?: string;
   number_of_tickets?: number;
   total_amount?: string | number;
   booking_date?: string;
@@ -49,12 +55,75 @@ const CITY_IMAGE_MAP: Record<string, string> = {
   Delhi: "/cities/Delhi.jpeg",
   Lucknow: "/cities/Lucknow.jpeg",
   Panaji: "/cities/Goa.jpeg",
+  Goa: "/cities/Goa.jpeg",
   Hyderabad: "/cities/Hyderabad.jpeg",
   Chennai: "/cities/Chennai.jpeg",
   Trivandrum: "/cities/Trivandrum.jpeg",
 };
 
 const DEFAULT_POSTER = "/categories/image.png";
+
+// Helper: Extracts clean 12-hour formatted time or returns null if not specified
+const extractFormattedTime = (
+  timeField?: string,
+  dateField?: string
+): string | null => {
+  // 1. Explicit time string provided (e.g. "19:30:00" or "07:30 PM")
+  if (timeField && timeField.trim()) {
+    const rawTime = timeField.trim();
+    if (rawTime.includes(":")) {
+      const parts = rawTime.split(":");
+      const hours = parseInt(parts[0], 10);
+      const minutes = parseInt(parts[1], 10);
+      if (!isNaN(hours) && !isNaN(minutes)) {
+        const d = new Date();
+        d.setHours(hours, minutes, 0);
+        return new Intl.DateTimeFormat("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        }).format(d);
+      }
+    }
+    return rawTime;
+  }
+
+  // 2. Fallback: Check if date string contains timestamp (ISO format)
+  if (dateField && dateField.includes("T")) {
+    try {
+      const d = new Date(dateField);
+      // Avoid treating UTC default midnight 00:00:00 as an explicit event time
+      if (
+        !(d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0)
+      ) {
+        return new Intl.DateTimeFormat("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        }).format(d);
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+};
+
+// Helper: Formats event date string
+const formatEventOnlyDate = (dateStr?: string) => {
+  if (!dateStr) return "Date to be announced";
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format(new Date(dateStr));
+  } catch {
+    return dateStr;
+  }
+};
 
 interface DigitalTicketModalProps {
   isOpen: boolean;
@@ -85,32 +154,10 @@ function DigitalTicketModal({ isOpen, onClose, booking }: DigitalTicketModalProp
   const venueLocation = booking.venue || booking.location || "Venue details TBA";
   const isCancelled = booking.status?.toUpperCase() === "CANCELLED";
 
-  const formatEventDate = (dateStr?: string) => {
-    if (!dateStr) return "Date to be announced";
-    try {
-      return new Intl.DateTimeFormat("en-US", {
-        weekday: "short",
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }).format(new Date(dateStr));
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const formatEventTime = (dateStr?: string) => {
-    if (!dateStr) return "Time TBA";
-    try {
-      return new Intl.DateTimeFormat("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      }).format(new Date(dateStr));
-    } catch {
-      return "12:00 AM";
-    }
-  };
+  const eventTimeFormatted = extractFormattedTime(
+    booking.time || booking.event_time,
+    booking.event_date
+  );
 
   return (
     <div className="ticket-modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
@@ -120,7 +167,6 @@ function DigitalTicketModal({ isOpen, onClose, booking }: DigitalTicketModalProp
         </button>
 
         <div className={`digital-ticket-card ${isCancelled ? "ticket-cancelled" : ""}`}>
-
           <div className="ticket-header-band">
             <div className="ticket-brand-row">
               <span className="brand-badge">
@@ -129,7 +175,6 @@ function DigitalTicketModal({ isOpen, onClose, booking }: DigitalTicketModalProp
             </div>
             <h2 className="ticket-main-heading">CityPass Digital Ticket</h2>
           </div>
-
 
           <div className="ticket-body">
             <div className="ticket-title-row">
@@ -145,8 +190,10 @@ function DigitalTicketModal({ isOpen, onClose, booking }: DigitalTicketModalProp
             <div className="ticket-grid">
               <div className="ticket-cell">
                 <span className="cell-label"><FaCalendarAlt /> DATE & TIME</span>
-                <span className="cell-value">{formatEventDate(booking.event_date || booking.booking_date)}</span>
-                <span className="cell-subvalue">{formatEventTime(booking.event_date || booking.booking_date)}</span>
+                <span className="cell-value">{formatEventOnlyDate(booking.event_date || booking.booking_date)}</span>
+                {eventTimeFormatted && (
+                  <span className="cell-subvalue">{eventTimeFormatted}</span>
+                )}
               </div>
 
               <div className="ticket-cell">
@@ -171,7 +218,6 @@ function DigitalTicketModal({ isOpen, onClose, booking }: DigitalTicketModalProp
               </div>
             </div>
           </div>
-
 
           <div className="ticket-divider">
             <div className="notch notch-left" />
@@ -256,7 +302,19 @@ export function BookingPage() {
     }
   };
 
-  const getCityPoster = (item: BookingItem): string => {
+  // Hierarchy: Event Image -> City Map Image -> Default Poster
+  const getBookingPoster = (item: BookingItem): string => {
+    const directEventImg =
+      item.image_url || item.poster_url || item.banner_image || item.image;
+    if (directEventImg && directEventImg.trim()) {
+      return directEventImg.trim();
+    }
+
+    const cityName = item.city_name?.trim();
+    if (cityName && CITY_IMAGE_MAP[cityName]) {
+      return CITY_IMAGE_MAP[cityName];
+    }
+
     const loc = (item.location || item.venue || "").trim().toLowerCase();
     for (const [cityName, imgPath] of Object.entries(CITY_IMAGE_MAP)) {
       if (loc.includes(cityName.toLowerCase())) {
@@ -264,30 +322,18 @@ export function BookingPage() {
       }
     }
 
-    return item.image_url || DEFAULT_POSTER;
+    return DEFAULT_POSTER;
   };
 
-  const formatEventDateTime = (dateStr?: string) => {
-    if (!dateStr) return "Date to be announced";
-    try {
-      const d = new Date(dateStr);
-      const formattedDate = new Intl.DateTimeFormat("en-US", {
-        weekday: "short",
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      }).format(d);
+  // Formats date & time string without defaulting to 12:00 AM
+  const getCombinedDateTimeDisplay = (item: BookingItem) => {
+    const dateFormatted = formatEventOnlyDate(item.event_date || item.booking_date);
+    const timeFormatted = extractFormattedTime(
+      item.time || item.event_time,
+      item.event_date
+    );
 
-      const formattedTime = new Intl.DateTimeFormat("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      }).format(d);
-
-      return `${formattedDate} • ${formattedTime}`;
-    } catch {
-      return dateStr;
-    }
+    return timeFormatted ? `${dateFormatted} • ${timeFormatted}` : dateFormatted;
   };
 
   const formatBookingDate = (dateStr?: string) => {
@@ -340,7 +386,6 @@ export function BookingPage() {
               const isCancelled = item.status?.toUpperCase() === "CANCELLED";
               const cityRaw = item.location || item.venue || "CITY";
               const eventTitle = item.event_title || item.name || "Event Pass";
-              
 
               const eventSlug = item.slug || (eventTitle ? createEventSlug(eventTitle) : item.pass_id ?? item.id);
               const targetUrl = `/events/${eventSlug}`;
@@ -351,14 +396,28 @@ export function BookingPage() {
                   className="hz-booking-card"
                   onClick={() => navigate(targetUrl)}
                 >
-
                   <div className="hz-card-media">
                     <img
-                      src={getCityPoster(item)}
+                      src={getBookingPoster(item)}
                       alt={eventTitle}
                       className="hz-poster-img"
                       onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src = DEFAULT_POSTER;
+                        const image = e.currentTarget;
+                        if (image.dataset.fallbackApplied === "true") {
+                          image.onerror = null;
+                          return;
+                        }
+
+                        image.dataset.fallbackApplied = "true";
+                        const cityName = item.city_name?.trim();
+                        let fallback = cityName ? CITY_IMAGE_MAP[cityName] : undefined;
+                        if (!fallback) {
+                          const loc = (item.location || item.venue || "").trim().toLowerCase();
+                          fallback = Object.entries(CITY_IMAGE_MAP).find(([name]) =>
+                            loc.includes(name.toLowerCase())
+                          )?.[1];
+                        }
+                        image.src = fallback || DEFAULT_POSTER;
                       }}
                     />
                     <div className="hz-media-badges">
@@ -366,12 +425,11 @@ export function BookingPage() {
                     </div>
                   </div>
 
-
                   <div className="hz-card-details">
                     <div className="hz-top-row">
                       <span className="hz-event-datetime">
                         <FaCalendarAlt className="hz-cal-icon" />
-                        {formatEventDateTime(item.event_date || item.booking_date)}
+                        {getCombinedDateTimeDisplay(item)}
                       </span>
 
                       <span className={`hz-status-pill ${isCancelled ? "cancelled" : "confirmed"}`}>
@@ -448,13 +506,11 @@ export function BookingPage() {
         )}
       </main>
 
-
       <DigitalTicketModal
         isOpen={Boolean(selectedBookingForPass)}
         onClose={() => setSelectedBookingForPass(null)}
         booking={selectedBookingForPass}
       />
-
 
       {selectedBookingForCancel && (
         <div

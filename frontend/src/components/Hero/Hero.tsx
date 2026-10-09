@@ -28,33 +28,76 @@ function Hero() {
   const swiperRef = useRef<SwiperType | null>(null);
 
   useEffect(() => {
-    const fetchHeroEvents = async () => {
-      try {
-        const response = await axios.get(
-          `${API_BASE_URL}/v1/events/events`
-        );
+  const fetchHeroEvents = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/v1/events/events`);
+      const rawData = response.data;
 
-        const rawData = response.data;
+      const eventList: Events[] = Array.isArray(rawData)
+        ? rawData
+        : rawData?.events || rawData?.data || [];
 
-        // Supports:
-        // 1. Direct array: [...]
-        // 2. { events: [...] }
-        // 3. { data: [...] }
-        const eventList: Events[] = Array.isArray(rawData)
-          ? rawData
-          : rawData?.events || rawData?.data || [];
+      // Current timestamp (right now)
+      const now = new Date().getTime();
 
-        setFeaturedEvents(eventList.slice(0, 5));
-      } catch (error) {
-        console.error(
-          "Error fetching hero carousel events:",
-          error
-        );
-      }
-    };
+      const parseToTimestamp = (event: Events): number | null => {
+        if (!event.event_date) return null;
 
-    fetchHeroEvents();
-  }, []);
+        // Extract "YYYY-MM-DD" regardless of whether it's ISO, SQL, or standard date string
+        const dateStr = event.event_date.toString();
+        const cleanDatePart = dateStr.includes("T")
+          ? dateStr.split("T")[0]
+          : dateStr.split(" ")[0];
+
+        const [year, month, day] = cleanDatePart.split("-").map(Number);
+        if (!year || !month || !day) {
+          const fallback = new Date(event.event_date).getTime();
+          return isNaN(fallback) ? null : fallback;
+        }
+
+        // Extract time components if present (e.g., "18:30:00" or "02:30:00")
+        let hours = 23;
+        let minutes = 59;
+        let seconds = 59;
+
+        const timeField = (event as any).time;
+        if (timeField && typeof timeField === "string" && timeField.includes(":")) {
+          const timeParts = timeField.split(":").map(Number);
+          hours = timeParts[0] ?? 0;
+          minutes = timeParts[1] ?? 0;
+          seconds = timeParts[2] ?? 0;
+        }
+
+        // Construct exact local date instance: Month is 0-indexed in JS (month - 1)
+        const eventDateObj = new Date(year, month - 1, day, hours, minutes, seconds);
+        const timeVal = eventDateObj.getTime();
+
+        return isNaN(timeVal) ? null : timeVal;
+      };
+
+      // 1. Filter out all events where the event timestamp is strictly less than right now
+      // 2. Sort by nearest upcoming event first
+      const upcomingEvents = eventList
+        .filter((event) => {
+          const eventTime = parseToTimestamp(event);
+          if (eventTime === null) return false;
+          return eventTime >= now;
+        })
+        .sort((a, b) => {
+          const timeA = parseToTimestamp(a) || 0;
+          const timeB = parseToTimestamp(b) || 0;
+          return timeA - timeB;
+        })
+        .slice(0, 5);
+
+      setFeaturedEvents(upcomingEvents);
+    } catch (error) {
+      console.error("Error fetching hero carousel events:", error);
+    }
+  };
+
+  fetchHeroEvents();
+}, []);
 
   // Update Swiper after events are loaded
   useEffect(() => {

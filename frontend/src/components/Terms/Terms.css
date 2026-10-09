@@ -1,3 +1,11 @@
+body {
+  padding-top: 80px;
+  margin-top: 92px auto 30px;
+}
+
+
+
+
 .bms-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -10,6 +18,7 @@
   padding: 1.25rem;
   z-index: 3000; /* Stacks above the deactivate confirmation overlay */
   box-sizing: border-box;
+  
 }
 
 .bms-modal-card {
