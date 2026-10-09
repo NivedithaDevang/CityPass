@@ -302,7 +302,7 @@ export function Sidebar({
               </div>
 
               <span
-                className={`settings-arrow ${
+                className={`sidebar-settings-arrow ${
                   isSettingsOpen
                     ? "rotate"
                     : ""

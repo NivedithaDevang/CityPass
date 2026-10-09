@@ -139,7 +139,27 @@
   place-items: center;
   width: 22px;
   color: #64748b;
-  font-size: 19px;
+  font-size: 20px;
+}
+
+.profile-icon { 
+  color: rgb(28, 79, 220);
+}
+
+.ticket-icon { 
+  color : rgb(233, 112, 152)
+}
+
+.setting-icon { 
+  color : rgb(92, 91, 91)
+}
+
+.terms-icon { 
+  color : rgb(15, 0, 128)
+}
+
+.privacy-icon{
+  color : rgb(38, 88, 2)
 }
 
 .booking-button,
@@ -154,13 +174,13 @@
 }
 
 .booking-arrow,
-.settings-arrow {
+.sidebar-settings-arrow {
   display: flex;
   transition: transform 0.2s ease;
 }
 
 .booking-arrow.rotate,
-.settings-arrow.rotate {
+.sidebar-settings-arrow.rotate {
   transform: rotate(90deg);
 }
 

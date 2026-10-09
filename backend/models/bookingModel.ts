@@ -34,8 +34,10 @@ export const getBookingsByUserId = async (userId: number) => {
       u.email AS user_email,
       b.pass_id,
       e.name AS event_title,
+      e.image AS image,
       e.location AS venue,
       e.event_date,
+      ci.name AS city_name,
       c.name AS category_name,
       b.number_of_tickets,
       b.total_amount,
@@ -44,6 +46,7 @@ export const getBookingsByUserId = async (userId: number) => {
     FROM bookings b
     LEFT JOIN users u ON b.user_id = u.id
     LEFT JOIN events e ON b.pass_id = e.id
+    LEFT JOIN cities ci ON e.city_id = ci.id
     LEFT JOIN categories c ON e.category_id = c.id
     WHERE b.user_id = ?
     ORDER BY b.id DESC

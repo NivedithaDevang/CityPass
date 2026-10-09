@@ -1,3 +1,4 @@
+
 .settings-page {
   min-height: calc(100vh - 72px);
   background-color: #f8fafc;
@@ -133,6 +134,7 @@
   color: #ffffff;
   transform: translateX(2px);
 }
+
 .nav-item.danger {
   border-color: #fee2e2;
 }
@@ -154,7 +156,6 @@
 .nav-item.danger:hover .nav-arrow {
   color: #e63946;
 }
-
 
 .nav-item.danger.active {
   border-color: #e63946 !important;
@@ -182,6 +183,7 @@
 
 .settings-panel {
   flex: 1;
+  min-width: 0;
   background: #ffffff;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
@@ -280,12 +282,19 @@
   display: none;
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+.default-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #5144ed;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
 }
 
+.form-grid,
 .org-form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -303,10 +312,11 @@
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
+  min-width: 0;
 }
 
-.form-group label {
+.form-group > label {
   font-size: 13.5px;
   font-weight: 600;
   color: #334155;
@@ -316,18 +326,18 @@
 .form-group select,
 .form-group textarea {
   width: 100%;
+  min-width: 0;
   height: 44px;
   padding: 0 14px;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
+  font-family: inherit;
   font-size: 14px;
   color: #0f172a;
   background-color: #ffffff;
   box-sizing: border-box;
   outline: none;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .form-group input:hover,
@@ -362,10 +372,224 @@
   color: #94a3b8;
 }
 
+.city-dropdown {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.city-select {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+
+  color: #334155;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+
+  transition:
+    background-color 0.2s ease-in-out,
+    border-color 0.2s ease-in-out,
+    color 0.2s ease-in-out,
+    box-shadow 0.2s ease-in-out;
+}
+
+.city-select-label {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.city-select:hover {
+  background-color: #eff0fe;
+  border-color: #c7d2fe;
+  color: #5144ed;
+  box-shadow: 0 2px 8px rgba(81, 68, 237, 0.08);
+}
+
+.city-select.has-value {
+  background: #eff0fe;
+  border-color: #c7d2fe;
+  color: #5144ed;
+}
+
+.city-select:focus-visible {
+  outline: none;
+  background: #eff0fe;
+  border-color: #5144ed;
+  box-shadow: 0 0 0 3px rgba(81, 68, 237, 0.15);
+}
+
+.city-select-chevron {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  color: #64748b;
+  transform: rotate(90deg);
+  transition:
+    transform 0.2s ease,
+    color 0.2s ease;
+}
+
+.city-select:hover .city-select-chevron,
+.city-select.has-value .city-select-chevron {
+  color: #5144ed;
+}
+
+.city-select-chevron.open {
+  transform: rotate(-90deg);
+  color: #5144ed;
+}
+
+.city-options {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  width: 100%;
+  max-height: 270px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  padding: 6px;
+
+  background: #ffffff;
+  border: 1px solid #e2ddfe;
+  border-radius: 16px;
+
+  box-shadow:
+    0 16px 36px rgba(15, 23, 42, 0.1),
+    0 4px 12px rgba(81, 68, 237, 0.08);
+
+  box-sizing: border-box;
+  animation: cityDropdownFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.city-option {
+  width: 100%;
+  min-height: 40px;
+  flex-shrink: 0;
+
+  padding: 9px 14px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+
+  color: #334155;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.city-option > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.city-option:hover {
+  background-color: #f1f0fd;
+  color: #5144ed;
+}
+
+.city-option:focus-visible {
+  outline: none;
+  background-color: #f1f0fd;
+  color: #5144ed;
+  border-color: #c7d2fe;
+}
+
+.city-option.selected {
+  background-color: #eff0fe;
+  color: #5144ed;
+  font-weight: 700;
+}
+
+.city-option.selected:hover {
+  background-color: #e8e7ff;
+}
+
+.city-option-check {
+  flex-shrink: 0;
+  color: #5144ed;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+@keyframes cityDropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.city-options::-webkit-scrollbar {
+  width: 6px;
+}
+
+.city-options::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+}
+
+.city-options::-webkit-scrollbar-thumb {
+  background: #d8d4fb;
+  border-radius: 999px;
+}
+
+.city-options::-webkit-scrollbar-thumb:hover {
+  background: #a5a0f2;
+}
+
 .gender-pill-group {
   display: flex;
   gap: 10px;
-  height: 44px;
+  min-height: 44px;
 }
 
 .gender-pill {
@@ -554,6 +778,7 @@
 }
 
 .deactivate-reason-option {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -653,9 +878,7 @@
   resize: vertical;
   outline: none;
   box-sizing: border-box;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .other-reason-box textarea:hover {
@@ -686,18 +909,6 @@
   display: flex;
   gap: 12px;
   margin-top: 8px;
-}
-
-.default-avatar {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: #5144ed;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 34px;
 }
 
 @media (max-width: 900px) {
@@ -788,6 +999,21 @@
 
   .deactivate-reason-option {
     min-height: 46px;
+    padding: 10px 12px;
+  }
+
+  .city-select {
+    min-height: 44px;
+    padding: 9px 14px;
+    font-size: 13px;
+  }
+
+  .city-options {
+    max-height: 220px;
+  }
+
+  .city-option {
+    min-height: 40px;
     padding: 10px 12px;
   }
 }

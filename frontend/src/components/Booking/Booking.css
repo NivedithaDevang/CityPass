@@ -1,21 +1,17 @@
-/* =========================================
-   INLINE BOOKING ACCORDION PANEL
-   ========================================= */
-
 .booking-inline-panel {
-  margin-top: 1.25rem;
+  margin-top: 1rem;
   padding-top: 1.25rem;
   border-top: 1px dashed #e2e8f0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  animation: expandInline 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  gap: 12px;
+  animation: expandInline 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes expandInline {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-6px);
   }
   to {
     opacity: 1;
@@ -26,11 +22,12 @@
 .inline-error-banner {
   padding: 10px 14px;
   background: #fef2f2;
-  border: 1px solid #fecaca;
+  border: 1px solid #fee2e2;
   color: #dc2626;
   border-radius: 10px;
   font-size: 13px;
   font-weight: 500;
+  line-height: 1.4;
 }
 
 /* Quantity Box */
@@ -40,58 +37,66 @@
   align-items: center;
   padding: 12px 14px;
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #edf2f7;
   border-radius: 12px;
 }
 
 .counter-title {
   display: block;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
   color: #0f172a;
 }
 
 .counter-sub {
-  margin: 2px 0 0;
+  margin: 1px 0 0;
   font-size: 12px;
   color: #64748b;
+  font-weight: 500;
 }
 
 .counter-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  background: #ffffff;
+  padding: 3px 5px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
 }
 
 .counter-action-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid #e2e8f0;
   background: #ffffff;
   color: #1e293b;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .counter-action-btn:hover:not(:disabled) {
   border-color: #5144ed;
+  background: #f5f3ff;
   color: #5144ed;
 }
 
 .counter-action-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
+  background: #f8fafc;
 }
 
 .counter-count {
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 700;
-  min-width: 18px;
+  min-width: 22px;
   text-align: center;
   color: #0f172a;
 }
@@ -99,7 +104,7 @@
 /* Price Breakdown */
 .inline-price-breakdown {
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #edf2f7;
   border-radius: 12px;
   padding: 12px 14px;
 }
@@ -107,6 +112,7 @@
 .breakdown-line {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 13px;
   color: #64748b;
   margin-bottom: 6px;
@@ -114,8 +120,11 @@
 
 .breakdown-line .free-tag {
   color: #16a34a;
+  background: #dcfce7;
+  padding: 2px 7px;
+  border-radius: 6px;
   font-weight: 700;
-  font-size: 11.5px;
+  font-size: 11px;
 }
 
 .breakdown-sep {
@@ -131,17 +140,23 @@
   color: #0f172a;
 }
 
-/* Pay & Cancel Buttons */
+.breakdown-line.total-line strong {
+  font-size: 16px;
+  color: #0f172a;
+}
+
+/* Action Buttons */
 .inline-action-buttons {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: 4px;
 }
 
 .inline-pay-btn {
   width: 100%;
   height: 46px;
-  background: linear-gradient(135deg, #5144ed 0%, #3f35c8 100%);
+  background: #5144ed;
   color: #ffffff;
   border: none;
   border-radius: 11px;
@@ -150,11 +165,15 @@
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(81, 68, 237, 0.28);
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .inline-pay-btn:hover {
-  filter: brightness(1.06);
+  background: #4335dc;
   transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(81, 68, 237, 0.35);
 }
 
 .inline-cancel-btn {
@@ -173,41 +192,46 @@
 .inline-cancel-btn:hover {
   background: #f1f5f9;
   color: #0f172a;
+  border-color: #cbd5e1;
 }
 
-/* =========================================
-   REVIEW & CONFIRMATION MODALS
-   ========================================= */
-
+/* Modals */
 .booking-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.72);
+  background: rgba(12, 18, 28, 0.68);
   backdrop-filter: blur(5px);
-  z-index: 99999;
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 100000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
   box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .booking-modal-card {
   background: #ffffff;
-  border-radius: 24px;
+  border: 1px solid #e5e9ef;
+  border-radius: 16px;
   width: 100%;
-  max-width: 440px;
-  padding: 32px 28px;
+  max-width: 460px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 30px 28px;
   text-align: center;
-  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+  box-shadow: 0 24px 72px rgba(7, 14, 24, 0.28);
   box-sizing: border-box;
   animation: reviewPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  overscroll-behavior: contain;
 }
 
 @keyframes reviewPop {
   from {
     opacity: 0;
-    transform: scale(0.94) translateY(8px);
+    transform: scale(0.96) translateY(6px);
   }
   to {
     opacity: 1;
@@ -216,12 +240,12 @@
 }
 
 .review-icon-wrapper {
-  width: 58px;
-  height: 58px;
-  margin: 0 auto 16px;
-  background: #f0f1fe;
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 14px;
+  background: #eff0fe;
   color: #5144ed;
-  font-size: 26px;
+  font-size: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -230,25 +254,25 @@
 
 .booking-modal-card h3 {
   margin: 0 0 6px;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.02em;
 }
 
 .booking-modal-card .booking-modal-sub {
-  margin: 0 0 20px;
-  font-size: 13.5px;
+  margin: 0 0 18px;
+  font-size: 13px;
   line-height: 1.5;
   color: #64748b;
 }
 
 .booking-modal-card .booking-summary-mini {
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 14px 18px;
-  margin-bottom: 22px;
+  border: 1px solid #edf2f7;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -258,8 +282,9 @@
 .booking-modal-card .mini-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  font-size: 13.5px;
+  align-items: flex-start;
+  gap: 16px;
+  font-size: 13px;
   color: #64748b;
 }
 
@@ -268,7 +293,7 @@
   font-weight: 700;
   text-align: right;
   max-width: 65%;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .booking-modal-card .mini-row.total-highlight {
@@ -290,18 +315,18 @@
 
 .review-modal-actions {
   display: grid;
-  grid-template-columns: 1fr 1.45fr;
-  gap: 12px;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 10px;
   align-items: center;
 }
 
 .review-btn-cancel {
-  height: 46px;
+  height: 44px;
   background: #ffffff;
   border: 1.5px solid #e2e8f0;
   color: #475569;
-  border-radius: 12px;
-  font-size: 14px;
+  border-radius: 11px;
+  font-size: 13.5px;
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -316,12 +341,12 @@
 }
 
 .review-btn-confirm {
-  height: 46px;
+  height: 44px;
   background: #5144ed;
   color: #ffffff;
   border: none;
-  border-radius: 12px;
-  font-size: 14px;
+  border-radius: 11px;
+  font-size: 13.5px;
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -337,12 +362,12 @@
 }
 
 .booking-success-icon-wrapper {
-  width: 62px;
-  height: 62px;
-  margin: 0 auto 16px;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 14px;
   background: #dcfce7;
   color: #16a34a;
-  font-size: 30px;
+  font-size: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -351,18 +376,41 @@
 
 .booking-view-all-btn {
   width: 100%;
-  height: 48px;
+  height: 46px;
   background: #5144ed;
   color: #ffffff;
   border: none;
-  border-radius: 12px;
-  font-size: 14.5px;
+  border-radius: 11px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(81, 68, 237, 0.3);
+  box-shadow: 0 4px 14px rgba(81, 68, 237, 0.28);
   transition: all 0.15s ease;
 }
 
 .booking-view-all-btn:hover {
   background: #4335dc;
+}
+
+@media (max-width: 520px) {
+  .booking-modal-overlay {
+    align-items: flex-end;
+    padding: 12px 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .booking-modal-card {
+    max-height: calc(100dvh - 24px);
+    padding: 26px 20px 22px;
+    border-radius: 14px;
+  }
+
+  .review-modal-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .booking-modal-card {
+    animation: none;
+  }
 }
