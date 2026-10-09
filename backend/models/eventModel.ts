@@ -124,9 +124,17 @@ return results;
 //get event by slug
 export const getEventBySlug = async (slug: string) => {
     const sql = `
-        SELECT events.*, categories.name AS category_name
+        SELECT
+            events.*,
+            categories.name AS category_name,
+            cities.name AS city_name,
+            organizers.stage_name AS organiser_stage_name,
+            users.name AS organiser_user_name
         FROM events
         LEFT JOIN categories ON categories.id = events.category_id
+        LEFT JOIN cities ON cities.id = events.city_id
+        LEFT JOIN organizers ON organizers.id = events.organizer_id
+        LEFT JOIN users ON users.id = organizers.user_id
         WHERE events.slug = ?
         AND events.status = 'APPROVED'
     `;
