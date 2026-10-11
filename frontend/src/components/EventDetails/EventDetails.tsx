@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -16,6 +17,7 @@ import {
   FaExternalLinkAlt,
   FaClock,
   FaFire,
+  FaCheckCircle,
 } from "react-icons/fa";
 import { TermsModal } from "../Terms/EventTerms";
 import { OrganiserDetails } from "../OrganiserCard/OrganiserCard";
@@ -23,12 +25,34 @@ import { Booking } from "../Booking/Booking";
 import Auth from "../Auth/Auth";
 import "./EventDetails.css";
 
+interface EventTicket {
+  id: number;
+  event_id: number;
+  name: string;
+  description?: string | null;
+  price: number | string;
+  status?: string;
+}
+
+interface EventWithTickets extends Events {
+  event_tickets?: EventTicket[];
+  tickets?: EventTicket[];
+  image?: string;
+  image_url?: string;
+  poster_url?: string;
+  banner_image?: string;
+}
+
 function EventDetails() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { user, setUser } = useUser();
 
-  const [event, setEvent] = useState<Events | null>(null);
+  const [event, setEvent] = useState<EventWithTickets | null>(null);
+  const [tickets, setTickets] = useState<EventTicket[]>([]);
+  const [selectedTicket, setSelectedTicket] =
+    useState<EventTicket | null>(null);
+
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showTerms, setShowTerms] = useState(false);
@@ -39,14 +63,31 @@ function EventDetails() {
     const fetchEventDetails = async () => {
       try {
         setLoading(true);
+        setError(null);
 
         const response = await axios.get(
           `${API_BASE_URL}/v1/events/${slug}`
         );
 
-        const loadedEvent = response.data.event || response.data;
+        const loadedEvent: EventWithTickets =
+          response.data.event || response.data;
 
         setEvent(loadedEvent);
+
+        // The event API should return the event-specific ticket records.
+        const eventTicketList: EventTicket[] = (
+          loadedEvent.event_tickets ||
+          loadedEvent.tickets ||
+          []
+        ).filter(
+          (ticket) =>
+            ticket.status === undefined ||
+            ticket.status === "ACTIVE"
+        );
+
+        setTickets(eventTicketList);
+        setSelectedTicket(eventTicketList[0] || null);
+
         document.title = `${loadedEvent.name || "Event"} | CityPass`;
       } catch (err) {
         console.error("EVENT DETAILS ERROR:", err);
@@ -61,20 +102,28 @@ function EventDetails() {
     }
   }, [slug]);
 
-  // Formats date only (e.g., "Thursday, October 29, 2026")
   const formatEventDate = (eventDate?: string) => {
     if (!eventDate) return "Date to be announced";
+
+    const parsedDate = new Date(eventDate);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return eventDate;
+    }
+
     return new Intl.DateTimeFormat("en-US", {
       dateStyle: "full",
-    }).format(new Date(eventDate));
+    }).format(parsedDate);
   };
 
-  // Formats time string (e.g., "02:30:00" -> "2:30 AM")
   const formatTimeString = (timeStr?: string) => {
     if (!timeStr) return "";
 
     const [hours, minutes] = timeStr.split(":");
-    if (hours === undefined || minutes === undefined) return timeStr;
+
+    if (hours === undefined || minutes === undefined) {
+      return timeStr;
+    }
 
     const date = new Date();
     date.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0);
@@ -91,7 +140,8 @@ function EventDetails() {
       setShowAuthModal(true);
       return;
     }
-    setIsDrawerOpen((prev) => !prev);
+
+    setIsDrawerOpen((previous) => !previous);
   };
 
   const handleAuthSuccess = (authenticatedUser: User) => {
@@ -118,8 +168,14 @@ function EventDetails() {
       <>
         <Navbar />
         <div className="details-container details-state">
-          <p className="status-text">{error || "Event not found."}</p>
-          <button className="back-button" onClick={() => navigate(-1)}>
+          <p className="status-text">
+            {error || "Event not found."}
+          </p>
+
+          <button
+            className="back-button"
+            onClick={() => navigate(-1)}
+          >
             <FaArrowLeft /> Back to Events
           </button>
         </div>
@@ -133,36 +189,62 @@ function EventDetails() {
     "/eventBG/image2.png",
     "/eventBG/image3.png",
   ];
-  const fallbackImage = eventBackgrounds[event.id % eventBackgrounds.length];
+
+  const fallbackImage =
+    eventBackgrounds[event.id % eventBackgrounds.length];
+
   const eventImage =
-    (event as any).image ||
-    (event as any).poster_url ||
-    (event as any).image_url ||
-    (event as any).banner_image;
+    event.image ||
+    event.poster_url ||
+    event.image_url ||
+    event.banner_image;
+
   const posterImage = eventImage || fallbackImage;
-  const formattedTime = formatTimeString(event.time) || "(Time yet to be confirmed)";
+
+  const formattedTime =
+    formatTimeString(event.time) ||
+    "(Time yet to be confirmed)";
+
+  const startingPrice =
+    tickets.length > 0
+      ? Math.min(...tickets.map((ticket) => Number(ticket.price)))
+      : Number(event.price || 0);
+
+  // Pass the selected event-ticket details to the booking component.
+  // Booking.tsx must use selected_ticket_id when creating the booking.
+  const eventForBooking = {
+    ...event,
+    selected_ticket_id: selectedTicket?.id ?? null,
+    selected_ticket_name: selectedTicket?.name ?? null,
+    selected_ticket_price: selectedTicket
+      ? Number(selectedTicket.price)
+      : null,
+  };
 
   return (
     <>
-     <Navbar />
-    <div className="details-outer-container">
-     
+      <Navbar />
 
-      <div className="details-page-bg">
-        <main className="details-wrapper">
-          <button className="back-button" onClick={() => navigate(-1)}>
-            <FaArrowLeft /> <span>Back to Events</span>
-          </button>
+      <div className="details-outer-container">
+        <div className="details-page-bg">
+          <main className="details-wrapper">
+            <button
+              className="back-button"
+              onClick={() => navigate(-1)}
+            >
+              <FaArrowLeft />
+              <span>Back to Events</span>
+            </button>
 
-          {/* BookMyShow / District Style Hero Section */}
-          <header className="details-hero">
-            {posterImage && (
+            {/* Event hero */}
+            <header className="details-hero">
               <img
                 src={posterImage}
                 alt={event.name || "Event backdrop"}
                 className="hero-backdrop-img"
                 onError={(e) => {
                   const image = e.currentTarget;
+
                   if (image.dataset.fallbackApplied !== "true") {
                     image.dataset.fallbackApplied = "true";
                     image.src = fallbackImage;
@@ -171,11 +253,10 @@ function EventDetails() {
                   }
                 }}
               />
-            )}
-            <div className="hero-overlay-shade" />
 
-            <div className="hero-grid-content">
-              {posterImage && (
+              <div className="hero-overlay-shade" />
+
+              <div className="hero-grid-content">
                 <div className="hero-poster-wrapper">
                   <img
                     src={posterImage}
@@ -183,6 +264,7 @@ function EventDetails() {
                     className="hero-poster-img"
                     onError={(e) => {
                       const image = e.currentTarget;
+
                       if (image.dataset.fallbackApplied !== "true") {
                         image.dataset.fallbackApplied = "true";
                         image.src = fallbackImage;
@@ -192,166 +274,293 @@ function EventDetails() {
                     }}
                   />
                 </div>
-              )}
 
-              <div className="hero-info-column">
-                <div className="hero-tags-strip">
-                  <span className="details-badge">
-                    {event.category_name || "Event"}
-                  </span>
-                  <span className="details-sub-tag">English / Hindi</span>
-                  <span className="details-sub-tag">16+</span>
-                  <span className="details-sub-tag">
-                    <FaClock className="tag-icon" /> 2 Hours
-                  </span>
+                <div className="hero-info-column">
+                  <div className="hero-tags-strip">
+                    <span className="details-badge">
+                      {event.category_name || "Event"}
+                    </span>
+
+                    <span className="details-sub-tag">
+                      English / Hindi
+                    </span>
+
+                    <span className="details-sub-tag">16+</span>
+
+                    <span className="details-sub-tag">
+                      <FaClock className="tag-icon" /> 2 Hours
+                    </span>
+                  </div>
+
+                  <h1 className="details-title">
+                    {event.name || "Untitled event"}
+                  </h1>
+
+                  <div className="details-meta-cards">
+                    <div className="meta-card">
+                      <div className="meta-icon-wrapper">
+                        <FaCalendarAlt />
+                      </div>
+
+                      <div>
+                        <span className="meta-label">
+                          Date & Time
+                        </span>
+
+                        <p className="meta-value">
+                          {formatEventDate(event.event_date)}
+                          {` • ${formattedTime}`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="meta-card">
+                      <div className="meta-icon-wrapper">
+                        <FaMapPin />
+                      </div>
+
+                      <div className="meta-venue-details">
+                        <span className="meta-label">
+                          Location
+                        </span>
+
+                        <p className="meta-value">
+                          {event.location || "Venue TBA"}
+                        </p>
+
+                        {event.location && (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                              event.location
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="maps-link"
+                          >
+                            View on Maps{" "}
+                            <FaExternalLinkAlt className="maps-icon" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            {/* Main content */}
+            <div className="details-body">
+              <section className="details-left">
+                <div className="content-card">
+                  <h2 className="section-title">
+                    About the Event
+                  </h2>
+
+                  <p className="details-description">
+                    {event.description ||
+                      "No description provided for this event."}
+                  </p>
                 </div>
 
-                <h1 className="details-title">{event.name || "Untitled event"}</h1>
+                {/* Event ticket categories */}
+                {tickets.length > 0 && (
+                  <div className="content-card event-ticket-options">
+                    <h2 className="section-title">
+                      Choose Your Ticket
+                    </h2>
 
-                <div className="details-meta-cards">
-                  <div className="meta-card">
-                    <div className="meta-icon-wrapper">
-                      <FaCalendarAlt />
+                    <p className="ticket-selection-description">
+                      Select your preferred ticket category.
+                    </p>
+
+                    <div className="event-ticket-list">
+                      {tickets.map((ticket) => {
+                        const isSelected =
+                          selectedTicket?.id === ticket.id;
+
+                        return (
+                          <button
+                            key={ticket.id}
+                            type="button"
+                            className={`event-ticket-option ${
+                              isSelected ? "selected" : ""
+                            }`}
+                            onClick={() =>
+                              setSelectedTicket(ticket)
+                            }
+                            aria-pressed={isSelected}
+                          >
+                            <span className="event-ticket-option-info">
+                              <span className="event-ticket-name">
+                                {ticket.name}
+                                {isSelected && (
+                                  <FaCheckCircle className="event-ticket-check" />
+                                )}
+                              </span>
+
+                              {ticket.description && (
+                                <span className="event-ticket-description">
+                                  {ticket.description}
+                                </span>
+                              )}
+                            </span>
+
+                            <span className="event-ticket-price">
+                              ₹
+                              {Number(ticket.price).toLocaleString(
+                                "en-IN"
+                              )}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
+                  </div>
+                )}
+
+                <div
+                  className="terms-action-card"
+                  onClick={() => setShowTerms(true)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setShowTerms(true);
+                    }
+                  }}
+                >
+                  <div className="terms-action-left">
+                    <FaShieldAlt className="terms-shield-icon" />
+
                     <div>
-                      <span className="meta-label">Date & Time</span>
-                      <p className="meta-value">
-                        {formatEventDate(event.event_date)}
-                        {` • ${formattedTime}`}
+                      <h4>Terms & Conditions</h4>
+                      <p>
+                        Cancellation policies, venue rules, and
+                        entry guidelines
                       </p>
                     </div>
                   </div>
 
-                  <div className="meta-card">
-                    <div className="meta-icon-wrapper">
-                      <FaMapPin />
-                    </div>
-                    <div className="meta-venue-details">
-                      <span className="meta-label">Location</span>
-                      <p className="meta-value">{event.location || "Venue TBA"}</p>
-                      {event.location && (
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                            event.location
-                          )}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="maps-link"
-                        >
-                          View on Maps <FaExternalLinkAlt className="maps-icon" />
-                        </a>
-                      )}
+                  <FaChevronRight className="terms-chevron" />
+                </div>
+
+                <div className="content-card organiser-section">
+                  <h2 className="section-title">
+                    Organised By
+                  </h2>
+
+                  <OrganiserDetails
+                    stageName={event.organiser_stage_name}
+                    userName={event.organiser_user_name}
+                  />
+                </div>
+              </section>
+
+              {/* Booking card */}
+              <aside className="details-sidebar">
+                <div className="booking-card">
+                  <div className="booking-card-header">
+                    <div>
+                      <div className="booking-icon-circle">
+                        <FaTicketAlt />
+                      </div>
+
+                      <span className="booking-card-title">
+                        Reserve Spot
+                      </span>
+
+                      <span className="booking-card-sub">
+                        Instant confirmation
+                      </span>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          </header>
 
-          {/* Main Content Layout */}
-          <div className="details-body">
-            <section className="details-left">
-              <div className="content-card">
-                <h2 className="section-title">About the Event</h2>
-                <p className="details-description">
-                  {event.description || "No description provided for this event."}
-                </p>
-              </div>
-
-              <div
-                className="terms-action-card"
-                onClick={() => setShowTerms(true)}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="terms-action-left">
-                  <FaShieldAlt className="terms-shield-icon" />
-                  <div>
-                    <h4>Terms & Conditions</h4>
-                    <p>Cancellation policies, venue rules, and entry guidelines</p>
+                  <div className="urgency-pill">
+                    <FaFire className="urgency-icon" />
+                    <span>
+                      Filling fast • Limited tickets available
+                    </span>
                   </div>
-                </div>
-                <FaChevronRight className="terms-chevron" />
-              </div>
 
-              <div className="content-card organiser-section">
-                <h2 className="section-title">Organised By</h2>
-                <OrganiserDetails
-                  stageName={event.organiser_stage_name}
-                  userName={event.organiser_user_name}
-                />
-              </div>
-            </section>
+                  <div className="booking-price-container">
+                    <span className="price-tag-label">
+                      {tickets.length > 0
+                        ? "Selected ticket price"
+                        : "Tickets starting from"}
+                    </span>
 
-            {/* In-place Booking Card */}
-            <aside className="details-sidebar">
-              <div className="booking-card">
-                <div className="booking-card-header">
-                  <div>
-                    <div className="booking-icon-circle">
-                      <FaTicketAlt />
+                    <p className="price-tag-amount">
+                      ₹
+                      {(selectedTicket
+                        ? Number(selectedTicket.price)
+                        : startingPrice
+                      ).toLocaleString("en-IN")}
+                    </p>
+
+                    {selectedTicket && (
+                      <p className="selected-ticket-summary">
+                        {selectedTicket.name}
+                      </p>
+                    )}
+                  </div>
+
+                  {!isDrawerOpen ? (
+                    <button
+                      type="button"
+                      className="book-now-button"
+                      onClick={handleBookTicketsClick}
+                      disabled={
+                        tickets.length > 0 && !selectedTicket
+                      }
+                    >
+                      Book Tickets
+                    </button>
+                  ) : (
+                    <div className="inline-booking-wrapper">
+                      <Booking
+                        isOpen={isDrawerOpen}
+                        onClose={() => setIsDrawerOpen(false)}
+                        event={eventForBooking}
+                        onRequireAuth={() => setShowAuthModal(true)}
+                      />
                     </div>
-                    <span className="booking-card-title">Reserve Spot</span>
-                    <span className="booking-card-sub">Instant confirmation</span>
-                  </div>
-                </div>
+                  )}
 
-                {/* Urgency Trigger */}
-                <div className="urgency-pill">
-                  <FaFire className="urgency-icon" />
-                  <span>Filling fast • Limited tickets available</span>
-                </div>
-
-                <div className="booking-price-container">
-                  <span className="price-tag-label">Tickets starting from</span>
-                  <p className="price-tag-amount">
-                    ₹ {Number(event.price || 0).toLocaleString()}
+                  <p className="booking-guarantee">
+                    Official verified ticket • 100% Secure Checkout
                   </p>
                 </div>
-
-                {!isDrawerOpen ? (
-                  <button
-                    type="button"
-                    className="book-now-button"
-                    onClick={handleBookTicketsClick}
-                  >
-                    Book Tickets
-                  </button>
-                ) : (
-                  <div className="inline-booking-wrapper">
-                    <Booking
-                      isOpen={isDrawerOpen}
-                      onClose={() => setIsDrawerOpen(false)}
-                      event={event}
-                      onRequireAuth={() => setShowAuthModal(true)}
-                    />
-                  </div>
-                )}
-
-                <p className="booking-guarantee">
-                  Official verified ticket • 100% Secure Checkout
-                </p>
-              </div>
-            </aside>
-          </div>
-        </main>
-      </div>
-
-      {/* Mobile Sticky Booking Bar */}
-      <div className="mobile-floating-checkout-bar">
-        <div className="mobile-checkout-price">
-          <span className="mobile-checkout-label">From</span>
-          <span className="mobile-checkout-amount">
-            ₹{Number(event.price || 0).toLocaleString()}
-          </span>
+              </aside>
+            </div>
+          </main>
         </div>
-        <button
-          type="button"
-          className="mobile-book-now-btn"
-          onClick={handleBookTicketsClick}
-        >
-          Book Now
-        </button>
+
+        {/* Mobile booking bar */}
+        <div className="mobile-floating-checkout-bar">
+          <div className="mobile-checkout-price">
+            <span className="mobile-checkout-label">
+              {selectedTicket ? selectedTicket.name : "From"}
+            </span>
+
+            <span className="mobile-checkout-amount">
+              ₹
+              {(selectedTicket
+                ? Number(selectedTicket.price)
+                : startingPrice
+              ).toLocaleString("en-IN")}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="mobile-book-now-btn"
+            onClick={handleBookTicketsClick}
+            disabled={tickets.length > 0 && !selectedTicket}
+          >
+            Book Now
+          </button>
+        </div>
       </div>
 
       {showAuthModal && (
@@ -363,9 +572,12 @@ function EventDetails() {
         />
       )}
 
-      <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
+      <TermsModal
+        isOpen={showTerms}
+        onClose={() => setShowTerms(false)}
+      />
+
       <Footer />
-    </div>
     </>
   );
 }

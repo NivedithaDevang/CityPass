@@ -9,11 +9,10 @@ import {
 } from "../../../services/adminService";
 
 import { 
-  FaTicket, 
-  FaTag, 
   FaTrashCan, 
   FaPlus, 
   FaXmark, 
+  FaEye,
   FaIndianRupeeSign 
 } from "react-icons/fa6";
 import { MdOutlineSearch } from "react-icons/md";
@@ -62,6 +61,9 @@ function Tickets() {
   const [ticketDescription, setTicketDescription] = useState("");
   const [ticketPrice, setTicketPrice] = useState<number | "">("");
   const [ticketCategory, setTicketCategory] = useState("Music");
+
+  // View Ticket Details Modal
+  const [viewingTicket, setViewingTicket] = useState<AdminTicket | null>(null);
 
   // Delete Confirmation Modal
   const [deletingTicket, setDeletingTicket] = useState<AdminTicket | null>(null);
@@ -151,6 +153,9 @@ function Tickets() {
 
       setSuccess("Ticket deleted successfully.");
       setDeletingTicket(null);
+      if (viewingTicket?.id === deletingTicket.id) {
+        setViewingTicket(null);
+      }
     } catch (err: any) {
       console.error("Failed to delete ticket:", err);
       const message =
@@ -160,6 +165,7 @@ function Tickets() {
       setActionLoading(null);
     }
   };
+
   const handleAddTicket = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -185,7 +191,7 @@ function Tickets() {
         category: ticketCategory,
       });
 
-      // Reset
+      // Reset Form State
       setTicketName("");
       setTicketDescription("");
       setTicketPrice("");
@@ -213,6 +219,9 @@ function Tickets() {
         <div>
           <span className="ticket-subhead">TICKET MANAGEMENT</span>
           <h1>Tickets</h1>
+          <p className="ticket-header-desc">
+            Manage ticket types, pricing tiers, categories, and descriptions.
+          </p>
         </div>
 
         <div className="ticket-toolbar">
@@ -227,11 +236,11 @@ function Tickets() {
           </div>
 
           <div className="ticket-tabs">
-            {["ALL", "Music", "Comedy", "Sports", "Art"].map((tab) => (
+            {["ALL", "Music", "Comedy", "Sports", "Food", "Art"].map((tab) => (
               <button
                 key={tab}
                 type="button"
-                className={`tab-btn ${filter === tab ? "active" : ""}`}
+                className={`tab-btn ${filter.toUpperCase() === tab.toUpperCase() ? "active" : ""}`}
                 onClick={() => setFilter(tab)}
               >
                 {tab.toUpperCase()}
@@ -280,49 +289,139 @@ function Tickets() {
             : "No tickets match your search or filter."}
         </div>
       ) : (
-        <div className="ticket-list-grid">
-          {filteredTickets.map((ticket) => (
-            <article key={ticket.id} className="ticket-item-card">
-              <div className="ticket-item-top">
-                <div className="ticket-org-meta">
-                  <div className="ticket-icon-box">
-                    <FaTicket />
-                  </div>
-                  <div>
-                    <h3>{ticket.name}</h3>
-                    <div className="ticket-tags">
-                      <span>
-                        <FaTag /> {ticket.category}
-                      </span>
+        <div className="ticket-table-container">
+          <table className="ticket-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th style={{ textAlign: "right" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTickets.map((ticket) => (
+                <tr key={ticket.id}>
+                  <td className="ticket-col-id">#{ticket.id}</td>
+                  <td className="ticket-col-name">{ticket.name}</td>
+                  <td>
+                    <span className="ticket-cat-badge">{ticket.category}</span>
+                  </td>
+                  <td>
+                    <span className="ticket-table-price">
+                      <FaIndianRupeeSign className="rupee-icon" />
+                      {ticket.price.toLocaleString("en-IN")}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="ticket-table-actions">
+                      <button
+                        type="button"
+                        className="btn-view"
+                        onClick={() => setViewingTicket(ticket)}
+                      >
+                        <FaEye /> View
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-delete"
+                        disabled={actionLoading === ticket.id}
+                        onClick={() => setDeletingTicket(ticket)}
+                      >
+                        <FaTrashCan /> Delete
+                      </button>
                     </div>
-                  </div>
-                </div>
-
-                <div className="ticket-price-pill">
-                  <FaIndianRupeeSign /> {ticket.price.toLocaleString("en-IN")}
-                </div>
-              </div>
-
-              <p className="ticket-desc">
-                {ticket.description || "No description or perks provided."}
-              </p>
-
-              <div className="ticket-card-actions">
-                <span className="ticket-id">Tier ID #{ticket.id}</span>
-                <button
-                  type="button"
-                  className="btn-delete"
-                  disabled={actionLoading === ticket.id}
-                  onClick={() => setDeletingTicket(ticket)}
-                >
-                  <FaTrashCan /> Delete
-                </button>
-              </div>
-            </article>
-          ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
+      {/* VIEW TICKET DETAILS MODAL */}
+      {viewingTicket && (
+        <div className="modal-backdrop" onClick={() => setViewingTicket(null)}>
+          <div className="modal-card ticket-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-header-info">
+                <div className="modal-title-row">
+                  <h3>{viewingTicket.name}</h3>
+                  <span className="ticket-cat-badge">{viewingTicket.category}</span>
+                </div>
+                <span className="modal-subtext">Tier ID: #{viewingTicket.id}</span>
+              </div>
+              <button
+                className="modal-close-btn"
+                type="button"
+                onClick={() => setViewingTicket(null)}
+              >
+                <FaXmark />
+              </button>
+            </div>
+
+            <div className="ticket-details-body">
+              <div className="ticket-meta-grid">
+                <div className="meta-tile">
+                  <span className="meta-tile-label">Category</span>
+                  <span className="meta-tile-value cat-tag">{viewingTicket.category}</span>
+                </div>
+                <div className="meta-tile">
+                  <span className="meta-tile-label">Base Price</span>
+                  <span className="meta-tile-value price-highlight">
+                    <FaIndianRupeeSign /> {viewingTicket.price.toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <div className="meta-tile">
+                  <span className="meta-tile-label">Status</span>
+                  <span className={`status-pill status-${viewingTicket.status.toLowerCase()}`}>
+                    {viewingTicket.status}
+                  </span>
+                </div>
+                <div className="meta-tile">
+                  <span className="meta-tile-label">Tier Type</span>
+                  <span className="meta-tile-value">Standard Pass</span>
+                </div>
+              </div>
+
+              <div className="ticket-desc-section">
+                <span className="meta-tile-label">Description & Perks</span>
+                <div className="ticket-desc-box">
+                  {viewingTicket.description ? (
+                    <p>{viewingTicket.description}</p>
+                  ) : (
+                    <p className="desc-empty">No description or perks provided for this pass.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn-danger-link"
+                onClick={() => {
+                  const target = viewingTicket;
+                  setViewingTicket(null);
+                  setDeletingTicket(target);
+                }}
+              >
+                <FaTrashCan /> Delete Tier
+              </button>
+              <button
+                type="button"
+                className="btn-cancel"
+                onClick={() => setViewingTicket(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE TICKET MODAL */}
       {showAddForm && (
         <div className="modal-backdrop" onClick={() => setShowAddForm(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -417,6 +516,7 @@ function Tickets() {
         </div>
       )}
 
+      {/* DELETE CONFIRMATION MODAL */}
       {deletingTicket && (
         <div className="modal-backdrop" onClick={() => setDeletingTicket(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>

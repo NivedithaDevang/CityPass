@@ -12,7 +12,7 @@ function CitySection() {
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const cityImages: Record<string, string> = {
+  const localCityImages: Record<string, string> = {
     Bengaluru: "/cities/Bangalore.jpeg",
     Mumbai: "/cities/Mumbai.jpeg",
     Delhi: "/cities/Delhi.jpeg",
@@ -27,14 +27,13 @@ function CitySection() {
     const fetchCities = async () => {
       try {
         setLoading(true);
+        // Public endpoint returns only active cities
         const response = await axios.get(`${API_BASE_URL}/v1/cities`);
 
-        // Check common API response wrappers:
-        // response.data could be an Array, or { city: [...] }, { cities: [...] }, or { data: [...] }
         const data = response.data;
         const list = Array.isArray(data)
           ? data
-          : data?.city ?? data?.cities ?? data?.data?.cities ?? data?.data ?? [];
+          : data?.cities ?? data?.city ?? data?.data?.cities ?? data?.data ?? [];
 
         if (Array.isArray(list)) {
           setCities(list);
@@ -58,7 +57,7 @@ function CitySection() {
     navigate(`/events?city=${encodeURIComponent(cityName)}`);
   };
 
-  // Helper to ensure active check doesn't accidentally discard valid cities
+  // Double-check active state in frontend as a safeguard
   const isCityActive = (city: any) => {
     if (city.status !== undefined && city.status !== null) {
       return String(city.status).toUpperCase() === "ACTIVE";
@@ -70,7 +69,7 @@ function CitySection() {
         String(city.is_active).toLowerCase() === "true"
       );
     }
-    return true;
+    return false;
   };
 
   const activeCities = cities.filter(isCityActive);
@@ -101,7 +100,11 @@ function CitySection() {
               style={{ cursor: "pointer" }}
             >
               <img
-                src={cityImages[city.name] || "/cities/default.jpeg"}
+                src={
+                  city.image ||
+                  localCityImages[city.name] ||
+                  "/cities/default.jpeg"
+                }
                 alt={city.name}
               />
               <h4>{city.name}</h4>

@@ -1,3 +1,4 @@
+
 import axios from "axios";
 import { API_BASE_URL } from "../config/config";
 
@@ -52,12 +53,14 @@ export interface OrganiserBooking {
   booking_status: string | null;
 }
 
-export const getOrganiserErrorMessage = (error: unknown, fallback: string): string => {
-  if (axios.isAxiosError<{ message?: string }>(error)) {
-    return error.response?.data?.message || fallback;
-  }
-  return error instanceof Error ? error.message : fallback;
-};
+export interface AdminTicketTemplate {
+  id: number;
+  name: string;
+  description?: string;
+  price: number;
+  category: string;
+  status: "ACTIVE" | "DELETED";
+}
 
 const organiserApi = axios.create({
   baseURL: `${API_BASE_URL}/v1/organisers`,
@@ -68,6 +71,22 @@ const lookupApi = axios.create({
   baseURL: `${API_BASE_URL}/v1`,
   withCredentials: true,
 });
+
+export const fetchActiveAdminTickets = async (): Promise<AdminTicketTemplate[]> => {
+  const response = await lookupApi.get("/tickets");
+  return response.data?.tickets || [];
+};
+
+export const getOrganiserErrorMessage = (
+  error: unknown,
+  fallback: string
+): string => {
+  if (axios.isAxiosError<{ message?: string }>(error)) {
+    return error.response?.data?.message || fallback;
+  }
+
+  return error instanceof Error ? error.message : fallback;
+};
 
 export const fetchMyEvents = async (): Promise<OrganiserEvent[]> => {
   const response = await organiserApi.get("/events");
@@ -80,9 +99,11 @@ export const fetchOrganiserBookings = async (): Promise<OrganiserBooking[]> => {
 };
 
 export const createOrganiserEvent = async (
-  data: CreateOrganiserEventData
+  data: CreateOrganiserEventData & {
+    ticket_category_name?: string;
+    ticket_tiers?: string;
+  }
 ): Promise<OrganiserEvent> => {
-
   const formData = new FormData();
 
   formData.append("city_id", String(data.city_id));
@@ -95,41 +116,50 @@ export const createOrganiserEvent = async (
   formData.append("price", String(data.price));
   formData.append("capacity", String(data.capacity));
 
+  if (data.ticket_category_name !== undefined) {
+    formData.append("ticket_category_name", data.ticket_category_name);
+  }
+
+  if (data.ticket_tiers !== undefined) {
+    formData.append("ticket_tiers", data.ticket_tiers);
+  }
+
   if (data.image) {
     formData.append("image", data.image);
   }
 
-  const response = await organiserApi.post(
-    "/add-event",
+  const response = await organiserApi.post("/add-event", formData);
+
+  return response.data.event;
+};
+
+
+export const patchOrganiserEvent = async (
+  eventId: number | string,
+  updates: Record<string, unknown>
+): Promise<OrganiserEvent> => {
+  const formData = new FormData();
+
+  Object.entries(updates).forEach(([key, value]) => {
+    if (value === undefined || value === null) {
+      return;
+    }
+
+    if (value instanceof Blob) {
+      formData.append(key, value);
+    } else {
+      formData.append(key, String(value));
+    }
+  });
+
+  const response = await organiserApi.patch(
+    `/edit-event/${eventId}`,
     formData
   );
 
   return response.data.event;
 };
 
-export const patchOrganiserEvent = async (
-  eventId: number | string,
-  updates: Record<string, any>
-): Promise<OrganiserEvent> => {
-  const formData = new FormData();
-
-  Object.entries(updates).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) {
-      formData.append(key, value instanceof File ? value : String(value));
-    }
-  });
-
-  const response = await axios.patch(
-    `${API_BASE_URL}/v1/organiser/events/${eventId}`,
-    formData,
-    {
-      headers: { "Content-Type": "multipart/form-data" },
-      withCredentials: true,
-    }
-  );
-
-  return response.data.event;
-};
 
 export const fetchOrganiserCities = async (): Promise<OrganiserLookupOption[]> => {
   const response = await lookupApi.get("/cities");
