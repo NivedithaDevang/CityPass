@@ -16,14 +16,18 @@ export const validateEvent = (
         capacity
     } = req.body;
 
-    // Required fields
+    const isPartialUpdate = req.method === "PATCH";
+
+    // Creation requires the complete event; updates validate only supplied fields.
     if (
+        !isPartialUpdate && (
         city_id === undefined ||
         category_id === undefined ||
         !name ||
         !event_date ||
         price === undefined ||
         capacity === undefined
+        )
     ) {
         return res.status(400).json({
             message:
@@ -32,28 +36,28 @@ export const validateEvent = (
     }
 
     // Validate city_id
-    if (!Number.isInteger(Number(city_id)) || Number(city_id) <= 0) {
+    if (city_id !== undefined && (!Number.isInteger(Number(city_id)) || Number(city_id) <= 0)) {
         return res.status(400).json({
             message: "city_id must be a valid positive number"
         });
     }
 
     // Validate category_id
-    if (!Number.isInteger(Number(category_id)) || Number(category_id) <= 0) {
+    if (category_id !== undefined && (!Number.isInteger(Number(category_id)) || Number(category_id) <= 0)) {
         return res.status(400).json({
             message: "category_id must be a valid positive number"
         });
     }
 
     // Validate name
-    if (typeof name !== "string" || name.trim().length < 3) {
+    if (name !== undefined && (typeof name !== "string" || name.trim().length < 3)) {
         return res.status(400).json({
             message: "Event name must contain at least 3 characters"
         });
     }
     
 
-    if (name.trim().length > 150) {
+    if (name !== undefined && name.trim().length > 150) {
         return res.status(400).json({
             message:
                 "Event name cannot exceed 150 characters"
@@ -81,23 +85,25 @@ export const validateEvent = (
     }
 
     // Validate event date
-    const eventDate = new Date(event_date);
+    if (event_date !== undefined) {
+        const eventDate = new Date(event_date);
 
-    if (isNaN(eventDate.getTime())) {
-        return res.status(400).json({
-            message: "event_date must be a valid date"
-        });
-    }
+        if (isNaN(eventDate.getTime())) {
+            return res.status(400).json({
+                message: "event_date must be a valid date"
+            });
+        }
 
-    // Event should be in the future
-    if (eventDate <= new Date()) {
-        return res.status(400).json({
-            message: "Event date must be in the future"
-        });
+        // Event should be in the future
+        if (eventDate <= new Date()) {
+            return res.status(400).json({
+                message: "Event date must be in the future"
+            });
+        }
     }
 
     // Validate price
-    if (isNaN(Number(price)) || Number(price) < 0) {
+    if (price !== undefined && (isNaN(Number(price)) || Number(price) < 0)) {
         return res.status(400).json({
             message: "Price must be a valid number greater than or equal to 0"
         });
@@ -105,8 +111,10 @@ export const validateEvent = (
 
     // Validate capacity
     if (
+        capacity !== undefined && (
         !Number.isInteger(Number(capacity)) ||
         Number(capacity) <= 0
+        )
     ) {
         return res.status(400).json({
             message: "Capacity must be a positive whole number"

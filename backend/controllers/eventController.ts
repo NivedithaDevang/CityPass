@@ -278,7 +278,9 @@ const uploadResult = await new Promise<{
                     }
                 );
             } catch{
-                //ignore cleanup failure
+                res.status(500).json({
+                    message : "Unable to create event"
+                })
             }
         }
 
@@ -424,30 +426,10 @@ const updatePayload: UpdateEvent = {};
         if (newImageUrl) {
             updatePayload.image = newImageUrl;
         }
-        const result = await updateEventModel(
+        await updateEventModel(
             eventId,
             updatePayload
         );
-
-        if (result.affectedRows === 0) {
-            
-            if (uploadedPublicId) {
-                try {
-                    await cloudinary.uploader.destroy(
-                        uploadedPublicId,
-                        {
-                            resource_type: "image"
-                        }
-                    );
-                } catch {
-
-                }
-            }
-
-            return res.status(404).json({
-                message: "Event not found"
-            });
-        }
         if (imageFile && existingEvent.length > 0) {
             const oldImageUrl = existingEvent[0].image;
 

@@ -9,6 +9,7 @@ import { getRequests } from "../../controllers/organiserRequestController.js";
 import { getTickets, addTicket, deleteTicket } from "../../controllers/ticketController.js";
 import { authenticate } from "../../middleware/authMiddleware.js";
 import { checkAdminRole, checkCityAccess } from "../../middleware/roleMiddleware.js";
+import upload from "../../middleware/upload.js";
 
 const adminRouter = express.Router();
 
@@ -26,7 +27,7 @@ adminRouter.get( "/organiser-requests", getRequests );
 adminRouter.get( "/tickets", getTickets);
 
 
-adminRouter.post( "/add-city", addCity );
+adminRouter.post( "/add-city", upload.single("image"), addCity );
 adminRouter.post( "/add-category", addCategory );
 adminRouter.post( "/add-ticket", addTicket);
 
