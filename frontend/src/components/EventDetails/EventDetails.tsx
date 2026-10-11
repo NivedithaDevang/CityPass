@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -16,8 +15,8 @@ import {
   FaTicketAlt,
   FaExternalLinkAlt,
   FaClock,
-  FaFire,
   FaCheckCircle,
+  FaInfoCircle,
 } from "react-icons/fa";
 import { TermsModal } from "../Terms/EventTerms";
 import { OrganiserDetails } from "../OrganiserCard/OrganiserCard";
@@ -41,6 +40,13 @@ interface EventWithTickets extends Events {
   image_url?: string;
   poster_url?: string;
   banner_image?: string;
+  instructions?: string;
+  additional_instructions?: string;
+  languages?: string | string[];
+  age_restriction?: string;
+  age_group?: string;
+  duration?: string;
+  duration_hours?: number | string;
 }
 
 function EventDetails() {
@@ -50,8 +56,7 @@ function EventDetails() {
 
   const [event, setEvent] = useState<EventWithTickets | null>(null);
   const [tickets, setTickets] = useState<EventTicket[]>([]);
-  const [selectedTicket, setSelectedTicket] =
-    useState<EventTicket | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<EventTicket | null>(null);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,24 +70,16 @@ function EventDetails() {
         setLoading(true);
         setError(null);
 
-        const response = await axios.get(
-          `${API_BASE_URL}/v1/events/${slug}`
-        );
-
-        const loadedEvent: EventWithTickets =
-          response.data.event || response.data;
-
+        const response = await axios.get(`${API_BASE_URL}/v1/events/${slug}`);
+        const loadedEvent: EventWithTickets = response.data.event || response.data;
         setEvent(loadedEvent);
 
-        // The event API should return the event-specific ticket records.
         const eventTicketList: EventTicket[] = (
           loadedEvent.event_tickets ||
           loadedEvent.tickets ||
           []
         ).filter(
-          (ticket) =>
-            ticket.status === undefined ||
-            ticket.status === "ACTIVE"
+          (ticket) => ticket.status === undefined || ticket.status === "ACTIVE"
         );
 
         setTickets(eventTicketList);
@@ -106,7 +103,6 @@ function EventDetails() {
     if (!eventDate) return "Date to be announced";
 
     const parsedDate = new Date(eventDate);
-
     if (Number.isNaN(parsedDate.getTime())) {
       return eventDate;
     }
@@ -120,7 +116,6 @@ function EventDetails() {
     if (!timeStr) return "";
 
     const [hours, minutes] = timeStr.split(":");
-
     if (hours === undefined || minutes === undefined) {
       return timeStr;
     }
@@ -133,6 +128,34 @@ function EventDetails() {
       minute: "2-digit",
       hour12: true,
     }).format(date);
+  };
+
+  const getFormattedLanguages = (languages?: string | string[]) => {
+    if (!languages) return "English";
+    if (Array.isArray(languages)) return languages.join(" / ");
+
+    try {
+      const parsed = JSON.parse(languages);
+      if (Array.isArray(parsed)) return parsed.join(" / ");
+    } catch {
+      // String format like "English, Hindi"
+    }
+
+    return languages.replace(/,/g, " / ");
+  };
+
+  const formatDurationDisplay = (
+    durationHours?: number | string,
+    durationText?: string
+  ) => {
+    if (durationHours !== undefined && durationHours !== null && durationHours !== "") {
+      const num = Number(durationHours);
+      if (!isNaN(num)) {
+        return `${num} ${num === 1 ? "Hour" : "Hours"}`;
+      }
+      return String(durationHours);
+    }
+    return durationText || "2 Hours";
   };
 
   const handleBookTicketsClick = () => {
@@ -168,14 +191,8 @@ function EventDetails() {
       <>
         <Navbar />
         <div className="details-container details-state">
-          <p className="status-text">
-            {error || "Event not found."}
-          </p>
-
-          <button
-            className="back-button"
-            onClick={() => navigate(-1)}
-          >
+          <p className="status-text">{error || "Event not found."}</p>
+          <button className="back-button" onClick={() => navigate(-1)}>
             <FaArrowLeft /> Back to Events
           </button>
         </div>
@@ -190,8 +207,7 @@ function EventDetails() {
     "/eventBG/image3.png",
   ];
 
-  const fallbackImage =
-    eventBackgrounds[event.id % eventBackgrounds.length];
+  const fallbackImage = eventBackgrounds[event.id % eventBackgrounds.length];
 
   const eventImage =
     event.image ||
@@ -202,16 +218,13 @@ function EventDetails() {
   const posterImage = eventImage || fallbackImage;
 
   const formattedTime =
-    formatTimeString(event.time) ||
-    "(Time yet to be confirmed)";
+    formatTimeString(event.time) || "(Time yet to be confirmed)";
 
   const startingPrice =
     tickets.length > 0
       ? Math.min(...tickets.map((ticket) => Number(ticket.price)))
       : Number(event.price || 0);
 
-  // Pass the selected event-ticket details to the booking component.
-  // Booking.tsx must use selected_ticket_id when creating the booking.
   const eventForBooking = {
     ...event,
     selected_ticket_id: selectedTicket?.id ?? null,
@@ -221,6 +234,9 @@ function EventDetails() {
       : null,
   };
 
+  const eventInstructions =
+    event.additional_instructions || event.instructions;
+
   return (
     <>
       <Navbar />
@@ -228,10 +244,7 @@ function EventDetails() {
       <div className="details-outer-container">
         <div className="details-page-bg">
           <main className="details-wrapper">
-            <button
-              className="back-button"
-              onClick={() => navigate(-1)}
-            >
+            <button className="back-button" onClick={() => navigate(-1)}>
               <FaArrowLeft />
               <span>Back to Events</span>
             </button>
@@ -244,7 +257,6 @@ function EventDetails() {
                 className="hero-backdrop-img"
                 onError={(e) => {
                   const image = e.currentTarget;
-
                   if (image.dataset.fallbackApplied !== "true") {
                     image.dataset.fallbackApplied = "true";
                     image.src = fallbackImage;
@@ -264,7 +276,6 @@ function EventDetails() {
                     className="hero-poster-img"
                     onError={(e) => {
                       const image = e.currentTarget;
-
                       if (image.dataset.fallbackApplied !== "true") {
                         image.dataset.fallbackApplied = "true";
                         image.src = fallbackImage;
@@ -282,13 +293,16 @@ function EventDetails() {
                     </span>
 
                     <span className="details-sub-tag">
-                      English / Hindi
+                      {getFormattedLanguages(event.languages)}
                     </span>
 
-                    <span className="details-sub-tag">16+</span>
+                    <span className="details-sub-tag">
+                      {event.age_group || event.age_restriction || "All Ages"}
+                    </span>
 
                     <span className="details-sub-tag">
-                      <FaClock className="tag-icon" /> 2 Hours
+                      <FaClock className="tag-icon" />{" "}
+                      {formatDurationDisplay(event.duration_hours, event.duration)}
                     </span>
                   </div>
 
@@ -303,10 +317,7 @@ function EventDetails() {
                       </div>
 
                       <div>
-                        <span className="meta-label">
-                          Date & Time
-                        </span>
-
+                        <span className="meta-label">Date & Time</span>
                         <p className="meta-value">
                           {formatEventDate(event.event_date)}
                           {` • ${formattedTime}`}
@@ -320,10 +331,7 @@ function EventDetails() {
                       </div>
 
                       <div className="meta-venue-details">
-                        <span className="meta-label">
-                          Location
-                        </span>
-
+                        <span className="meta-label">Location</span>
                         <p className="meta-value">
                           {event.location || "Venue TBA"}
                         </p>
@@ -351,32 +359,48 @@ function EventDetails() {
             {/* Main content */}
             <div className="details-body">
               <section className="details-left">
+                {/* About the Event */}
                 <div className="content-card">
-                  <h2 className="section-title">
-                    About the Event
-                  </h2>
-
+                  <h2 className="section-title">About the Event</h2>
                   <p className="details-description">
-                    {event.description ||
-                      "No description provided for this event."}
+                    {event.description || "No description provided for this event."}
                   </p>
                 </div>
+
+                {/* Instructions & Amenities Section */}
+                {eventInstructions && (
+                  <div className="content-card">
+                    <h2
+                      className="section-title"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      <FaInfoCircle style={{ color: "var(--primary-color, #7c3aed)" }} />
+                      Instructions & Venue Amenities
+                    </h2>
+                    <p
+                      className="details-description"
+                      style={{ whiteSpace: "pre-line" }}
+                    >
+                      {eventInstructions}
+                    </p>
+                  </div>
+                )}
 
                 {/* Event ticket categories */}
                 {tickets.length > 0 && (
                   <div className="content-card event-ticket-options">
-                    <h2 className="section-title">
-                      Choose Your Ticket
-                    </h2>
-
+                    <h2 className="section-title">Choose Your Ticket</h2>
                     <p className="ticket-selection-description">
                       Select your preferred ticket category.
                     </p>
 
                     <div className="event-ticket-list">
                       {tickets.map((ticket) => {
-                        const isSelected =
-                          selectedTicket?.id === ticket.id;
+                        const isSelected = selectedTicket?.id === ticket.id;
 
                         return (
                           <button
@@ -385,9 +409,7 @@ function EventDetails() {
                             className={`event-ticket-option ${
                               isSelected ? "selected" : ""
                             }`}
-                            onClick={() =>
-                              setSelectedTicket(ticket)
-                            }
+                            onClick={() => setSelectedTicket(ticket)}
                             aria-pressed={isSelected}
                           >
                             <span className="event-ticket-option-info">
@@ -406,10 +428,7 @@ function EventDetails() {
                             </span>
 
                             <span className="event-ticket-price">
-                              ₹
-                              {Number(ticket.price).toLocaleString(
-                                "en-IN"
-                              )}
+                              ₹{Number(ticket.price).toLocaleString("en-IN")}
                             </span>
                           </button>
                         );
@@ -432,12 +451,10 @@ function EventDetails() {
                 >
                   <div className="terms-action-left">
                     <FaShieldAlt className="terms-shield-icon" />
-
                     <div>
                       <h4>Terms & Conditions</h4>
                       <p>
-                        Cancellation policies, venue rules, and
-                        entry guidelines
+                        Cancellation policies, venue rules, and entry guidelines
                       </p>
                     </div>
                   </div>
@@ -446,10 +463,7 @@ function EventDetails() {
                 </div>
 
                 <div className="content-card organiser-section">
-                  <h2 className="section-title">
-                    Organised By
-                  </h2>
-
+                  <h2 className="section-title">Organised By</h2>
                   <OrganiserDetails
                     stageName={event.organiser_stage_name}
                     userName={event.organiser_user_name}
@@ -465,22 +479,9 @@ function EventDetails() {
                       <div className="booking-icon-circle">
                         <FaTicketAlt />
                       </div>
-
-                      <span className="booking-card-title">
-                        Reserve Spot
-                      </span>
-
-                      <span className="booking-card-sub">
-                        Instant confirmation
-                      </span>
+                      <span className="booking-card-title">Reserve Spot</span>
+                      <span className="booking-card-sub">Instant confirmation</span>
                     </div>
-                  </div>
-
-                  <div className="urgency-pill">
-                    <FaFire className="urgency-icon" />
-                    <span>
-                      Filling fast • Limited tickets available
-                    </span>
                   </div>
 
                   <div className="booking-price-container">
@@ -510,9 +511,7 @@ function EventDetails() {
                       type="button"
                       className="book-now-button"
                       onClick={handleBookTicketsClick}
-                      disabled={
-                        tickets.length > 0 && !selectedTicket
-                      }
+                      disabled={tickets.length > 0 && !selectedTicket}
                     >
                       Book Tickets
                     </button>

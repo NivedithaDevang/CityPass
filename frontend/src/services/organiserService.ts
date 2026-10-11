@@ -9,6 +9,7 @@ export type OrganiserEvent = {
   category_id: number;
   name: string;
   image?: string | null;
+  image_url?: string | null;
   description: string | null;
   location: string | null;
   event_date: string;
@@ -20,6 +21,13 @@ export type OrganiserEvent = {
   category_name: string | null;
   city_name: string | null;
   rejection_reason?: string | null;
+  languages?: string | string[] | null;
+  age_group?: string | null;
+  age_restriction?: string | null;
+  duration_hours?: number | string | null;
+  duration?: string | null;
+  additional_instructions?: string | null;
+  instructions?: string | null;
 };
 
 export interface CreateOrganiserEventData {
@@ -33,6 +41,14 @@ export interface CreateOrganiserEventData {
   price: number;
   capacity: number;
   image?: File;
+  // Add the new fields:
+  instructions?: string;
+  additional_instructions?: string;
+  languages?: string | string[];
+  age_restriction?: string;
+  age_group?: string;
+  duration?: string;
+  duration_hours?: number;
 }
 
 export interface OrganiserLookupOption {
@@ -116,6 +132,30 @@ export const createOrganiserEvent = async (
   formData.append("price", String(data.price));
   formData.append("capacity", String(data.capacity));
 
+  // --- Append the missing instruction & badge fields ---
+  const instructions = data.additional_instructions || data.instructions;
+  if (instructions) {
+    formData.append("additional_instructions", instructions);
+    formData.append("instructions", instructions);
+  }
+
+  const ageGroup = data.age_group || data.age_restriction;
+  if (ageGroup) {
+    formData.append("age_group", ageGroup);
+    formData.append("age_restriction", ageGroup);
+  }
+
+  const durationVal = data.duration_hours !== undefined ? String(data.duration_hours) : data.duration;
+  if (durationVal) {
+    formData.append("duration", String(durationVal));
+    formData.append("duration_hours", String(durationVal));
+  }
+
+  if (data.languages) {
+    const langs = Array.isArray(data.languages) ? JSON.stringify(data.languages) : data.languages;
+    formData.append("languages", langs);
+  }
+
   if (data.ticket_category_name !== undefined) {
     formData.append("ticket_category_name", data.ticket_category_name);
   }
@@ -129,7 +169,6 @@ export const createOrganiserEvent = async (
   }
 
   const response = await organiserApi.post("/add-event", formData);
-
   return response.data.event;
 };
 
@@ -147,6 +186,8 @@ export const patchOrganiserEvent = async (
 
     if (value instanceof Blob) {
       formData.append(key, value);
+    } else if (typeof value === "object") {
+      formData.append(key, JSON.stringify(value));
     } else {
       formData.append(key, String(value));
     }

@@ -47,6 +47,7 @@ interface CreateEventModalProps {
 interface FormState {
   name: string;
   description: string;
+  instructions: string;
   location: string;
   city_id: string;
   category_id: string;
@@ -54,11 +55,14 @@ interface FormState {
   time: string;
   price: number;
   capacity: number;
+  age_restriction: string;
+  duration: string;
 }
 
 const initialFormState: FormState = {
   name: "",
   description: "",
+  instructions: "",
   location: "",
   city_id: "",
   category_id: "",
@@ -66,7 +70,24 @@ const initialFormState: FormState = {
   time: "",
   price: 0,
   capacity: 50,
+  age_restriction: "All Ages",
+  duration: "2 Hours",
 };
+
+const AVAILABLE_LANGUAGES = [
+  "English",
+  "Hindi",
+  "Kannada",
+  "Tamil",
+  "Telugu",
+  "Malayalam",
+  "Marathi",
+  "Bengali",
+  "Punjabi",
+  "Gujarati",
+];
+
+const AGE_RESTRICTIONS = ["All Ages", "3+", "7+", "12+", "16+", "18+", "21+"];
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
@@ -78,6 +99,9 @@ export const CreateEventModal = ({
   eventToEdit,
 }: CreateEventModalProps) => {
   const [formData, setFormData] = useState<FormState>(initialFormState);
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([
+    "English",
+  ]);
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -119,6 +143,10 @@ export const CreateEventModal = ({
       setFormData({
         name: eventToEdit.name || "",
         description: eventToEdit.description || "",
+        instructions:
+          (eventToEdit as any).additional_instructions ||
+          (eventToEdit as any).instructions ||
+          "",
         location: eventToEdit.location || "",
         city_id: String((eventToEdit as any).city_id || ""),
         category_id: String((eventToEdit as any).category_id || ""),
@@ -126,7 +154,28 @@ export const CreateEventModal = ({
         time: eventToEdit.time ? eventToEdit.time.slice(0, 5) : "",
         price: Number(eventToEdit.price) || 0,
         capacity: Number(eventToEdit.capacity) || 50,
+        age_restriction:
+          (eventToEdit as any).age_group ||
+          (eventToEdit as any).age_restriction ||
+          "All Ages",
+        duration:
+          (eventToEdit as any).duration_hours !== undefined &&
+          (eventToEdit as any).duration_hours !== null
+            ? `${(eventToEdit as any).duration_hours} Hours`
+            : (eventToEdit as any).duration || "2 Hours",
       });
+
+      const langs = (eventToEdit as any).languages;
+      if (Array.isArray(langs)) {
+        setSelectedLanguages(langs);
+      } else if (typeof langs === "string") {
+        try {
+          const parsed = JSON.parse(langs);
+          setSelectedLanguages(Array.isArray(parsed) ? parsed : [langs]);
+        } catch {
+          setSelectedLanguages(langs.split(",").map((l) => l.trim()));
+        }
+      }
 
       const existingTiers = (eventToEdit as any).ticket_tiers;
       if (Array.isArray(existingTiers) && existingTiers.length > 0) {
@@ -149,6 +198,7 @@ export const CreateEventModal = ({
       if (existingImg) setImagePreview(existingImg);
     } else {
       setFormData(initialFormState);
+      setSelectedLanguages(["English"]);
       setImage(null);
       setImagePreview("");
       setTicketMode("NONE");
@@ -183,9 +233,7 @@ export const CreateEventModal = ({
       })
       .catch((lookupError: unknown) => {
         if (active) {
-          setError(
-            getOrganiserErrorMessage(lookupError, "Unable to load form data.")
-          );
+          setError(getOrganiserErrorMessage(lookupError, "Unable to load form data."));
         }
       })
       .finally(() => {
@@ -216,6 +264,7 @@ export const CreateEventModal = ({
   const requestClose = () => {
     if (!submitting) {
       setFormData(initialFormState);
+      setSelectedLanguages(["English"]);
       setImage(null);
       setImagePreview("");
       setError(null);
@@ -234,9 +283,14 @@ export const CreateEventModal = ({
     setError(null);
     setFormData((current) => ({
       ...current,
-      [name]:
-        type === "number" ? (value === "" ? 0 : Number(value)) : value,
+      [name]: type === "number" ? (value === "" ? 0 : Number(value)) : value,
     }));
+  };
+
+  const toggleLanguage = (lang: string) => {
+    setSelectedLanguages((prev) =>
+      prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang]
+    );
   };
 
   const handleToggleAdminTicket = (ticket: AdminTicketTemplate) => {
@@ -280,7 +334,12 @@ export const CreateEventModal = ({
         .map((t) => ({ id: t.id, name: t.name, price: Number(t.price), type: "ADMIN" }));
     }
     if (ticketMode === "CUSTOM") {
-      return customTiers.map((c, i) => ({ id: `custom-${i}`, name: c.name, price: c.price, type: "CUSTOM" }));
+      return customTiers.map((c, i) => ({
+        id: `custom-${i}`,
+        name: c.name,
+        price: c.price,
+        type: "CUSTOM",
+      }));
     }
     return [{ name: "General Admission", price: Number(formData.price), type: "ADMIN" }];
   };
@@ -306,17 +365,13 @@ export const CreateEventModal = ({
     setImagePreview(URL.createObjectURL(file));
   };
 
-  const removeImage = (e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setImage(null);
-    setImagePreview("");
-    setIsLightboxOpen(false);
-  };
-
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
 
+    if (selectedLanguages.length === 0) {
+      return setError("Please select at least one language for the event.");
+    }
     if (ticketMode === "ADMIN" && selectedAdminTicketIds.length === 0) {
       return setError("Please choose at least one admin ticket tier.");
     }
@@ -326,11 +381,14 @@ export const CreateEventModal = ({
 
     const compiledTiers = getFinalTicketTiers();
     const primaryTierName = compiledTiers.map((t) => t.name).join(", ");
+    const languagesPayload = JSON.stringify(selectedLanguages);
 
     if (!isEditMode) {
       if (!formData.name.trim()) return setError("Event name is required.");
-      if (!formData.city_id || !formData.category_id) return setError("Choose a city and category.");
-      if (!formData.event_date || !formData.time) return setError("Date and time are required.");
+      if (!formData.city_id || !formData.category_id)
+        return setError("Choose a city and category.");
+      if (!formData.event_date || !formData.time)
+        return setError("Date and time are required.");
       if (formData.capacity < 1) return setError("Capacity must be at least 1.");
       if (!image) return setError("Please upload an event image.");
 
@@ -339,6 +397,13 @@ export const CreateEventModal = ({
         const createdEvent = await createOrganiserEvent({
           name: formData.name.trim(),
           description: formData.description.trim() || undefined,
+          instructions: formData.instructions.trim() || undefined,
+          additional_instructions: formData.instructions.trim() || undefined,
+          languages: languagesPayload,
+          age_restriction: formData.age_restriction,
+          age_group: formData.age_restriction,
+          duration: formData.duration.trim() || "2 Hours",
+          duration_hours: formData.duration.trim() || "2 Hours",
           location: formData.location.trim() || undefined,
           city_id: Number(formData.city_id),
           category_id: Number(formData.category_id),
@@ -366,16 +431,77 @@ export const CreateEventModal = ({
     if (!eventToEdit) return;
     const patchPayload: Record<string, any> = {};
 
-    if (formData.name.trim() !== (eventToEdit.name || "").trim()) patchPayload.name = formData.name.trim();
-    if (formData.description.trim() !== (eventToEdit.description || "").trim()) patchPayload.description = formData.description.trim();
-    if (formData.location.trim() !== (eventToEdit.location || "").trim()) patchPayload.location = formData.location.trim();
-    if (formData.city_id && Number(formData.city_id) !== Number((eventToEdit as any).city_id)) patchPayload.city_id = Number(formData.city_id);
-    if (formData.category_id && Number(formData.category_id) !== Number((eventToEdit as any).category_id)) patchPayload.category_id = Number(formData.category_id);
-    if (formData.event_date && formData.event_date !== (eventToEdit.event_date || "").slice(0, 10)) patchPayload.event_date = formData.event_date;
-    if (formData.time && formData.time !== (eventToEdit.time || "").slice(0, 5)) patchPayload.time = formData.time;
-    if (Number(formData.price) !== Number(eventToEdit.price)) patchPayload.price = Number(formData.price);
-    if (Number(formData.capacity) !== Number(eventToEdit.capacity)) patchPayload.capacity = Number(formData.capacity);
-    if (image instanceof File) patchPayload.image = image;
+    if (formData.name.trim() !== (eventToEdit.name || "").trim()) {
+      patchPayload.name = formData.name.trim();
+    }
+    if (formData.description.trim() !== (eventToEdit.description || "").trim()) {
+      patchPayload.description = formData.description.trim();
+    }
+    if (formData.location.trim() !== (eventToEdit.location || "").trim()) {
+      patchPayload.location = formData.location.trim();
+    }
+    if (formData.city_id && Number(formData.city_id) !== Number((eventToEdit as any).city_id)) {
+      patchPayload.city_id = Number(formData.city_id);
+    }
+    if (formData.category_id && Number(formData.category_id) !== Number((eventToEdit as any).category_id)) {
+      patchPayload.category_id = Number(formData.category_id);
+    }
+    if (formData.event_date && formData.event_date !== (eventToEdit.event_date || "").slice(0, 10)) {
+      patchPayload.event_date = formData.event_date;
+    }
+    if (formData.time && formData.time !== (eventToEdit.time || "").slice(0, 5)) {
+      patchPayload.time = formData.time;
+    }
+    if (Number(formData.price) !== Number(eventToEdit.price)) {
+      patchPayload.price = Number(formData.price);
+    }
+    if (Number(formData.capacity) !== Number(eventToEdit.capacity)) {
+      patchPayload.capacity = Number(formData.capacity);
+    }
+    if (image instanceof File) {
+      patchPayload.image = image;
+    }
+
+    // Instructions
+    const originalInstructions = (
+      (eventToEdit as any).additional_instructions ||
+      (eventToEdit as any).instructions ||
+      ""
+    ).trim();
+    if (formData.instructions.trim() !== originalInstructions) {
+      patchPayload.additional_instructions = formData.instructions.trim();
+      patchPayload.instructions = formData.instructions.trim();
+    }
+
+    // Age restriction / group
+    const originalAge = (
+      (eventToEdit as any).age_group ||
+      (eventToEdit as any).age_restriction ||
+      "All Ages"
+    ).trim();
+    if (formData.age_restriction !== originalAge) {
+      patchPayload.age_group = formData.age_restriction;
+      patchPayload.age_restriction = formData.age_restriction;
+    }
+
+    // Duration
+    const originalDuration = String(
+      (eventToEdit as any).duration_hours !== undefined && (eventToEdit as any).duration_hours !== null
+        ? `${(eventToEdit as any).duration_hours} Hours`
+        : (eventToEdit as any).duration || ""
+    ).trim();
+    if (formData.duration.trim() !== originalDuration) {
+      patchPayload.duration_hours = formData.duration.trim();
+      patchPayload.duration = formData.duration.trim();
+    }
+
+    // Languages
+    const currentLanguagesStr = typeof (eventToEdit as any).languages === "string"
+      ? (eventToEdit as any).languages
+      : JSON.stringify((eventToEdit as any).languages || []);
+    if (languagesPayload !== currentLanguagesStr) {
+      patchPayload.languages = languagesPayload;
+    }
 
     patchPayload.ticket_category_name = primaryTierName;
     patchPayload.ticket_tiers = JSON.stringify(compiledTiers);
@@ -509,7 +635,84 @@ export const CreateEventModal = ({
                 value={formData.description}
                 onChange={handleChange}
                 rows={3}
-                placeholder="What should guests know?"
+                placeholder="What should guests know about this event?"
+              />
+            </label>
+
+            <label className="org-form-field org-form-wide" htmlFor="event-instructions">
+              <span>Instructions, Amenities & Guidelines</span>
+              <textarea
+                id="event-instructions"
+                name="instructions"
+                value={formData.instructions}
+                onChange={handleChange}
+                rows={3}
+                placeholder="e.g. Free parking available, AC hall, Bring physical ID proof, Wheelchair accessible, Outside food strictly prohibited."
+              />
+            </label>
+
+            {/* Languages Multi-select */}
+            <div className="org-form-field org-form-wide">
+              <span>Languages</span>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "0.5rem 1rem",
+                  marginTop: "0.4rem",
+                }}
+              >
+                {AVAILABLE_LANGUAGES.map((lang) => {
+                  const isChecked = selectedLanguages.includes(lang);
+                  return (
+                    <label
+                      key={lang}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        fontSize: "0.875rem",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleLanguage(lang)}
+                      />
+                      {lang}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Age restriction and Duration */}
+            <label className="org-form-field" htmlFor="event-age">
+              <span>Age restriction</span>
+              <select
+                id="event-age"
+                name="age_restriction"
+                value={formData.age_restriction}
+                onChange={handleChange}
+              >
+                {AGE_RESTRICTIONS.map((age) => (
+                  <option key={age} value={age}>
+                    {age}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="org-form-field" htmlFor="event-duration">
+              <span>Duration</span>
+              <input
+                id="event-duration"
+                name="duration"
+                value={formData.duration}
+                onChange={handleChange}
+                placeholder="e.g. 2 Hours, 90 Mins, Full Day"
+                required
               />
             </label>
 

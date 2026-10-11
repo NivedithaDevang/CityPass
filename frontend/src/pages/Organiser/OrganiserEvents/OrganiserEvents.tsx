@@ -5,13 +5,18 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Clock,
   Edit,
   Eye,
+  Globe2,
+  Info,
   Loader2,
   MapPin,
   Plus,
   Search,
   Tag,
+  TrendingUp,
+  UserCheck,
   X,
 } from "lucide-react";
 import {
@@ -463,17 +468,16 @@ function OrganiserEvents() {
                         </button>
 
                         <button
-  type="button"
-  className="org-card-action-btn"
-  onClick={(e) => {
-    e.stopPropagation();
-    console.log("Manage Tickets clicked:", event.id);
-    setTicketEventId(Number(event.id));
-  }}
->
-  <Tag size={13} />
-  Manage Tickets
-</button>
+                          type="button"
+                          className="org-card-action-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTicketEventId(Number(event.id));
+                          }}
+                        >
+                          <Tag size={13} />
+                          Manage Tickets
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -530,6 +534,10 @@ function OrganiserEvents() {
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
           onEdit={() => openEditModal(selectedEvent)}
+          onManageTickets={(eventId) => {
+            setSelectedEvent(null);
+            setTicketEventId(eventId);
+          }}
         />
       )}
 
@@ -547,14 +555,73 @@ function EventDetailsModal({
   event,
   onClose,
   onEdit,
+  onManageTickets,
 }: {
   event: OrganiserEvent;
   onClose: () => void;
   onEdit: () => void;
+  onManageTickets: (eventId: number) => void;
 }) {
+  const imageUrl = (event as any).image_url || (event as any).image;
+  const instructions =
+    (event as any).additional_instructions || (event as any).instructions;
+  const ageGroup =
+    (event as any).age_group || (event as any).age_restriction || "All Ages";
+
+  // Lock scrolling behind the modal while mounted
+  useEffect(() => {
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+
+    const scrollbarWidth =
+      window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+    };
+  }, []);
+
+  const formatLanguages = () => {
+    const raw = (event as any).languages;
+    if (!raw) return "Not specified";
+    if (Array.isArray(raw)) return raw.join(", ");
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.join(", ");
+    } catch {
+      // standard comma-separated text
+    }
+    return String(raw).replace(/[[\]"]/g, "");
+  };
+
+  const formatDuration = () => {
+    const rawDur = (event as any).duration_hours ?? (event as any).duration;
+    if (!rawDur) return "2 Hours";
+    const num = Number(rawDur);
+    return !isNaN(num) ? `${num} ${num === 1 ? "Hour" : "Hours"}` : String(rawDur);
+  };
+
+  const potentialRevenue =
+    Number(event.price || 0) * Number(event.capacity || 0);
+
   return (
     <div
       className="org-detail-backdrop"
+      onWheel={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
       onMouseDown={(click) => {
         if (click.target === click.currentTarget) {
           onClose();
@@ -566,10 +633,26 @@ function EventDetailsModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="org-detail-title"
+        onWheel={(e) => e.stopPropagation()}
       >
-        <header className="org-detail-header">
-          <div className="org-detail-header-text">
-            <div className="org-detail-meta-tags">
+        {/* Cover / Header section */}
+        {imageUrl ? (
+          <div
+            className="org-detail-cover"
+            style={{ backgroundImage: `url(${imageUrl})` }}
+          >
+            <div className="org-detail-cover-overlay" />
+
+            <button
+              type="button"
+              className="org-detail-cover-close-btn"
+              onClick={onClose}
+              aria-label="Close event details"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="org-detail-cover-badges">
               <span className="org-detail-badge-cat">
                 {event.category_name || "General"}
               </span>
@@ -580,25 +663,60 @@ function EventDetailsModal({
                 {event.status}
               </span>
             </div>
-
-            <h2 id="org-detail-title">{event.name}</h2>
           </div>
+        ) : (
+          <header className="org-detail-header">
+            <div className="org-detail-header-text">
+              <div className="org-detail-meta-tags">
+                <span className="org-detail-badge-cat">
+                  {event.category_name || "General"}
+                </span>
 
-          <button
-            type="button"
-            className="org-detail-close-btn"
-            onClick={onClose}
-            aria-label="Close event details"
-          >
-            <X size={18} />
-          </button>
-        </header>
+                <span
+                  className={`org-status-badge ${event.status.toLowerCase()}`}
+                >
+                  {event.status}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="org-detail-close-btn"
+              onClick={onClose}
+              aria-label="Close event details"
+            >
+              <X size={18} />
+            </button>
+          </header>
+        )}
 
         <div className="org-detail-content">
+          {/* Title & Metadata Strip */}
+          <div>
+            <h2 id="org-detail-title" className="org-detail-event-title">
+              {event.name}
+            </h2>
+
+            <div className="org-detail-tags-strip">
+              <span className="org-detail-tag-pill">
+                <Globe2 size={13} /> {formatLanguages()}
+              </span>
+
+              <span className="org-detail-tag-pill">
+                <UserCheck size={13} /> {ageGroup}
+              </span>
+
+              <span className="org-detail-tag-pill">
+                <Clock size={13} /> {formatDuration()}
+              </span>
+            </div>
+          </div>
+
+          {/* Admin Rejection notice */}
           {event.status === "REJECTED" && (
             <div className="org-detail-reason">
               <strong>Admin Rejection Feedback</strong>
-
               <p>
                 {event.rejection_reason ||
                   "Your submission was rejected by the platform administrator. Please verify venue details and resubmit."}
@@ -606,45 +724,47 @@ function EventDetailsModal({
             </div>
           )}
 
+          {/* 4-Metric Grid */}
           <div className="org-detail-metrics-row">
             <div className="org-detail-metric-card">
               <span className="metric-label">Date &amp; Time</span>
-
               <span className="metric-value">
                 {formatEventDate(event.event_date)}
               </span>
-
               <span className="metric-sub">
-                {event.time
-                  ? formatEventTime(event.time)
-                  : "Time not set"}
+                {event.time ? formatEventTime(event.time) : "Time not set"}
               </span>
             </div>
 
             <div className="org-detail-metric-card">
-              <span className="metric-label">Ticket Price</span>
-
+              <span className="metric-label">Ticket Base Price</span>
               <span className="metric-value">
                 ₹
                 {Number(event.price || 0).toLocaleString("en-IN", {
                   minimumFractionDigits: 2,
                 })}
               </span>
-
-              <span className="metric-sub">Per ticket</span>
+              <span className="metric-sub">Starting price</span>
             </div>
 
             <div className="org-detail-metric-card">
               <span className="metric-label">Capacity</span>
-
-              <span className="metric-value">
-                {event.capacity || "—"}
-              </span>
-
+              <span className="metric-value">{event.capacity || "—"}</span>
               <span className="metric-sub">Max attendees</span>
+            </div>
+
+            <div className="org-detail-metric-card">
+              <span className="metric-label metric-revenue-label">
+                <TrendingUp size={12} /> Est. Revenue
+              </span>
+              <span className="metric-value metric-revenue-value">
+                ₹{potentialRevenue.toLocaleString("en-IN")}
+              </span>
+              <span className="metric-sub">At 100% capacity</span>
             </div>
           </div>
 
+          {/* Venue & Location */}
           <div className="org-detail-section">
             <span className="org-detail-section-title">
               Venue &amp; Location
@@ -665,18 +785,31 @@ function EventDetailsModal({
             </div>
           </div>
 
+          {/* About / Description */}
           <div className="org-detail-section">
-            <span className="org-detail-section-title">
-              Description
-            </span>
-
+            <span className="org-detail-section-title">Description</span>
             <p className="org-detail-description">
               {event.description?.trim() ||
                 "No event description provided for this submission."}
             </p>
           </div>
+
+          {/* Instructions & Amenities Box */}
+          {instructions && (
+            <div className="org-detail-section org-detail-instructions-box">
+              <span className="org-detail-section-title org-detail-instructions-title">
+                <Info size={15} className="org-detail-info-icon" />
+                Instructions &amp; Venue Amenities
+              </span>
+
+              <p className="org-detail-instructions-text">
+                {instructions}
+              </p>
+            </div>
+          )}
         </div>
 
+        {/* Modal Footer */}
         <footer className="org-detail-footer">
           <div className="org-detail-footer-actions">
             {event.status === "APPROVED" && event.slug ? (
@@ -697,24 +830,19 @@ function EventDetailsModal({
             )}
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "8px",
-              alignItems: "center",
-            }}
-          >
+          <div className="org-detail-footer-buttons">
             <button
               type="button"
-              className="org-button-primary"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 16px",
-                borderRadius: "8px",
-                fontSize: "13px",
-              }}
+              className="org-button-secondary org-detail-footer-btn"
+              onClick={() => onManageTickets(Number(event.id))}
+            >
+              <Tag size={13} />
+              Manage Tickets
+            </button>
+
+            <button
+              type="button"
+              className="org-button-primary org-detail-footer-btn"
               onClick={onEdit}
             >
               <Edit size={14} />
