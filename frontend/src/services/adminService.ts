@@ -68,14 +68,17 @@ export const fetchAdminCities = async () => {
 
 export const addCity = async (
   name: string,
-  description: string
+  description: string,
+  image?: File | null
 ) => {
+  const formData = new FormData();
+  formData.append("name", name);
+  formData.append("description", description);
+  if (image) formData.append("image", image);
+
   const response = await adminApi.post(
     "/add-city",
-    {
-      name,
-      description,
-    }
+    formData
   );
 
   return response.data;

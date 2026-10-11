@@ -12,7 +12,7 @@ interface AdminUser {
   role?: string;
   status?: string;
   account_status?: string;
-  city?: string;
+  city_id?: string;
   city_name?: string;
 }
 
@@ -70,7 +70,7 @@ function Users() {
         user.email.toLowerCase().includes(query) ||
         (user.phone || "").toLowerCase().includes(query) ||
         (user.role || "").toLowerCase().includes(query) ||
-        (user.city || user.city_name || "")
+        (user.city_name || "")
           .toLowerCase()
           .includes(query)
       );
@@ -151,10 +151,7 @@ function Users() {
                   user.account_status ||
                   "—";
 
-                const city =
-                  user.city ||
-                  user.city_name ||
-                  "—";
+                const city = user.city_name || "—";
 
                 return (
                   <tr key={user.id}>

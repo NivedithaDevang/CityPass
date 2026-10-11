@@ -158,21 +158,28 @@ export const updateUserProfile = async (
   return results;
 };
 
+
 export const getAllUsers = async () => {
   const sql = `
     SELECT
-      id,
-      name,
-      email,
-      phone,
-      role,
-      status,
-      city_id
-    FROM users
-    ORDER BY id DESC
+      u.id,
+      u.name,
+      u.email,
+      u.phone,
+      u.role,
+      u.status,
+      u.city_id,
+      c.name AS city_name
+    FROM users u
+    LEFT JOIN cities c
+      ON u.city_id = c.id
+    ORDER BY u.id DESC
   `;
 
   const [results] = await db.query(sql);
 
   return results;
 };
+
+
+

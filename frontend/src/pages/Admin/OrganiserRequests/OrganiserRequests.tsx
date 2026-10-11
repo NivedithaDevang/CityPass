@@ -5,11 +5,8 @@ import {
   updateOrganizerStatus 
 } from "../../../services/adminService";
 import { 
-  FaBuilding, 
-  FaLocationDot, 
   FaCheck, 
   FaXmark, 
-  FaTag, 
   FaEye 
 } from "react-icons/fa6";
 import { MdOutlineSearch } from "react-icons/md";
@@ -133,6 +130,7 @@ function OrganiserRequests() {
         <div>          
           <span className="req-subhead">REVIEW APPLICATIONS</span>
           <h1>Organiser Requests</h1>
+          <p className="req-header-desc">Review and manage organizer verification applications.</p>
         </div>
 
         <div className="req-toolbar">
@@ -158,6 +156,10 @@ function OrganiserRequests() {
               </button>
             ))}
           </div>
+
+          <div className="req-count">
+            {filtered.length} {filtered.length === 1 ? "Request" : "Requests"}
+          </div>
         </div>
       </div>
 
@@ -173,109 +175,173 @@ function OrganiserRequests() {
       ) : filtered.length === 0 ? (
         <div className="req-placeholder">No matching requests found.</div>
       ) : (
-        <div className="req-list-grid">
-          {filtered.map((req) => {
-            const statusUpper = (req.status || "PENDING").trim().toUpperCase();
+        <div className="req-table-container">
+          <table className="req-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Organization</th>
+                <th>City</th>
+                <th>Status</th>
+                <th style={{ textAlign: "right" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((req) => {
+                const statusUpper = (req.status || "PENDING").trim().toUpperCase();
 
-            return (
-              <article key={req.id} className="req-item-card">
-                <div className="req-item-top">
-                  <div className="req-org-meta">
-                    <div className="req-icon-box">
-                      <FaBuilding />
-                    </div>
-                    <div>
-                      <h3>{req.organization_name || "Unnamed Organization"}</h3>
-                      <div className="req-tags">
-                        {req.category && (
-                          <span><FaTag /> {req.category}</span>
+                return (
+                  <tr key={req.id}>
+                    <td>{req.id}</td>
+                    <td className="req-col-org">
+                      <span className="req-org-title">{req.organization_name || "—"}</span>
+                    </td>
+                    <td>{req.city || "—"}</td>
+                    <td>
+                      <span className={`status-pill status-${statusUpper.toLowerCase()}`}>
+                        {statusUpper}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="req-table-actions">
+                        <button 
+                          type="button"
+                          className="btn-view"
+                          onClick={() => setViewingRequest(req)}
+                        >
+                          <FaEye /> View
+                        </button>
+
+                        {statusUpper === "PENDING" && (
+                          <>
+                            <button
+                              type="button"
+                              className="btn-approve"
+                              disabled={actionLoading === req.id}
+                              onClick={() => handleStatusUpdate(req.id, "APPROVED")}
+                            >
+                              <FaCheck /> {actionLoading === req.id ? "..." : "Approve"}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-reject"
+                              disabled={actionLoading === req.id}
+                              onClick={() => openRejectModal(req.id)}
+                            >
+                              <FaXmark /> Reject
+                            </button>
+                          </>
                         )}
-                        <span><FaLocationDot /> {req.city || "All Cities"}</span>
                       </div>
-                    </div>
-                  </div>
-
-                  <span className={`status-pill status-${statusUpper.toLowerCase()}`}>
-                    {statusUpper}
-                  </span>
-                </div>
-
-                <div className="req-card-actions">
-                  <button 
-                    type="button"
-                    className="btn-view"
-                    onClick={() => setViewingRequest(req)}
-                  >
-                    <FaEye /> Details
-                  </button>
-
-                  {statusUpper === "PENDING" && (
-                    <div className="action-buttons">
-                      <button
-                        className="btn-reject"
-                        disabled={actionLoading === req.id}
-                        onClick={() => openRejectModal(req.id)}
-                      >
-                        <FaXmark /> Reject
-                      </button>
-                      <button
-                        className="btn-approve"
-                        disabled={actionLoading === req.id}
-                        onClick={() => handleStatusUpdate(req.id, "APPROVED")}
-                      >
-                        <FaCheck /> {actionLoading === req.id ? "Approving..." : "Approve"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </article>
-            );
-          })}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {viewingRequest && (
-        <div className="modal-backdrop" onClick={() => setViewingRequest(null)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{viewingRequest.organization_name}</h3>
-              <button className="modal-close-btn" onClick={() => setViewingRequest(null)}>
-                <FaXmark />
-              </button>
-            </div>
+      {/* Details Modal (Displays All Request Information) */}
+      {/* Details Modal */}
+{viewingRequest && (
+  <div className="modal-backdrop" onClick={() => setViewingRequest(null)}>
+    <div className="modal-card admin-modal-card" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-header">
+        <div className="modal-header-info">
+          <div className="modal-title-row">
+            <h3>{viewingRequest.organization_name}</h3>
+            <span className={`status-pill status-${viewingRequest.status.toLowerCase()}`}>
+              {viewingRequest.status}
+            </span>
+          </div>
+          <span className="modal-subtext">Application ID: #{viewingRequest.id}</span>
+        </div>
+        <button 
+          className="modal-close-btn" 
+          onClick={() => setViewingRequest(null)}
+          aria-label="Close modal"
+        >
+          <FaXmark />
+        </button>
+      </div>
 
-            <div className="details-grid">
-              <div>
-                <strong>Status:</strong>{" "}
-                <span className={`status-pill status-${viewingRequest.status.toLowerCase()}`}>
-                  {viewingRequest.status}
-                </span>
-              </div>
-              <div><strong>Category:</strong> {viewingRequest.category || "N/A"}</div>
-              <div><strong>City:</strong> {viewingRequest.city || "N/A"}</div>
-              <div><strong>PAN Card:</strong> {viewingRequest.id_proof || "N/A"}</div>
-              <div><strong>Email:</strong> {viewingRequest.email || "N/A"}</div>
-              <div><strong>Phone:</strong> {viewingRequest.phone || "N/A"}</div>
-            </div>
-
-            <div className="details-desc-box">
-              <strong>Description:</strong>
-              <p>{viewingRequest.description}</p>
-            </div>
-
-            <div className="modal-footer">
-              <button 
-                type="button" 
-                className="btn-cancel" 
-                onClick={() => setViewingRequest(null)}
-              >
-                Close
-              </button>
-            </div>
+      <div className="admin-details-body">
+        {/* Core Metadata Grid */}
+        <div className="admin-meta-grid">
+          <div className="meta-tile">
+            <span className="meta-tile-label">Category</span>
+            <span className="meta-tile-value cat-tag">{viewingRequest.category || "Not Specified"}</span>
+          </div>
+          <div className="meta-tile">
+            <span className="meta-tile-label">City / Region</span>
+            <span className="meta-tile-value">{viewingRequest.city || "All Cities"}</span>
+          </div>
+          <div className="meta-tile">
+            <span className="meta-tile-label">PAN / Tax ID</span>
+            <span className="meta-tile-value mono-val">{viewingRequest.id_proof || "N/A"}</span>
+          </div>
+          <div className="meta-tile">
+            <span className="meta-tile-label">Phone Number</span>
+            <span className="meta-tile-value">{viewingRequest.phone || "—"}</span>
+          </div>
+          <div className="meta-tile full-width">
+            <span className="meta-tile-label">Primary Email</span>
+            <span className="meta-tile-value email-val">{viewingRequest.email || "—"}</span>
           </div>
         </div>
-      )}
 
+        {/* Description Section */}
+        <div className="admin-desc-section">
+          <span className="meta-tile-label">Organization Description</span>
+          <div className="admin-desc-box">
+            {viewingRequest.description ? (
+              <p>{viewingRequest.description}</p>
+            ) : (
+              <p className="desc-empty">No organization overview provided.</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="modal-footer">
+        {viewingRequest.status.toUpperCase() === "PENDING" && (
+          <div className="modal-pending-actions">
+            <button
+              type="button"
+              className="btn-reject"
+              disabled={actionLoading === viewingRequest.id}
+              onClick={() => {
+                const id = viewingRequest.id;
+                setViewingRequest(null);
+                openRejectModal(id);
+              }}
+            >
+              <FaXmark /> Reject
+            </button>
+            <button
+              type="button"
+              className="btn-approve"
+              disabled={actionLoading === viewingRequest.id}
+              onClick={() => handleStatusUpdate(viewingRequest.id, "APPROVED")}
+            >
+              <FaCheck /> Approve
+            </button>
+          </div>
+        )}
+        <button 
+          type="button" 
+          className="btn-cancel" 
+          onClick={() => setViewingRequest(null)}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+      {/* Rejection Reason Modal */}
       {rejectingId !== null && (
         <div className="modal-backdrop" onClick={closeRejectModal}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
