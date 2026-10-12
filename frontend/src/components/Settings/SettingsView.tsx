@@ -10,6 +10,9 @@ import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import { useUser } from "../../context/UserContext";
 import Navbar from "../Navbar/Navbar";
+import ConfirmationPopup from "../Terms/ConfirmationPopup";
+import { DeactivateTerms as DeactivationTermsModal } from "../Terms/DeactivationTerms";
+import { OrgTerms as OrganiserTermsModal } from "../Terms/OrganiserTerms";
 import {
   FaPlus,
   FaEye,
@@ -113,9 +116,7 @@ function StyledDropdown({
 
   const [isOpen, setIsOpen] = useState(false);
 
-  const selectedOption = options.find(
-    (option) => option.value === value
-  );
+  const selectedOption = options.find((option) => option.value === value);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -128,13 +129,9 @@ function StyledDropdown({
 
     document.addEventListener("pointerdown", handlePointerDown);
 
-    const selectedIndex = options.findIndex(
-      (option) => option.value === value
-    );
+    const selectedIndex = options.findIndex((option) => option.value === value);
 
-    optionRefs.current[
-      selectedIndex >= 0 ? selectedIndex : 0
-    ]?.focus();
+    optionRefs.current[selectedIndex >= 0 ? selectedIndex : 0]?.focus();
 
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
@@ -152,8 +149,7 @@ function StyledDropdown({
     }
 
     if (event.key === "ArrowUp") {
-      nextIndex =
-        (optionIndex - 1 + options.length) % options.length;
+      nextIndex = (optionIndex - 1 + options.length) % options.length;
     }
 
     if (event.key === "Home") nextIndex = 0;
@@ -221,9 +217,7 @@ function StyledDropdown({
                 setIsOpen(false);
                 buttonRef.current?.focus();
               }}
-              onKeyDown={(event) =>
-                handleOptionKeyDown(event, index)
-              }
+              onKeyDown={(event) => handleOptionKeyDown(event, index)}
               ref={(element) => {
                 optionRefs.current[index] = element;
               }}
@@ -295,11 +289,17 @@ function SettingsView() {
 
   const [orgMessage, setOrgMessage] = useState("");
   const [orgError, setOrgError] = useState("");
+  const [showOrgConfirmModal, setShowOrgConfirmModal] = useState(false);
+  const [showOrgTermsModal, setShowOrgTermsModal] = useState(false);
 
   const [deactivateReason, setDeactivateReason] = useState("");
   const [otherDeactivateReason, setOtherDeactivateReason] = useState("");
   const [showDeactivateTerms, setShowDeactivateTerms] = useState(false);
   const [deactivateError, setDeactivateError] = useState("");
+  const [showDeactivateConfirmModal, setShowDeactivateConfirmModal] =
+    useState(false);
+  const [showDeactivateTermsModal, setShowDeactivateTermsModal] =
+    useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -514,9 +514,7 @@ function SettingsView() {
     }
 
     if (profile.dob && profile.dob > MAX_DOB) {
-      setProfileError(
-        "Date of birth must be 31 December 2015 or earlier."
-      );
+      setProfileError("Date of birth must be 31 December 2015 or earlier.");
       return;
     }
 
@@ -677,14 +675,14 @@ function SettingsView() {
     return "";
   };
 
-  const handleOrganizerSubmit = async (e: FormEvent) => {
+  const handleOrganizerPreSubmit = (e: FormEvent) => {
     e.preventDefault();
     setOrgMessage("");
     setOrgError("");
 
     if (
+      !org.fullName.trim() ||
       !org.stageName.trim() ||
-      !org.category.trim() ||
       !org.city.trim() ||
       !org.id_proof_type.trim() ||
       !org.id_proof.trim() ||
@@ -702,18 +700,22 @@ function SettingsView() {
     }
 
     const idProofError = validateIdProof();
-
     if (idProofError) {
       setOrgError(idProofError);
       return;
     }
 
+    setShowOrgConfirmModal(true);
+  };
+
+  const executeOrganizerSubmit = async () => {
     try {
       setLoading(true);
 
       await axios.post(
         `${API_BASE_URL}/v1/organiser-requests`,
         {
+          full_name: org.fullName.trim(),
           organization_name: org.stageName.trim(),
           category: org.category.trim(),
           city: org.city.trim(),
@@ -726,6 +728,7 @@ function SettingsView() {
         { withCredentials: true }
       );
 
+      setShowOrgConfirmModal(false);
       setOrgMessage("Organizer request submitted successfully!");
 
       setOrg({
@@ -740,6 +743,7 @@ function SettingsView() {
         description: "",
       });
     } catch (error: any) {
+      setShowOrgConfirmModal(false);
       setOrgError(
         error.response?.data?.message ||
           "Unable to submit organizer request. Please try again."
@@ -759,15 +763,13 @@ function SettingsView() {
     if (value !== "Other") setOtherDeactivateReason("");
   };
 
-  const handleDeactivate = async () => {
+  const handleDeactivatePreSubmit = () => {
     setDeactivateError("");
 
     if (!deactivateReason) {
       setDeactivateError("Please select a reason.");
       return;
     }
-
-    let finalReason = deactivateReason;
 
     if (deactivateReason === "Other") {
       if (!otherDeactivateReason.trim()) {
@@ -783,9 +785,16 @@ function SettingsView() {
         );
         return;
       }
-
-      finalReason = otherDeactivateReason.trim();
     }
+
+    setShowDeactivateConfirmModal(true);
+  };
+
+  const executeDeactivate = async () => {
+    const finalReason =
+      deactivateReason === "Other"
+        ? otherDeactivateReason.trim()
+        : deactivateReason;
 
     try {
       setLoading(true);
@@ -796,9 +805,11 @@ function SettingsView() {
         { withCredentials: true }
       );
 
+      setShowDeactivateConfirmModal(false);
       clearUser();
       navigate("/login");
     } catch (error: any) {
+      setShowDeactivateConfirmModal(false);
       setDeactivateError(
         error.response?.data?.message || "Unable to deactivate account."
       );
@@ -984,9 +995,7 @@ function SettingsView() {
                           aria-haspopup="listbox"
                           aria-expanded={isCityDropdownOpen}
                           aria-controls="profile-city-options"
-                          onClick={() =>
-                            setIsCityDropdownOpen((open) => !open)
-                          }
+                          onClick={() => setIsCityDropdownOpen((open) => !open)}
                           onKeyDown={(event) => {
                             if (event.key === "ArrowDown" && !isCityDropdownOpen) {
                               event.preventDefault();
@@ -995,9 +1004,8 @@ function SettingsView() {
                           }}
                         >
                           <span className="city-select-label">
-                            {cities.find(
-                              (city) => city.id === profile.city_id
-                            )?.name || "Select your city"}
+                            {cities.find((city) => city.id === profile.city_id)?.name ||
+                              "Select your city"}
                           </span>
 
                           <FaChevronRight
@@ -1023,9 +1031,7 @@ function SettingsView() {
                                 profile.city_id === "" ? "selected" : ""
                               }`}
                               onClick={() => handleCitySelect("")}
-                              onKeyDown={(event) =>
-                                handleCityOptionKeyDown(event, 0)
-                              }
+                              onKeyDown={(event) => handleCityOptionKeyDown(event, 0)}
                               ref={(element) => {
                                 cityOptionRefs.current[0] = element;
                               }}
@@ -1162,20 +1168,14 @@ function SettingsView() {
                         id="confirmPassword"
                         type={showConfirmPassword ? "text" : "password"}
                         value={confirmPassword}
-                        onChange={(event) =>
-                          setConfirmPassword(event.target.value)
-                        }
+                        onChange={(event) => setConfirmPassword(event.target.value)}
                         placeholder="Confirm new password"
                       />
                       <button
                         type="button"
                         className="toggle-visibility-btn"
-                        onClick={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
-                        aria-label={
-                          showConfirmPassword ? "Hide password" : "Show password"
-                        }
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                       >
                         {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                       </button>
@@ -1214,7 +1214,7 @@ function SettingsView() {
                 </div>
 
                 <form
-                  onSubmit={handleOrganizerSubmit}
+                  onSubmit={handleOrganizerPreSubmit}
                   className="org-form-grid"
                   noValidate
                 >
@@ -1324,8 +1324,7 @@ function SettingsView() {
                         value={org.id_proof}
                         onChange={handleOrgChange}
                         placeholder={
-                          selectedIdProof?.placeholder ||
-                          "Enter ID proof number"
+                          selectedIdProof?.placeholder || "Enter ID proof number"
                         }
                         maxLength={
                           org.id_proof_type === "aadhar"
@@ -1405,8 +1404,7 @@ function SettingsView() {
                     <div className="deactivate-reason-header">
                       <h3>Why are you leaving?</h3>
                       <p>
-                        Please select the reason that best describes your
-                        decision.
+                        Please select the reason that best describes your decision.
                       </p>
                     </div>
 
@@ -1483,7 +1481,7 @@ function SettingsView() {
                       <button
                         type="button"
                         className="danger-button"
-                        onClick={handleDeactivate}
+                        onClick={handleDeactivatePreSubmit}
                         disabled={
                           loading ||
                           !deactivateReason ||
@@ -1491,7 +1489,7 @@ function SettingsView() {
                             otherDeactivateReason.trim().length < 1)
                         }
                       >
-                        {loading ? "Deactivating..." : "Deactivate Account"}
+                        Deactivate Account
                       </button>
                     </div>
                   </div>
@@ -1501,6 +1499,40 @@ function SettingsView() {
           </main>
         </div>
       </div>
+
+      {/* Confirmation Modal for Organiser Application */}
+      <ConfirmationPopup
+        isOpen={showOrgConfirmModal}
+        title="Terms and Conditions to become an organiser"
+        message="Are you sure you want to submit your form to become an organiser?"
+        confirmText="Confirm & Submit"
+        isLoading={loading}
+        onConfirm={executeOrganizerSubmit}
+        onClose={() => setShowOrgConfirmModal(false)}
+        onViewTerms={() => setShowOrgTermsModal(true)}
+      />
+
+      {/* Confirmation Modal for Account Deactivation */}
+      <ConfirmationPopup
+        isOpen={showDeactivateConfirmModal}
+        title="Account Deactivation Terms"
+        message="Are you sure you want to deactivate your account?"
+        confirmText="Confirm Deactivation"
+        danger={true}
+        isLoading={loading}
+        onConfirm={executeDeactivate}
+        onClose={() => setShowDeactivateConfirmModal(false)}
+        onViewTerms={() => setShowDeactivateTermsModal(true)}
+      />
+
+      <OrganiserTermsModal
+        isOpen={showOrgTermsModal}
+        onClose={() => setShowOrgTermsModal(false)}
+      />
+      <DeactivationTermsModal
+        isOpen={showDeactivateTermsModal}
+        onClose={() => setShowDeactivateTermsModal(false)}
+      />
     </>
   );
 }

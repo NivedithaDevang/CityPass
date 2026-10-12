@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   CalendarDays,
-  CircleDollarSign,
   Clock3,
   Plus,
   TicketCheck,
@@ -280,110 +279,7 @@ function OrganiserHome() {
           )}
         </article>
 
-        <article className="org-panel org-metrics-panel">
-          <div className="org-panel-heading">
-            <div>
-              <h2>Performance</h2>
-
-              <p>Sales reporting for your events</p>
-            </div>
-
-            <CircleDollarSign size={19} />
-          </div>
-
-          <div className="org-unavailable-metric">
-            <span>Tickets sold</span>
-
-            <strong>Not available</strong>
-
-            <small>
-              The current API does not return ticket sales.
-            </small>
-          </div>
-
-          <div className="org-unavailable-metric">
-            <span>Total revenue</span>
-
-            <strong>Not available</strong>
-
-            <small>
-              Revenue requires organiser booking data.
-            </small>
-          </div>
-        </article>
-      </section>
-
-      <section className="org-bottom-grid">
-        <article className="org-panel org-upcoming-panel">
-          <div className="org-panel-heading">
-            <div>
-              <h2>Upcoming events</h2>
-
-              <p>Your next scheduled listings</p>
-            </div>
-
-            <Link to="/organiser/events">
-              View all <ArrowRight size={15} />
-            </Link>
-          </div>
-
-          {loading ? (
-            <div className="org-panel-loading">
-              Loading upcoming events...
-            </div>
-          ) : upcoming.length === 0 ? (
-            <div className="org-panel-empty">
-              <CalendarDays size={22} />
-
-              <span>No upcoming events yet.</span>
-            </div>
-          ) : (
-            <div className="org-upcoming-list">
-              {upcoming.map((event) => (
-                <Link
-                  className="org-upcoming-item"
-                  to="/organiser/events"
-                  key={event.id}
-                >
-                  <span className="org-upcoming-date">
-                    <b>
-                      {new Date(
-                        `${event.event_date}T00:00:00`
-                      ).toLocaleDateString("en", {
-                        day: "2-digit",
-                      })}
-                    </b>
-
-                    <small>
-                      {new Date(
-                        `${event.event_date}T00:00:00`
-                      ).toLocaleDateString("en", {
-                        month: "short",
-                      })}
-                    </small>
-                  </span>
-
-                  <span className="org-upcoming-info">
-                    <b>{event.name}</b>
-
-                    <small>
-                      {event.city_name || "City not set"} ·{" "}
-                      {event.time || "Time not set"}
-                    </small>
-                  </span>
-
-                  <span
-                    className={`org-status-badge ${event.status.toLowerCase()}`}
-                  >
-                    {event.status}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </article>
-
-        <article className="org-panel org-recent-bookings">
+          <article className="org-panel org-recent-bookings">
           <div className="org-panel-heading">
             <div>
               <h2>Recent bookings</h2>
@@ -441,6 +337,85 @@ function OrganiserHome() {
             </div>
           )}
         </article>
+
+      </section>
+
+      <section className="org-bottom-grid">
+        <article className="org-panel org-upcoming-panel">
+          <div className="org-panel-heading">
+            <div>
+              <h2>Upcoming events</h2>
+
+              <p>Your next scheduled listings</p>
+            </div>
+
+            <Link to="/organiser/events">
+              View all <ArrowRight size={15} />
+            </Link>
+          </div>
+
+          {loading ? (
+            <div className="org-panel-loading">
+              Loading upcoming events...
+            </div>
+          ) : upcoming.length === 0 ? (
+            <div className="org-panel-empty">
+              <CalendarDays size={22} />
+
+              <span>No upcoming events yet.</span>
+            </div>
+          ) : (
+            <div className="org-upcoming-list">
+              {upcoming.map((event) => (
+                <Link
+                  className="org-upcoming-item"
+                  to="/organiser/events"
+                  key={event.id}
+                >
+                  <span className="org-upcoming-date">
+                    <b>
+                      {new Date(
+                        `${event.event_date}T00:00:00`
+                      ).toLocaleDateString("en", {
+                        day: "2-digit",
+                      })}
+                    </b>
+
+                    <small>
+                      {new Date(
+                        `${event.event_date}T00:00:00`
+                      ).toLocaleDateString("en", {
+                        month: "short",
+                      })}
+                    </small>
+                  </span>
+
+                  <span className="org-upcoming-info">
+                    <span className="org-upcoming-title-row">
+                      <b>{event.name}</b>
+                      {(event.is_live === true || event.is_live === 1) && (
+                        <span className="org-upcoming-live-badge">LIVE</span>
+                      )}
+                    </span>
+
+                    <small>
+                      {event.city_name || "City not set"} ·{" "}
+                      {event.time || "Time not set"}
+                    </small>
+                  </span>
+
+                  <span
+                    className={`org-status-badge ${event.status.toLowerCase()}`}
+                  >
+                    {event.status}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </article>
+
+        
       </section>
     </div>
   );

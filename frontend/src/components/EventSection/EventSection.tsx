@@ -182,7 +182,15 @@ function EventSection() {
                 <span className="event-date">
                   {formatEventDate(event.event_date)}
                 </span>
-                <h3>{event.name || "Untitled event"}</h3>
+                <div className="eventsec-title-row">
+                  <h3>{event.name || "Untitled event"}</h3>
+                  {(event.is_live === true || event.is_live === 1) && (
+                    <span className="eventsec-live-badge">
+                      <span className="eventsec-live-dot" />
+                      LIVE
+                    </span>
+                  )}
+                </div>
 
                 <div className="eventsec-card-footer">
                   <div>

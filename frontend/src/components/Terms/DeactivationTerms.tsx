@@ -18,7 +18,7 @@ const deactivateTerms: string[] = [
     "Your account information may continue to be retained while your account is inactive in accordance with the CityPass Privacy Policy and applicable laws.",
 ];
 
-export const Terms = ({ isOpen, onClose }: DeactivateTerms) => {
+export const DeactivateTerms = ({ isOpen, onClose }: DeactivateTerms) => {
 
     useEffect(() => {
         if(!isOpen)

@@ -76,6 +76,7 @@ export interface Events {
   price?: string;
   capacity?: number;
   status?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | "COMPLETED";
+  is_live?: boolean | number;
   is_active: boolean;
 }
 

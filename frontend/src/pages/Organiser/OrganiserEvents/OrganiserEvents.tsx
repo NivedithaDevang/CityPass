@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Clock,
   Edit,
-  Eye,
   Globe2,
   Info,
   Loader2,
@@ -32,6 +31,8 @@ import type { IconType } from "react-icons";
 import {
   fetchMyEvents,
   getOrganiserErrorMessage,
+  cancelEvent,
+  liveEvent,
   type OrganiserEvent,
 } from "../../../services/organiserService";
 
@@ -40,6 +41,13 @@ import EventTicketManager from "../../../components/EventTicketManager/EventTick
 import "./OrganiserEvents.css";
 
 type EventStatusFilter = "ALL" | OrganiserEvent["status"];
+
+type Decision = {
+  eventId: number;
+  eventName: string;
+  status: "CANCELLED";
+};
+
 
 const PAGE_SIZE = 8;
 
@@ -140,6 +148,49 @@ function OrganiserEvents() {
   const isCreateOpen =
     searchParams.get("create") === "1" || Boolean(editingEvent);
 
+    // Inside OrganiserEvents component:
+const [cancel, setCancel] = useState<Decision | null>(null);
+const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const confirmCancelEvent = async () => {
+  if (!cancel) return;
+
+  const { eventId, status } = cancel;
+
+  try {
+    setActionLoading(eventId);
+    setError(null);
+
+    await cancelEvent(eventId, status);
+
+    // Update local events list to reflect CANCELLED status immediately
+    setEvents((prev) =>
+      prev.map((ev) =>
+        Number(ev.id) === eventId ? { ...ev, status: "CANCELLED" } : ev
+      )
+    );
+
+    // Also update selectedEvent if its detail modal is currently open
+    setSelectedEvent((prev) =>
+      prev && Number(prev.id) === eventId
+        ? { ...prev, status: "CANCELLED" }
+        : prev
+    );
+
+    setNotice(`"${cancel.eventName}" has been cancelled successfully.`);
+    window.setTimeout(() => setNotice(""), 4000);
+  } catch (err: unknown) {
+    setError(
+      getOrganiserErrorMessage(
+        err,
+        "Failed to cancel the event. Please try again."
+      )
+    );
+  } finally {
+    setActionLoading(null);
+    setCancel(null);
+  }
+};
+
   const loadEvents = useCallback(async () => {
     try {
       setLoading(true);
@@ -147,6 +198,11 @@ function OrganiserEvents() {
 
       const data = await fetchMyEvents();
       setEvents(data);
+      setLiveEvents(
+        Object.fromEntries(
+          data.map((event) => [String(event.id), Boolean(event.is_live)])
+        )
+      );
     } catch (loadError: unknown) {
       setError(
         getOrganiserErrorMessage(
@@ -158,6 +214,36 @@ function OrganiserEvents() {
       setLoading(false);
     }
   }, []);
+
+  // Inside OrganiserEvents component:
+const [liveEvents, setLiveEvents] = useState<Record<string, boolean>>({});
+
+const handleToggleLive = async (e: React.MouseEvent, eventId: number) => {
+  e.stopPropagation(); 
+
+  const currentStatus = Boolean(liveEvents[String(eventId)]);
+  const nextStatus = !currentStatus;
+
+  setLiveEvents((prev) => ({ ...prev, [eventId]: nextStatus }));
+
+  try {
+    await liveEvent(eventId, nextStatus);
+    setEvents((prev) =>
+      prev.map((event) =>
+        Number(event.id) === eventId
+          ? { ...event, is_live: nextStatus }
+          : event
+      )
+    );
+    setNotice(nextStatus ? "Event is now live!" : "Event is no longer live.");
+    window.setTimeout(() => setNotice(""), 3000);
+  } catch (err: unknown) {
+    setLiveEvents((prev) => ({ ...prev, [eventId]: currentStatus }));
+    setError(
+      getOrganiserErrorMessage(err, "Failed to update live status. Please try again.")
+    );
+  }
+};
 
   useEffect(() => {
     void loadEvents();
@@ -427,6 +513,49 @@ function OrganiserEvents() {
                       <h3 title={event.name}>{event.name}</h3>
                     </div>
 
+<div 
+  className="go-live-container" 
+  onClick={(e) => e.stopPropagation()}
+>
+  <button
+    type="button"
+    role="switch"
+    aria-checked={Boolean(liveEvents[event.id])}
+    className={`go-live-toggle ${liveEvents[event.id] ? "is-live" : ""}`}
+    onClick={(e) => handleToggleLive(e, Number(event.id))}
+  >
+    <span className="go-live-switch">
+      <span className="go-live-thumb" />
+    </span>
+    <span className="go-live-text">
+      {liveEvents[event.id] ? "Live" : "Go Live"}
+    </span>
+  </button>
+
+<button
+  type="button"
+  className="cancel-action-btn"
+  disabled={event.status === "CANCELLED" || actionLoading === Number(event.id)}
+  onClick={(e) => {
+    e.stopPropagation();
+    setCancel({
+      eventId: Number(event.id),
+      eventName: event.name,
+      status: "CANCELLED",
+    });
+  }}
+>
+  {actionLoading === Number(event.id) ? (
+    <Loader2 className="org-spin" size={13} />
+  ) : (
+    "Cancel Event"
+  )}
+</button>
+</div>
+
+
+                          
+
                     <div className="org-card-footer">
                       <div>
                         <span className="org-card-price-label">
@@ -453,18 +582,6 @@ function OrganiserEvents() {
                         >
                           <Edit size={13} />
                           Edit
-                        </button>
-
-                        <button
-                          type="button"
-                          className="org-card-action-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedEvent(event);
-                          }}
-                        >
-                          <Eye size={13} />
-                          Details
                         </button>
 
                         <button
@@ -547,6 +664,51 @@ function OrganiserEvents() {
           onClose={() => setTicketEventId(null)}
         />
       )}
+
+      {cancel && (
+  <div
+    className="org-detail-backdrop"
+    onClick={() => !actionLoading && setCancel(null)}
+  >
+    <div
+      className="org-confirm-dialog"
+      onClick={(e) => e.stopPropagation()}
+      role="dialog"
+      aria-modal="true"
+    >
+      <h3>Cancel Event</h3>
+      <p>
+        Are you sure you want to cancel <strong>{cancel.eventName}</strong>?
+        Ticket holders and public viewers will no longer be able to book this event.
+      </p>
+
+      <div className="org-confirm-actions">
+        <button
+          type="button"
+          className="org-button-secondary"
+          disabled={actionLoading !== null}
+          onClick={() => setCancel(null)}
+        >
+          Nevermind
+        </button>
+        <button
+          type="button"
+          className="org-button-danger"
+          disabled={actionLoading !== null}
+          onClick={confirmCancelEvent}
+        >
+          {actionLoading ? (
+            <>
+              <Loader2 className="org-spin" size={14} /> Cancelling...
+            </>
+          ) : (
+            "Yes, Cancel Event"
+          )}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
@@ -859,6 +1021,8 @@ function EventDetailsModal({
           </div>
         </footer>
       </section>
+
+      
     </div>
   );
 }

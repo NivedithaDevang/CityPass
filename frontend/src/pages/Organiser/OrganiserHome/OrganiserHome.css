@@ -412,6 +412,28 @@
   white-space: nowrap;
 }
 
+.org-upcoming-title-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.org-upcoming-title-row b {
+  min-width: 0;
+}
+
+.org-upcoming-live-badge {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border-radius: 9999px;
+  background: #fff0f1;
+  color: #c52232;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .org-upcoming-info small {
   overflow: hidden;
   color: #8b8492;
@@ -483,6 +505,7 @@
   font-weight: 700;
   cursor: pointer;
 }
+
 
 @media (max-width: 900px) {
   .org-stat-grid {

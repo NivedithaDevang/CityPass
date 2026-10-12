@@ -306,9 +306,16 @@ function EventDetails() {
                     </span>
                   </div>
 
-                  <h1 className="details-title">
-                    {event.name || "Untitled event"}
-                  </h1>
+                  <div className="details-title-row">
+                    <h1 className="details-title">
+                      {event.name || "Untitled event"}
+                    </h1>
+                    {(event.is_live === true || event.is_live === 1) && (
+                      <span className="details-live-badge">
+                        <span /> LIVE
+                      </span>
+                    )}
+                  </div>
 
                   <div className="details-meta-cards">
                     <div className="meta-card">
