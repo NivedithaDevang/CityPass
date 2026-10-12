@@ -5,8 +5,7 @@ import {
   Check, 
   ChevronLeft, 
   ChevronRight, 
-  Eye, 
-  MapPin, 
+  Eye,
   Search, 
   X,
   IndianRupee 
@@ -40,18 +39,6 @@ const getErrorMessage = (error: unknown) =>
     ? error.response?.data?.message || "An unexpected error occurred."
     : error instanceof Error ? error.message : "An unexpected error occurred.";
 
-const formatDate = (date: string) => {
-  if (!date) return "TBA";
-  try {
-    return new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
-      day: "numeric", 
-      month: "short", 
-      year: "numeric",
-    });
-  } catch {
-    return date;
-  }
-};
 
 function Events() {
   const [requests, setRequests] = useState<EventRequest[]>([]);

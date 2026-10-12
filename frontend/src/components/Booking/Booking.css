@@ -441,6 +441,37 @@
   color: #5144ed;
 }
 
+.booking-tier-dropdown{
+  background: #ffffff;
+  border: 1px solid #5144ed;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  color: #5144ed; 
+  font-weight: 600;
+  font-size: 13.5px;
+  cursor: pointer;
+
+  padding: 6px 12px;
+  border-radius: 9999px; 
+  transition: all 0.2s ease-in-out;
+}
+
+.booking-tier-dropdown:hover {
+  background-color: #5144ed;
+  border-color: #9890f2;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.12);
+}
+
+.booking-tier-description{
+  font-size: 10px;
+  border: #bcbcbc;
+  text-align: justify;
+  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
+
 
 @media (max-width: 520px) {
   .booking-modal-overlay {

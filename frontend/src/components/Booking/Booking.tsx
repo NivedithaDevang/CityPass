@@ -256,7 +256,7 @@ export function Booking({
             {loadingTiers ? (
               <option value="">Loading tickets...</option>
             ) : parsedTiers.length === 0 ? (
-              <option value="">No tickets available</option>
+              <option value="">No ticket category assigned</option>
             ) : (
               parsedTiers.map((tier) => (
                 <option key={tier.id} value={tier.id}>

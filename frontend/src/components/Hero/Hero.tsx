@@ -276,9 +276,14 @@ function Hero() {
                       {/* Ticket Body */}
                       <div className="ticket-body">
 
-                        <h3 className="ticket-title">
-                          {event.name}
-                        </h3>
+                        <div className="ticket-title-row">
+                          <h3 className="ticket-title">{event.name}</h3>
+                          {(event.is_live === true || event.is_live === 1) && (
+                            <span className="ticket-live-badge">
+                              <span /> LIVE
+                            </span>
+                          )}
+                        </div>
 
                         <div className="ticket-meta-row">
 

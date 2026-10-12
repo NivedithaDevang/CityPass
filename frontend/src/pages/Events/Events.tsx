@@ -333,14 +333,19 @@ function Event() {
       (event as any).image ||
       fallbackImage;
 
+    const isLive = event.is_live === true || event.is_live === 1;
+
     return (
       <article
         className="eventpage-card"
         key={event.id || event.name}
         onClick={() => handleCardClick(event)}
       >
-        {/* Poster Media Box with clean image display */}
-        <div className="eventpage-card-media-wrapper">
+        {/* Poster Media Box */}
+        <div
+          className="eventpage-card-media-wrapper"
+          style={{ position: "relative", overflow: "hidden" }}
+        >
           {posterImage ? (
             <img
               src={posterImage}
@@ -367,7 +372,7 @@ function Event() {
             </div>
           )}
 
-          {/* Floating Category Badge */}
+          {/* Category Badge on Top Left */}
           <div className="eventpage-media-badges">
             <span className="eventpage-badge">
               {CategoryIcon && (
@@ -376,27 +381,32 @@ function Event() {
               {event.category_name || "Event"}
             </span>
           </div>
+
         </div>
 
-        {/* Text Content Area: Date -> Title -> Location -> Footer */}
+        {/* Text Content Area */}
         <div className="eventpage-card-content">
           <div className="eventpage-card-info">
-            {/* 1. Date right above title */}
             <span className="eventpage-date-text">
               {formatEventDate(event.event_date)}
               {event.time && ` · ${event.time.slice(0, 5)}`}
             </span>
-            {/* 2. Event Title */}
-            <h3 title={event.name}>{event.name || "Untitled event"}</h3>
+            <div className="eventpage-title-row">
+              <h3 title={event.name}>{event.name || "Untitled event"}</h3>
+              {isLive && (
+                <span className="eventpage-live-badge-title">
+                  <span className="live-pulse-dot" />
+                  LIVE
+                </span>
+              )}
+            </div>
 
-            {/* 3. Location right below title */}
             <p className="eventpage-location">
               <FaMapPin className="eventpage-location-pin" />
               <span>{event.location || event.city_name || "Venue TBA"}</span>
             </p>
           </div>
 
-          {/* 4. Price & Booking Button */}
           <div className="eventpage-card-footer">
             <div className="eventpage-price-box">
               <span className="eventpage-price-label">Starting from</span>
@@ -446,7 +456,6 @@ function Event() {
       </div>
 
       <section className="eventpage-section">
-        {/* Header with "All Events" Title Beside Search & Filters */}
         <div className="eventpage-filter-toolbar">
           <div className="eventpage-title-group">
             <h2 className="eventpage-main-heading">All Events</h2>
@@ -604,7 +613,7 @@ function Event() {
           </div>
         </div>
 
-        {/* Unified 4-Column Event Grid */}
+        {/* Unified Event Grid */}
         <div className="eventpage-grid">
           {processedEvents.map(renderEventCard)}
           {!processedEvents.length && (

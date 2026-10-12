@@ -17,6 +17,7 @@ export type OrganiserEvent = {
   price: number;
   capacity: number;
   status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "CANCELLED";
+  is_live?: boolean | number;
   slug: string;
   category_name: string | null;
   city_name: string | null;
@@ -76,6 +77,12 @@ export interface AdminTicketTemplate {
   price: number;
   category: string;
   status: "ACTIVE" | "DELETED";
+}
+
+
+export interface CancelEvent {
+  id: number;
+  status: "CANCELLED"
 }
 
 const organiserApi = axios.create({
@@ -212,4 +219,38 @@ export const fetchOrganiserCategories = async (): Promise<OrganiserLookupOption[
   return response.data.categories || [];
 };
 
+
+export const cancelEvent = async (
+  eventId: number,
+  status: string = 'CANCELLED'
+) => {
+  const response = await organiserApi.patch(
+    `/cancel-event/${eventId}`,
+    {
+      id: eventId,
+      status,
+    }
+  );
+
+  return response.data;
+};
+
+
+export const liveEvent = async (
+  eventId: number,
+  isLive: boolean
+) => {
+  const response = await organiserApi.patch(
+    `/live-event/${eventId}`,
+    {
+      id: eventId,
+      isLive,
+    }
+  );
+
+  return response.data;
+};
+
+
 export default organiserApi;
+
