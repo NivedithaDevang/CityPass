@@ -1,6 +1,6 @@
 import express from "express";
 import { getOrganisers, getMyBookings, getMyEvents} from "../../controllers/organiserController.js";
-import { addEvent } from "../../controllers/eventController.js";
+import { addEvent, cancelOrganiserEvent, goEventLive } from "../../controllers/eventController.js";
 import { authenticate } from "../../middleware/authMiddleware.js";
 import { checkOrganiserRole } from "../../middleware/roleMiddleware.js";
 import { validateEvent } from "../../validators/eventValidator.js";
@@ -14,6 +14,7 @@ import {
 } from "../../controllers/eventTicketController.js";
 
 
+
 const organiserRouter = express.Router();
 organiserRouter.get( "/", getOrganisers);
 
@@ -22,8 +23,9 @@ organiserRouter.get( "/events", authenticate, checkOrganiserRole, getMyEvents );
 organiserRouter.get( "/bookings", authenticate, checkOrganiserRole, getMyBookings );
 organiserRouter.post("/add-event",authenticate, checkOrganiserRole, upload.single("image"), validateEvent, handleValidation, addEvent);
 organiserRouter.patch("/edit-event/:id", authenticate, checkOrganiserRole, upload.single("image"), validateEvent, handleValidation, updateEvent);
+organiserRouter.patch("/cancel-event/:id", authenticate, checkOrganiserRole, cancelOrganiserEvent);
+organiserRouter.patch("/live-event/:id", authenticate, checkOrganiserRole, goEventLive);
 
 organiserRouter.post("/events/:eventId/tickets/template", authenticate, checkOrganiserRole, addTemplateToEvent);
-
 organiserRouter.post( "/events/:eventId/tickets/custom", authenticate, checkOrganiserRole, addCustomEventTicket);
 export default organiserRouter;

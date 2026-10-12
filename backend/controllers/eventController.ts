@@ -9,6 +9,8 @@ import {
   updateEvent as updateEventModel,
   updateEventStatus as updateEventStatusModel,
   checkSlugExists,
+  cancelEvent,
+  goLive,
   type UpdateEvent,
 } from "../models/eventModel.js";
 import cloudinary from "../config/cloudinary.js";
@@ -434,3 +436,105 @@ export const updateEventStatus = async (
     next(err);
   }
 };
+
+export const cancelOrganiserEvent = async (
+  req: Request,
+  res: Response,
+  next : NextFunction
+) => {
+  try{
+    const eventId = Number(req.params.id);
+    const { status } = req.body;
+    const userId = req.user?.id;
+
+    if(!Number.isInteger(eventId) || eventId <= 0) {
+      return res.status(400).json({message: "A valid event id is required"});
+    }
+
+    if (status !== "CANCELLED") {
+      return res.status(400).json({ message: "Status must be CANCELLED" });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const organiser = await getOrganiserByUserId(userId);
+    if (!organiser) {
+      return res.status(404).json({ message: "Organiser profile not found" });
+    }
+
+    const [event] = await getEventById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (event.organizer_id !== organiser.id) {
+      return res.status(403).json({ message: "You cannot cancel this event" });
+    }
+
+    const result = await cancelEvent(eventId, status);
+    if(result.affectedRows===0){
+      return res.status(404).json({
+        message : "Event not found"
+      })
+    }
+
+    res.status(200).json({
+      message: "Event cancelled successfully",
+      eventId,
+      status,
+    });
+  } catch(err) {
+    next(err);
+  }
+}
+
+
+export const goEventLive = async (
+  req: Request,
+  res: Response,
+  next : NextFunction
+) => {
+  try{
+    const eventId = Number(req.params.id);
+    const { isLive } = req.body;
+    const userId = req.user?.id;
+
+    if(!Number.isInteger(eventId) || eventId <= 0) {
+      return res.status(400).json({message: "A valid event id is required"});
+    }
+
+    if (typeof isLive !== "boolean") {
+      return res.status(400).json({ message: "isLive must be a boolean" });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const organiser = await getOrganiserByUserId(userId);
+    if (!organiser) {
+      return res.status(404).json({ message: "Organiser profile not found" });
+    }
+
+    const [event] = await getEventById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (event.organizer_id !== organiser.id) {
+      return res.status(403).json({ message: "You cannot update this event" });
+    }
+
+    const result = await goLive(eventId, isLive);
+
+    return res.status(200).json({
+      message: isLive ? "Event is now live" : "Event is no longer live",
+      eventId,
+      isLive,
+    });
+  } catch(err) {
+    next(err);
+  }
+}

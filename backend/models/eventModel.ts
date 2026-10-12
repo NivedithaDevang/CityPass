@@ -1,3 +1,4 @@
+
 import { db } from "../config/database.js";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
@@ -23,6 +24,7 @@ export type Event = {
   price: number;
   capacity: number;
   status: EventStatus;
+  is_live?: boolean | number;
   languages?: string | string[] | null;
   age_group?: string | null;
   duration_hours?: number | null;
@@ -43,6 +45,7 @@ export type UpdateEvent = {
   price?: number;
   capacity?: number;
   status?: EventStatus;
+  is_live?: boolean | number;
   languages?: string | string[] | null;
   age_group?: string | null;
   duration_hours?: number | null;
@@ -246,6 +249,10 @@ export const updateEvent = async (
     fields.push("status = ?");
     values.push(event.status);
   }
+  if (event.is_live !== undefined) {
+    fields.push("is_live = ?");
+    values.push(event.is_live ? 1 : 0);
+  }
   if (event.organizer_id !== undefined) {
     fields.push("organizer_id = ?");
     values.push(event.organizer_id);
@@ -349,4 +356,22 @@ export const getAdminEventRequests = async (): Promise<AdminEventRequest[]> => {
   `;
   const [results] = await db.query<AdminEventRequest[]>(sql);
   return results;
+};
+
+export const cancelEvent = async (
+  eventId: number,
+  status: "CANCELLED"
+): Promise<ResultSetHeader> => {
+  const sql = "UPDATE events SET status = ? WHERE id = ?";
+  const [result] = await db.execute<ResultSetHeader>(sql, [status, eventId]);
+  return result;
+};
+
+export const goLive = async (
+  eventId: number,
+  isLive: boolean
+): Promise<ResultSetHeader> => {
+  const sql = "UPDATE events SET is_live = ? WHERE id = ?";
+  const [result] = await db.execute<ResultSetHeader>(sql, [isLive ? 1 : 0, eventId]);
+  return result;
 };
