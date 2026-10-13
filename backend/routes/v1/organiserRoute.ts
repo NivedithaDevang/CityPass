@@ -16,7 +16,7 @@ import {
 
 
 const organiserRouter = express.Router();
-organiserRouter.get( "/", getOrganisers);
+
 
 // View own events
 organiserRouter.get( "/events", authenticate, checkOrganiserRole, getMyEvents );

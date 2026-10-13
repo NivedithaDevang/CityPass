@@ -48,7 +48,6 @@ type Decision = {
   status: "CANCELLED";
 };
 
-
 const PAGE_SIZE = 8;
 
 const statuses: EventStatusFilter[] = [
@@ -148,48 +147,49 @@ function OrganiserEvents() {
   const isCreateOpen =
     searchParams.get("create") === "1" || Boolean(editingEvent);
 
-    // Inside OrganiserEvents component:
-const [cancel, setCancel] = useState<Decision | null>(null);
-const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [cancel, setCancel] = useState<Decision | null>(null);
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [liveEvents, setLiveEvents] = useState<Record<string, boolean>>({});
+
   const confirmCancelEvent = async () => {
-  if (!cancel) return;
+    if (!cancel) return;
 
-  const { eventId, status } = cancel;
+    const { eventId, status } = cancel;
 
-  try {
-    setActionLoading(eventId);
-    setError(null);
+    try {
+      setActionLoading(eventId);
+      setError(null);
 
-    await cancelEvent(eventId, status);
+      await cancelEvent(eventId, status);
 
-    // Update local events list to reflect CANCELLED status immediately
-    setEvents((prev) =>
-      prev.map((ev) =>
-        Number(ev.id) === eventId ? { ...ev, status: "CANCELLED" } : ev
-      )
-    );
+      // Update local events list to reflect CANCELLED status immediately
+      setEvents((prev) =>
+        prev.map((ev) =>
+          Number(ev.id) === eventId ? { ...ev, status: "CANCELLED" } : ev
+        )
+      );
 
-    // Also update selectedEvent if its detail modal is currently open
-    setSelectedEvent((prev) =>
-      prev && Number(prev.id) === eventId
-        ? { ...prev, status: "CANCELLED" }
-        : prev
-    );
+      // Also update selectedEvent if its detail modal is currently open
+      setSelectedEvent((prev) =>
+        prev && Number(prev.id) === eventId
+          ? { ...prev, status: "CANCELLED" }
+          : prev
+      );
 
-    setNotice(`"${cancel.eventName}" has been cancelled successfully.`);
-    window.setTimeout(() => setNotice(""), 4000);
-  } catch (err: unknown) {
-    setError(
-      getOrganiserErrorMessage(
-        err,
-        "Failed to cancel the event. Please try again."
-      )
-    );
-  } finally {
-    setActionLoading(null);
-    setCancel(null);
-  }
-};
+      setNotice(`"${cancel.eventName}" has been cancelled successfully.`);
+      window.setTimeout(() => setNotice(""), 4000);
+    } catch (err: unknown) {
+      setError(
+        getOrganiserErrorMessage(
+          err,
+          "Failed to cancel the event. Please try again."
+        )
+      );
+    } finally {
+      setActionLoading(null);
+      setCancel(null);
+    }
+  };
 
   const loadEvents = useCallback(async () => {
     try {
@@ -215,35 +215,32 @@ const [actionLoading, setActionLoading] = useState<number | null>(null);
     }
   }, []);
 
-  // Inside OrganiserEvents component:
-const [liveEvents, setLiveEvents] = useState<Record<string, boolean>>({});
+  const handleToggleLive = async (e: React.MouseEvent, eventId: number) => {
+    e.stopPropagation();
 
-const handleToggleLive = async (e: React.MouseEvent, eventId: number) => {
-  e.stopPropagation(); 
+    const currentStatus = Boolean(liveEvents[String(eventId)]);
+    const nextStatus = !currentStatus;
 
-  const currentStatus = Boolean(liveEvents[String(eventId)]);
-  const nextStatus = !currentStatus;
+    setLiveEvents((prev) => ({ ...prev, [eventId]: nextStatus }));
 
-  setLiveEvents((prev) => ({ ...prev, [eventId]: nextStatus }));
-
-  try {
-    await liveEvent(eventId, nextStatus);
-    setEvents((prev) =>
-      prev.map((event) =>
-        Number(event.id) === eventId
-          ? { ...event, is_live: nextStatus }
-          : event
-      )
-    );
-    setNotice(nextStatus ? "Event is now live!" : "Event is no longer live.");
-    window.setTimeout(() => setNotice(""), 3000);
-  } catch (err: unknown) {
-    setLiveEvents((prev) => ({ ...prev, [eventId]: currentStatus }));
-    setError(
-      getOrganiserErrorMessage(err, "Failed to update live status. Please try again.")
-    );
-  }
-};
+    try {
+      await liveEvent(eventId, nextStatus);
+      setEvents((prev) =>
+        prev.map((event) =>
+          Number(event.id) === eventId
+            ? { ...event, is_live: nextStatus }
+            : event
+        )
+      );
+      setNotice(nextStatus ? "Event is now live!" : "Event is no longer live.");
+      window.setTimeout(() => setNotice(""), 3000);
+    } catch (err: unknown) {
+      setLiveEvents((prev) => ({ ...prev, [eventId]: currentStatus }));
+      setError(
+        getOrganiserErrorMessage(err, "Failed to update live status. Please try again.")
+      );
+    }
+  };
 
   useEffect(() => {
     void loadEvents();
@@ -513,48 +510,50 @@ const handleToggleLive = async (e: React.MouseEvent, eventId: number) => {
                       <h3 title={event.name}>{event.name}</h3>
                     </div>
 
-<div 
-  className="go-live-container" 
-  onClick={(e) => e.stopPropagation()}
->
-  <button
-    type="button"
-    role="switch"
-    aria-checked={Boolean(liveEvents[event.id])}
-    className={`go-live-toggle ${liveEvents[event.id] ? "is-live" : ""}`}
-    onClick={(e) => handleToggleLive(e, Number(event.id))}
-  >
-    <span className="go-live-switch">
-      <span className="go-live-thumb" />
-    </span>
-    <span className="go-live-text">
-      {liveEvents[event.id] ? "Live" : "Go Live"}
-    </span>
-  </button>
+                    {/* Hidden entirely when event is cancelled */}
+                    {event.status !== "CANCELLED" && (
+                      <div
+                        className="go-live-container"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={Boolean(liveEvents[event.id])}
+                          className={`go-live-toggle ${
+                            liveEvents[event.id] ? "is-live" : ""
+                          }`}
+                          onClick={(e) => handleToggleLive(e, Number(event.id))}
+                        >
+                          <span className="go-live-switch">
+                            <span className="go-live-thumb" />
+                          </span>
+                          <span className="go-live-text">
+                            {liveEvents[event.id] ? "Live" : "Go Live"}
+                          </span>
+                        </button>
 
-<button
-  type="button"
-  className="cancel-action-btn"
-  disabled={event.status === "CANCELLED" || actionLoading === Number(event.id)}
-  onClick={(e) => {
-    e.stopPropagation();
-    setCancel({
-      eventId: Number(event.id),
-      eventName: event.name,
-      status: "CANCELLED",
-    });
-  }}
->
-  {actionLoading === Number(event.id) ? (
-    <Loader2 className="org-spin" size={13} />
-  ) : (
-    "Cancel Event"
-  )}
-</button>
-</div>
-
-
-                          
+                        <button
+                          type="button"
+                          className="cancel-action-btn"
+                          disabled={actionLoading === Number(event.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCancel({
+                              eventId: Number(event.id),
+                              eventName: event.name,
+                              status: "CANCELLED",
+                            });
+                          }}
+                        >
+                          {actionLoading === Number(event.id) ? (
+                            <Loader2 className="org-spin" size={13} />
+                          ) : (
+                            "Cancel Event"
+                          )}
+                        </button>
+                      </div>
+                    )}
 
                     <div className="org-card-footer">
                       <div>
@@ -666,49 +665,49 @@ const handleToggleLive = async (e: React.MouseEvent, eventId: number) => {
       )}
 
       {cancel && (
-  <div
-    className="org-detail-backdrop"
-    onClick={() => !actionLoading && setCancel(null)}
-  >
-    <div
-      className="org-confirm-dialog"
-      onClick={(e) => e.stopPropagation()}
-      role="dialog"
-      aria-modal="true"
-    >
-      <h3>Cancel Event</h3>
-      <p>
-        Are you sure you want to cancel <strong>{cancel.eventName}</strong>?
-        Ticket holders and public viewers will no longer be able to book this event.
-      </p>
+        <div
+          className="org-detail-backdrop"
+          onClick={() => !actionLoading && setCancel(null)}
+        >
+          <div
+            className="org-confirm-dialog"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <h3>Cancel Event</h3>
+            <p>
+              Are you sure you want to cancel <strong>{cancel.eventName}</strong>?
+              Ticket holders and public viewers will no longer be able to book this event.
+            </p>
 
-      <div className="org-confirm-actions">
-        <button
-          type="button"
-          className="org-button-secondary"
-          disabled={actionLoading !== null}
-          onClick={() => setCancel(null)}
-        >
-          Nevermind
-        </button>
-        <button
-          type="button"
-          className="org-button-danger"
-          disabled={actionLoading !== null}
-          onClick={confirmCancelEvent}
-        >
-          {actionLoading ? (
-            <>
-              <Loader2 className="org-spin" size={14} /> Cancelling...
-            </>
-          ) : (
-            "Yes, Cancel Event"
-          )}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+            <div className="org-confirm-actions">
+              <button
+                type="button"
+                className="org-button-secondary"
+                disabled={actionLoading !== null}
+                onClick={() => setCancel(null)}
+              >
+                Nevermind
+              </button>
+              <button
+                type="button"
+                className="org-button-danger"
+                disabled={actionLoading !== null}
+                onClick={confirmCancelEvent}
+              >
+                {actionLoading ? (
+                  <>
+                    <Loader2 className="org-spin" size={14} /> Cancelling...
+                  </>
+                ) : (
+                  "Yes, Cancel Event"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -797,7 +796,6 @@ function EventDetailsModal({
         aria-labelledby="org-detail-title"
         onWheel={(e) => e.stopPropagation()}
       >
-        {/* Cover / Header section */}
         {imageUrl ? (
           <div
             className="org-detail-cover"
@@ -854,7 +852,6 @@ function EventDetailsModal({
         )}
 
         <div className="org-detail-content">
-          {/* Title & Metadata Strip */}
           <div>
             <h2 id="org-detail-title" className="org-detail-event-title">
               {event.name}
@@ -875,7 +872,6 @@ function EventDetailsModal({
             </div>
           </div>
 
-          {/* Admin Rejection notice */}
           {event.status === "REJECTED" && (
             <div className="org-detail-reason">
               <strong>Admin Rejection Feedback</strong>
@@ -886,7 +882,6 @@ function EventDetailsModal({
             </div>
           )}
 
-          {/* 4-Metric Grid */}
           <div className="org-detail-metrics-row">
             <div className="org-detail-metric-card">
               <span className="metric-label">Date &amp; Time</span>
@@ -926,7 +921,6 @@ function EventDetailsModal({
             </div>
           </div>
 
-          {/* Venue & Location */}
           <div className="org-detail-section">
             <span className="org-detail-section-title">
               Venue &amp; Location
@@ -947,7 +941,6 @@ function EventDetailsModal({
             </div>
           </div>
 
-          {/* About / Description */}
           <div className="org-detail-section">
             <span className="org-detail-section-title">Description</span>
             <p className="org-detail-description">
@@ -956,7 +949,6 @@ function EventDetailsModal({
             </p>
           </div>
 
-          {/* Instructions & Amenities Box */}
           {instructions && (
             <div className="org-detail-section org-detail-instructions-box">
               <span className="org-detail-section-title org-detail-instructions-title">
@@ -971,7 +963,6 @@ function EventDetailsModal({
           )}
         </div>
 
-        {/* Modal Footer */}
         <footer className="org-detail-footer">
           <div className="org-detail-footer-actions">
             {event.status === "APPROVED" && event.slug ? (
@@ -1021,8 +1012,6 @@ function EventDetailsModal({
           </div>
         </footer>
       </section>
-
-      
     </div>
   );
 }
