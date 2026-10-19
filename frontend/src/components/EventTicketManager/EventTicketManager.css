@@ -184,6 +184,49 @@
   font-size: 14px;
 }
 
+.event-ticket-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.event-ticket-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #ded9e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #554d63;
+  cursor: pointer;
+}
+
+.event-ticket-actions button:last-child {
+  color: #bd3030;
+}
+
+.event-ticket-actions button:hover:not(:disabled) {
+  background: #f5f1fc;
+}
+
+.event-ticket-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ticket-secondary-btn {
+  align-self: flex-start;
+  padding: 10px 15px;
+  border: 1px solid #ded9e8;
+  border-radius: 9px;
+  background: #fff;
+  color: #554d63;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .ticket-empty {
   padding: 12px;
   border-radius: 9px;

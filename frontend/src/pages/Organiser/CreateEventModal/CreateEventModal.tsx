@@ -1,11 +1,10 @@
 import {
   useEffect,
-  useMemo,
   useState,
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import { ImagePlus, Loader2, Plus, Ticket, Trash2, X } from "lucide-react";
+import { ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
 
 import {
   createOrganiserEvent,
@@ -16,32 +15,21 @@ import {
   type OrganiserEvent,
   type OrganiserLookupOption,
 } from "../../../services/organiserService";
-import axios from "axios";
-import { API_BASE_URL } from "../../../config/config";
-
+import { createCustomEventTicket } from "../../../services/eventTicketService";
 import "./CreateEventModal.css";
-
-interface AdminTicketTemplate {
-  id: number;
-  name: string;
-  description?: string;
-  price: number;
-  category: string;
-  status?: string;
-}
-
-export interface SelectedTicketTier {
-  id?: number | string;
-  name: string;
-  price: number;
-  type: "ADMIN" | "CUSTOM";
-}
 
 interface CreateEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onEventSaved: (savedEvent: OrganiserEvent) => void;
   eventToEdit?: OrganiserEvent | null;
+}
+
+export interface TicketDraft {
+  id?: number;
+  name: string;
+  description: string;
+  price: string;
 }
 
 interface FormState {
@@ -53,8 +41,8 @@ interface FormState {
   category_id: string;
   event_date: string;
   time: string;
-  price: number;
-  capacity: number;
+  price: number | "";
+  capacity: string;
   age_restriction: string;
   duration: string;
 }
@@ -68,11 +56,15 @@ const initialFormState: FormState = {
   category_id: "",
   event_date: "",
   time: "",
-  price: 0,
-  capacity: 50,
+  price: "",
+  capacity: "",
   age_restriction: "All Ages",
   duration: "2 Hours",
 };
+
+const defaultInitialTickets: TicketDraft[] = [
+  { name: "General Admission", description: "Standard entry pass", price: "" },
+];
 
 const AVAILABLE_LANGUAGES = [
   "English",
@@ -88,7 +80,6 @@ const AVAILABLE_LANGUAGES = [
 ];
 
 const AGE_RESTRICTIONS = ["All Ages", "3+", "7+", "12+", "16+", "18+", "21+"];
-
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
 
@@ -106,35 +97,17 @@ export const CreateEventModal = ({
   const [imagePreview, setImagePreview] = useState("");
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
+  // Dynamic ticket categories created alongside the event
+  const [tickets, setTickets] = useState<TicketDraft[]>(defaultInitialTickets);
+
   const [cities, setCities] = useState<OrganiserLookupOption[]>([]);
   const [categories, setCategories] = useState<OrganiserLookupOption[]>([]);
-  const [adminTickets, setAdminTickets] = useState<AdminTicketTemplate[]>([]);
-
-  const [ticketMode, setTicketMode] = useState<"NONE" | "ADMIN" | "CUSTOM">("NONE");
-  const [selectedAdminTicketIds, setSelectedAdminTicketIds] = useState<number[]>([]);
-  const [customTiers, setCustomTiers] = useState<Array<{ name: string; price: number }>>([]);
-  const [newCustomTierName, setNewCustomTierName] = useState("");
-  const [newCustomTierPrice, setNewCustomTierPrice] = useState<number>(0);
 
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isEditMode = Boolean(eventToEdit);
-
-  const selectedCategoryName = useMemo(() => {
-    const found = categories.find((c) => String(c.id) === String(formData.category_id));
-    return found ? found.name.toLowerCase() : "";
-  }, [categories, formData.category_id]);
-
-  const availableAdminTickets = useMemo(() => {
-    if (!selectedCategoryName) return [];
-    return adminTickets.filter(
-      (ticket) =>
-        ticket.status !== "DELETED" &&
-        ticket.category.trim().toLowerCase() === selectedCategoryName
-    );
-  }, [adminTickets, selectedCategoryName]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -152,8 +125,11 @@ export const CreateEventModal = ({
         category_id: String((eventToEdit as any).category_id || ""),
         event_date: eventToEdit.event_date ? eventToEdit.event_date.slice(0, 10) : "",
         time: eventToEdit.time ? eventToEdit.time.slice(0, 5) : "",
-        price: Number(eventToEdit.price) || 0,
-        capacity: Number(eventToEdit.capacity) || 50,
+        price: eventToEdit.price !== undefined && eventToEdit.price !== null ? Number(eventToEdit.price) : "",
+        capacity:
+          eventToEdit.capacity !== undefined && eventToEdit.capacity !== null
+            ? String(eventToEdit.capacity)
+            : "",
         age_restriction:
           (eventToEdit as any).age_group ||
           (eventToEdit as any).age_restriction ||
@@ -177,23 +153,6 @@ export const CreateEventModal = ({
         }
       }
 
-      const existingTiers = (eventToEdit as any).ticket_tiers;
-      if (Array.isArray(existingTiers) && existingTiers.length > 0) {
-        setTicketMode("CUSTOM");
-        setCustomTiers(existingTiers);
-      } else if ((eventToEdit as any).ticket_category_name) {
-        setTicketMode("CUSTOM");
-        setCustomTiers([
-          {
-            name: (eventToEdit as any).ticket_category_name,
-            price: Number(eventToEdit.price) || 0,
-          },
-        ]);
-      } else {
-        setTicketMode("NONE");
-        setCustomTiers([]);
-      }
-
       const existingImg = (eventToEdit as any).image_url || (eventToEdit as any).image;
       if (existingImg) setImagePreview(existingImg);
     } else {
@@ -201,9 +160,9 @@ export const CreateEventModal = ({
       setSelectedLanguages(["English"]);
       setImage(null);
       setImagePreview("");
-      setTicketMode("NONE");
-      setSelectedAdminTicketIds([]);
-      setCustomTiers([]);
+      setTickets([
+        { name: "", description: "", price: "" },
+      ]);
     }
     setIsLightboxOpen(false);
   }, [isOpen, eventToEdit]);
@@ -215,21 +174,11 @@ export const CreateEventModal = ({
     setError(null);
     setLoadingOptions(true);
 
-    const fetchTickets = async (): Promise<AdminTicketTemplate[]> => {
-      try {
-        const res = await axios.get(`${API_BASE_URL}/v1/tickets`);
-        return res.data?.tickets || [];
-      } catch {
-        return [];
-      }
-    };
-
-    Promise.all([fetchOrganiserCities(), fetchOrganiserCategories(), fetchTickets()])
-      .then(([cityOptions, categoryOptions, ticketTemplates]) => {
+    Promise.all([fetchOrganiserCities(), fetchOrganiserCategories()])
+      .then(([cityOptions, categoryOptions]) => {
         if (!active) return;
         setCities(cityOptions.filter((option) => option.is_active !== false));
         setCategories(categoryOptions.filter((option) => option.is_active !== false));
-        setAdminTickets(ticketTemplates.filter((t) => t.status !== "DELETED"));
       })
       .catch((lookupError: unknown) => {
         if (active) {
@@ -244,12 +193,6 @@ export const CreateEventModal = ({
       active = false;
     };
   }, [isOpen]);
-
-  useEffect(() => {
-    setSelectedAdminTicketIds((prev) =>
-      prev.filter((id) => availableAdminTickets.some((t) => t.id === id))
-    );
-  }, [availableAdminTickets]);
 
   useEffect(() => {
     return () => {
@@ -267,11 +210,9 @@ export const CreateEventModal = ({
       setSelectedLanguages(["English"]);
       setImage(null);
       setImagePreview("");
+      setTickets(defaultInitialTickets);
       setError(null);
       setIsLightboxOpen(false);
-      setTicketMode("NONE");
-      setSelectedAdminTicketIds([]);
-      setCustomTiers([]);
       onClose();
     }
   };
@@ -283,7 +224,16 @@ export const CreateEventModal = ({
     setError(null);
     setFormData((current) => ({
       ...current,
-      [name]: type === "number" ? (value === "" ? 0 : Number(value)) : value,
+      [name]: type === "number" ? (value === "" ? "" : Number(value)) : value,
+    }));
+  };
+
+  const handleCapacityChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const cleanNumeric = event.target.value.replace(/\D/g, "");
+    setError(null);
+    setFormData((current) => ({
+      ...current,
+      capacity: cleanNumeric,
     }));
   };
 
@@ -291,57 +241,6 @@ export const CreateEventModal = ({
     setSelectedLanguages((prev) =>
       prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang]
     );
-  };
-
-  const handleToggleAdminTicket = (ticket: AdminTicketTemplate) => {
-    setSelectedAdminTicketIds((prev) => {
-      const exists = prev.includes(ticket.id);
-      const next = exists ? prev.filter((id) => id !== ticket.id) : [...prev, ticket.id];
-
-      const chosenTiers = adminTickets.filter((t) => next.includes(t.id));
-      if (chosenTiers.length > 0) {
-        const lowestPrice = Math.min(...chosenTiers.map((t) => Number(t.price)));
-        setFormData((fd) => ({ ...fd, price: lowestPrice }));
-      }
-      return next;
-    });
-  };
-
-  const handleAddCustomTier = () => {
-    if (!newCustomTierName.trim()) {
-      setError("Please provide a name for the custom tier.");
-      return;
-    }
-    setCustomTiers((prev) => [
-      ...prev,
-      { name: newCustomTierName.trim(), price: Number(newCustomTierPrice) || 0 },
-    ]);
-    if (formData.price === 0 || Number(newCustomTierPrice) < formData.price) {
-      setFormData((fd) => ({ ...fd, price: Number(newCustomTierPrice) || 0 }));
-    }
-    setNewCustomTierName("");
-    setNewCustomTierPrice(0);
-  };
-
-  const handleRemoveCustomTier = (index: number) => {
-    setCustomTiers((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const getFinalTicketTiers = (): SelectedTicketTier[] => {
-    if (ticketMode === "ADMIN") {
-      return adminTickets
-        .filter((t) => selectedAdminTicketIds.includes(t.id))
-        .map((t) => ({ id: t.id, name: t.name, price: Number(t.price), type: "ADMIN" }));
-    }
-    if (ticketMode === "CUSTOM") {
-      return customTiers.map((c, i) => ({
-        id: `custom-${i}`,
-        name: c.name,
-        price: c.price,
-        type: "CUSTOM",
-      }));
-    }
-    return [{ name: "General Admission", price: Number(formData.price), type: "ADMIN" }];
   };
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -365,22 +264,63 @@ export const CreateEventModal = ({
     setImagePreview(URL.createObjectURL(file));
   };
 
+  // Ticket categories management inside the modal
+  const handleAddTicket = () => {
+    setTickets((prev) => [
+      ...prev,
+      { name: "", description: "", price: "" },
+    ]);
+  };
+
+  const handleRemoveTicket = (index: number) => {
+    if (tickets.length === 1) {
+      return setError("At least one ticket category is required.");
+    }
+    setTickets((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleTicketChange = (
+    index: number,
+    field: keyof TicketDraft,
+    value: string
+  ) => {
+    setError(null);
+    setTickets((prev) =>
+      prev.map((t, i) => (i === index ? { ...t, [field]: value } : t))
+    );
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
 
+    const parsedCapacity = Number(formData.capacity);
+    if (!formData.capacity.trim() || isNaN(parsedCapacity) || parsedCapacity < 1) {
+      return setError("Capacity must be at least 1 attendee.");
+    }
+
     if (selectedLanguages.length === 0) {
       return setError("Please select at least one language for the event.");
     }
-    if (ticketMode === "ADMIN" && selectedAdminTicketIds.length === 0) {
-      return setError("Please choose at least one admin ticket tier.");
-    }
-    if (ticketMode === "CUSTOM" && customTiers.length === 0) {
-      return setError("Please add at least one custom ticket tier.");
+
+    // Validate tickets if creating new event
+    if (!isEditMode) {
+      if (tickets.length === 0) {
+        return setError("Please add at least one ticket category.");
+      }
+
+      for (let i = 0; i < tickets.length; i++) {
+        const t = tickets[i];
+        if (!t.name.trim()) {
+          return setError(`Ticket category #${i + 1} needs a name.`);
+        }
+        const parsedP = Number(t.price);
+        if (t.price.trim() === "" || isNaN(parsedP) || parsedP < 0) {
+          return setError(`Ticket category "${t.name}" needs a valid price (₹).`);
+        }
+      }
     }
 
-    const compiledTiers = getFinalTicketTiers();
-    const primaryTierName = compiledTiers.map((t) => t.name).join(", ");
     const languagesPayload = JSON.stringify(selectedLanguages);
 
     if (!isEditMode) {
@@ -389,11 +329,15 @@ export const CreateEventModal = ({
         return setError("Choose a city and category.");
       if (!formData.event_date || !formData.time)
         return setError("Date and time are required.");
-      if (formData.capacity < 1) return setError("Capacity must be at least 1.");
       if (!image) return setError("Please upload an event image.");
+
+      // Calculate lowest ticket price as event base starting price
+      const validPrices = tickets.map((t) => Number(t.price)).filter((p) => !isNaN(p));
+      const minStartingPrice = validPrices.length ? Math.min(...validPrices) : 0;
 
       try {
         setSubmitting(true);
+
         const createdEvent = await createOrganiserEvent({
           name: formData.name.trim(),
           description: formData.description.trim() || undefined,
@@ -409,12 +353,25 @@ export const CreateEventModal = ({
           category_id: Number(formData.category_id),
           event_date: formData.event_date,
           time: formData.time,
-          price: Number(formData.price),
-          capacity: Number(formData.capacity),
-          ticket_category_name: primaryTierName,
-          ticket_tiers: JSON.stringify(compiledTiers),
+          price: minStartingPrice,
+          capacity: parsedCapacity,
           image,
         } as any);
+
+        const newEventId = Number(createdEvent.id || (createdEvent as any).event?.id);
+
+        // Assign ticket categories directly to the created event
+        if (newEventId) {
+          await Promise.all(
+            tickets.map((t) =>
+              createCustomEventTicket(newEventId, {
+                name: t.name.trim(),
+                description: t.description.trim(),
+                price: Number(t.price),
+              })
+            )
+          );
+        }
 
         onEventSaved(createdEvent);
         requestClose();
@@ -428,6 +385,7 @@ export const CreateEventModal = ({
       return;
     }
 
+    // Edit flow
     if (!eventToEdit) return;
     const patchPayload: Record<string, any> = {};
 
@@ -452,17 +410,13 @@ export const CreateEventModal = ({
     if (formData.time && formData.time !== (eventToEdit.time || "").slice(0, 5)) {
       patchPayload.time = formData.time;
     }
-    if (Number(formData.price) !== Number(eventToEdit.price)) {
-      patchPayload.price = Number(formData.price);
-    }
-    if (Number(formData.capacity) !== Number(eventToEdit.capacity)) {
-      patchPayload.capacity = Number(formData.capacity);
+    if (parsedCapacity !== Number(eventToEdit.capacity)) {
+      patchPayload.capacity = parsedCapacity;
     }
     if (image instanceof File) {
       patchPayload.image = image;
     }
 
-    // Instructions
     const originalInstructions = (
       (eventToEdit as any).additional_instructions ||
       (eventToEdit as any).instructions ||
@@ -473,7 +427,6 @@ export const CreateEventModal = ({
       patchPayload.instructions = formData.instructions.trim();
     }
 
-    // Age restriction / group
     const originalAge = (
       (eventToEdit as any).age_group ||
       (eventToEdit as any).age_restriction ||
@@ -484,7 +437,6 @@ export const CreateEventModal = ({
       patchPayload.age_restriction = formData.age_restriction;
     }
 
-    // Duration
     const originalDuration = String(
       (eventToEdit as any).duration_hours !== undefined && (eventToEdit as any).duration_hours !== null
         ? `${(eventToEdit as any).duration_hours} Hours`
@@ -495,7 +447,6 @@ export const CreateEventModal = ({
       patchPayload.duration = formData.duration.trim();
     }
 
-    // Languages
     const currentLanguagesStr = typeof (eventToEdit as any).languages === "string"
       ? (eventToEdit as any).languages
       : JSON.stringify((eventToEdit as any).languages || []);
@@ -503,8 +454,9 @@ export const CreateEventModal = ({
       patchPayload.languages = languagesPayload;
     }
 
-    patchPayload.ticket_category_name = primaryTierName;
-    patchPayload.ticket_tiers = JSON.stringify(compiledTiers);
+    patchPayload.status = "PENDING";
+    patchPayload.is_live = false;
+    patchPayload.rejection_reason = null;
 
     try {
       setSubmitting(true);
@@ -513,7 +465,7 @@ export const CreateEventModal = ({
       requestClose();
     } catch (patchError: unknown) {
       setError(
-        getOrganiserErrorMessage(patchError, "Could not update event details. Please try again.")
+        getOrganiserErrorMessage(patchError, "Could not submit event for review. Please try again.")
       );
     } finally {
       setSubmitting(false);
@@ -537,7 +489,7 @@ export const CreateEventModal = ({
           <header className="org-modal-header">
             <div>
               <span className="org-modal-eyebrow">
-                {isEditMode ? "EDIT EVENT" : "NEW LISTING"}
+                {isEditMode ? "EDIT & RESUBMIT" : "NEW LISTING"}
               </span>
               <h3 id="org-create-title">
                 {isEditMode ? "Edit event details" : "Create an event"}
@@ -555,7 +507,7 @@ export const CreateEventModal = ({
             </button>
           </header>
 
-          <form onSubmit={handleSubmit} className="org-modal-form">
+          <form onSubmit={handleSubmit} className="org-modal-form" noValidate>
             {error && (
               <div className="org-form-error" role="alert">
                 {error}
@@ -622,7 +574,6 @@ export const CreateEventModal = ({
                 value={formData.name}
                 onChange={handleChange}
                 maxLength={120}
-                required
                 placeholder="Give your event a name"
               />
             </label>
@@ -651,7 +602,6 @@ export const CreateEventModal = ({
               />
             </label>
 
-            {/* Languages Multi-select */}
             <div className="org-form-field org-form-wide">
               <span>Languages</span>
               <div
@@ -687,7 +637,6 @@ export const CreateEventModal = ({
               </div>
             </div>
 
-            {/* Age restriction and Duration */}
             <label className="org-form-field" htmlFor="event-age">
               <span>Age restriction</span>
               <select
@@ -712,7 +661,6 @@ export const CreateEventModal = ({
                 value={formData.duration}
                 onChange={handleChange}
                 placeholder="e.g. 2 Hours, 90 Mins, Full Day"
-                required
               />
             </label>
 
@@ -723,7 +671,6 @@ export const CreateEventModal = ({
                 name="city_id"
                 value={formData.city_id}
                 onChange={handleChange}
-                required
                 disabled={loadingOptions}
               >
                 <option value="">
@@ -744,7 +691,6 @@ export const CreateEventModal = ({
                 name="category_id"
                 value={formData.category_id}
                 onChange={handleChange}
-                required
                 disabled={loadingOptions}
               >
                 <option value="">
@@ -777,7 +723,6 @@ export const CreateEventModal = ({
                 type="date"
                 value={formData.event_date}
                 onChange={handleChange}
-                required
               />
             </label>
 
@@ -789,168 +734,102 @@ export const CreateEventModal = ({
                 type="time"
                 value={formData.time}
                 onChange={handleChange}
-                required
               />
             </label>
 
-            <div className="org-form-field org-form-wide org-tier-section">
-              <div className="org-tier-header">
-                <Ticket size={16} />
-                <span>Ticket Category & Tiers</span>
-              </div>
-
-              <div className="org-tier-radios">
-                <label className="org-tier-radio-label">
-                  <input
-                    type="radio"
-                    name="tierMode"
-                    checked={ticketMode === "NONE"}
-                    onChange={() => {
-                      setTicketMode("NONE");
-                      setSelectedAdminTicketIds([]);
-                      setCustomTiers([]);
-                    }}
-                  />
-                  No category (General Admission)
-                </label>
-
-                <label className="org-tier-radio-label">
-                  <input
-                    type="radio"
-                    name="tierMode"
-                    checked={ticketMode === "ADMIN"}
-                    onChange={() => setTicketMode("ADMIN")}
-                  />
-                  Admin ticket tiers {selectedCategoryName ? `(${selectedCategoryName})` : ""}
-                </label>
-
-                <label className="org-tier-radio-label">
-                  <input
-                    type="radio"
-                    name="tierMode"
-                    checked={ticketMode === "CUSTOM"}
-                    onChange={() => setTicketMode("CUSTOM")}
-                  />
-                  Custom tiers
-                </label>
-              </div>
-
-              {ticketMode === "ADMIN" && (
-                <div className="org-tier-list">
-                  {!formData.category_id ? (
-                    <p className="org-tier-hint">
-                      👉 Select an event category above to see matching ticket tiers.
-                    </p>
-                  ) : availableAdminTickets.length === 0 ? (
-                    <p className="org-tier-error">
-                      No admin tiers configured for the <strong>{selectedCategoryName}</strong> category yet.
-                    </p>
-                  ) : (
-                    availableAdminTickets.map((t) => {
-                      const isSelected = selectedAdminTicketIds.includes(t.id);
-                      return (
-                        <div
-                          key={t.id}
-                          className={`org-tier-card ${isSelected ? "selected" : ""}`}
-                          onClick={() => handleToggleAdminTicket(t)}
-                        >
-                          <div className="org-tier-card-left">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => {}}
-                              style={{ pointerEvents: "none" }}
-                            />
-                            <div className="org-tier-details">
-                              <strong>{t.name}</strong>
-                              {t.description && <p>{t.description}</p>}
-                            </div>
-                          </div>
-                          <span className="org-tier-price">₹{Number(t.price).toLocaleString()}</span>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-
-              {ticketMode === "CUSTOM" && (
-                <div className="org-custom-builder">
-                  <div className="org-custom-inputs">
-                    <input
-                      type="text"
-                      placeholder="Tier name (e.g. VIP, Early Bird)"
-                      value={newCustomTierName}
-                      onChange={(e) => setNewCustomTierName(e.target.value)}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Price (₹)"
-                      value={newCustomTierPrice || ""}
-                      onChange={(e) => setNewCustomTierPrice(Number(e.target.value))}
-                    />
-                    <button
-                      type="button"
-                      className="org-custom-add-btn"
-                      onClick={handleAddCustomTier}
-                    >
-                      <Plus size={15} /> Add
-                    </button>
-                  </div>
-
-                  {customTiers.map((tier, idx) => (
-                    <div key={idx} className="org-custom-item">
-                      <span>{tier.name}</span>
-                      <div className="org-custom-item-actions">
-                        <strong>₹{tier.price.toLocaleString()}</strong>
-                        <button
-                          type="button"
-                          className="org-custom-remove-btn"
-                          onClick={() => handleRemoveCustomTier(idx)}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <label className="org-form-field" htmlFor="event-price">
-              <span>Starting / base ticket price (₹)</span>
-              <input
-                id="event-price"
-                name="price"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.price}
-                onChange={handleChange}
-                required
-              />
-            </label>
-
-            <label className="org-form-field" htmlFor="event-capacity">
-              <span>Capacity</span>
+            <label className="org-form-field org-form-wide" htmlFor="event-capacity">
+              <span>Total attendee capacity</span>
               <input
                 id="event-capacity"
                 name="capacity"
-                type="number"
-                min="1"
-                step="1"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="Enter attendee limit across all categories (e.g. 100)"
                 value={formData.capacity}
-                onChange={handleChange}
-                required
+                onChange={handleCapacityChange}
               />
             </label>
+
+            {/* Ticket Categories Configuration */}
+            {!isEditMode && (
+              <div className="org-form-field org-form-wide org-ticket-builder">
+                <div className="org-ticket-builder-header">
+                  <div>
+                    <span className="org-ticket-builder-title">Ticket categories</span>
+                    <small>Create ticket tiers for this event (e.g. Early Bird, VIP, General)</small>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="org-add-ticket-btn"
+                    onClick={handleAddTicket}
+                  >
+                    <Plus size={15} /> Add category
+                  </button>
+                </div>
+
+                <div className="org-ticket-builder-list">
+                  {tickets.map((ticket, index) => (
+                    <div key={index} className="org-ticket-builder-item">
+                      <div className="org-ticket-row-top">
+                        <input
+                          type="text"
+                          placeholder="Category name (e.g. VIP Pass)"
+                          value={ticket.name}
+                          onChange={(e) =>
+                            handleTicketChange(index, "name", e.target.value)
+                          }
+                          className="org-ticket-name-input"
+                        />
+
+                        <div className="org-ticket-price-input-wrapper">
+                          <span className="currency-prefix">₹</span>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="Price"
+                            value={ticket.price}
+                            onChange={(e) => {
+                              const clean = e.target.value.replace(/[^0-9.]/g, "");
+                              handleTicketChange(index, "price", clean);
+                            }}
+                            className="org-ticket-price-input"
+                          />
+                        </div>
+
+                        {tickets.length > 1 && (
+                          <button
+                            type="button"
+                            className="org-ticket-delete-btn"
+                            onClick={() => handleRemoveTicket(index)}
+                            aria-label="Remove ticket category"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+
+                      <input
+                        type="text"
+                        placeholder="Short description / perks (e.g. Front row seat + welcome drink)"
+                        value={ticket.description}
+                        onChange={(e) =>
+                          handleTicketChange(index, "description", e.target.value)
+                        }
+                        className="org-ticket-desc-input"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="org-modal-footer org-form-wide">
               <p>
                 {isEditMode
-                  ? "Edits may re-require admin approval."
-                  : "New events are submitted as pending for admin approval."}
+                  ? "Editing this event will reset its status to pending and require admin approval before it can go live."
+                  : "New events and their ticket tiers are submitted as pending for admin approval."}
               </p>
 
               <div>
@@ -971,10 +850,10 @@ export const CreateEventModal = ({
                   {submitting ? (
                     <>
                       <Loader2 size={16} className="org-spin" />
-                      {isEditMode ? "Saving changes..." : "Submitting..."}
+                      {isEditMode ? "Submitting for review..." : "Submitting event & tickets..."}
                     </>
                   ) : isEditMode ? (
-                    "Save changes"
+                    "Submit for review"
                   ) : (
                     "Submit for approval"
                   )}

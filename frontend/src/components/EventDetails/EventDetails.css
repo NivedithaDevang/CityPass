@@ -409,19 +409,6 @@
   gap: 0.85rem;
   margin-bottom: 1.25rem;
 }
-
-.booking-icon-circle {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: #eff0fe;
-  color: #5144ed;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-}
-
 .booking-card-title {
   display: block;
   font-weight: 800;

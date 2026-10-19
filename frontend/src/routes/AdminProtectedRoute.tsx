@@ -12,65 +12,68 @@ const AdminProtectedRoute = ({
 }: AdminProtectedRouteProps) => {
   const { user, loading } = useUser();
   const navigate = useNavigate();
-
-  // Check whether the Super Admin key has already been verified in this browser session.
   const [isPinVerified, setIsPinVerified] = useState<boolean>(() => {
     return sessionStorage.getItem("admin_pin_verified") === "true";
   });
 
-
+  // 1. Loading State
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          fontFamily: "sans-serif",
+          fontSize: "16px",
+          color: "#475569",
+        }}
+      >
+        Loading admin session...
+      </div>
+    );
   }
 
-
+  // 2. Unauthenticated State
   if (!user) {
-    return <Navigate to="/" replace />;
+    console.warn("[AdminProtectedRoute] Access denied: User is not logged in.");
+    return <Navigate to="/?login=true" replace />;
   }
 
-
-  const userRole = (user.role || "").toUpperCase().trim();
-
+  const userRole = String(user.role || "").toUpperCase().trim();
   const normalizedAllowedRoles = allowedRoles.map((role) =>
     role.toUpperCase().trim()
   );
 
-
   const isSuperAdmin = userRole === "SUPER_ADMIN";
+  const hasAdminRole = normalizedAllowedRoles.includes(userRole);
 
-
-  const isAdmin =
-    normalizedAllowedRoles.includes(userRole);
-
-
-  if (!isAdmin) {
+  // 3. Unauthorized Role
+  if (!hasAdminRole) {
+    console.warn(
+      `[AdminProtectedRoute] Forbidden: User role "${userRole}" is not authorized.`
+    );
     return <Navigate to="/" replace />;
   }
 
+  // 4. Super Admin PIN Verification Gate
   if (isSuperAdmin && !isPinVerified) {
     return (
       <AdminPinModal
         isOpen={true}
         onSuccess={() => {
-
-          sessionStorage.setItem(
-            "admin_pin_verified",
-            "true"
-          );
-
+          sessionStorage.setItem("admin_pin_verified", "true");
           setIsPinVerified(true);
         }}
         onCancel={() => {
-          // If user cancels the secret key modal,
-          // send them back to the homepage.
-          navigate("/", {
-            replace: true,
-          });
+          navigate("/", { replace: true });
         }}
       />
     );
   }
 
+  // 5. Authorized
   return <Outlet />;
 };
 

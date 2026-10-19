@@ -30,6 +30,205 @@
   line-height: 1.4;
 }
 
+/* Custom Ticket Category Dropdown */
+.booking-tier-select-box {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 6px;
+}
+
+.booking-tier-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.booking-tier-icon {
+  color: #5144ed;
+  font-size: 13px;
+}
+
+.custom-tier-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.custom-tier-trigger {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  background-color: #ffffff;
+  color: #0f172a;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-sizing: border-box;
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.custom-tier-trigger:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+.custom-tier-trigger.open {
+  border-color: #5144ed;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(81, 68, 237, 0.15);
+}
+
+.custom-tier-trigger:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
+  border-color: #e2e8f0;
+}
+
+.tier-trigger-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tier-placeholder {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.tier-name {
+  color: #0f172a;
+}
+
+.tier-separator {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.tier-price {
+  color: #5144ed;
+  font-weight: 700;
+}
+
+.tier-chevron {
+  color: #64748b;
+  font-size: 11px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.custom-tier-trigger.open .tier-chevron {
+  transform: rotate(180deg);
+  color: #5144ed;
+}
+
+/* Dropdown Menu Popup List */
+.custom-tier-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: #ffffff;
+  border: 1px solid #e2ddfe;
+  border-radius: 14px;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.1),
+              0 4px 12px rgba(81, 68, 237, 0.08);
+  max-height: 220px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  animation: tierMenuIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes tierMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.custom-tier-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.custom-tier-option:hover {
+  background-color: #f1f0fd;
+}
+
+.custom-tier-option.selected {
+  background-color: #eff0fe;
+}
+
+.tier-option-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.tier-option-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.custom-tier-option.selected .tier-option-name {
+  color: #5144ed;
+  font-weight: 700;
+}
+
+.tier-option-price {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.custom-tier-option.selected .tier-option-price {
+  color: #5144ed;
+}
+
+.tier-check-icon {
+  color: #5144ed;
+  font-size: 12px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.booking-tier-description {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
 /* Quantity Box */
 .inline-counter-box {
   display: flex;
@@ -118,6 +317,11 @@
   margin-bottom: 6px;
 }
 
+.breakdown-highlight-tier {
+  font-weight: 700;
+  color: #5144ed;
+}
+
 .breakdown-line .free-tag {
   color: #16a34a;
   background: #dcfce7;
@@ -170,10 +374,16 @@
   justify-content: center;
 }
 
-.inline-pay-btn:hover {
+.inline-pay-btn:hover:not(:disabled) {
   background: #4335dc;
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(81, 68, 237, 0.35);
+}
+
+.inline-pay-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .inline-cancel-btn {
@@ -391,87 +601,6 @@
 .booking-view-all-btn:hover {
   background: #4335dc;
 }
-
-
-/* Ticket category dropdown */
-.booking-tier-select-box {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  margin-bottom: 14px;
-}
-
-.booking-tier-label {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #334155;
-}
-
-.booking-tier-icon {
-  color: #5144ed;
-  font-size: 13px;
-}
-
-.booking-tier-dropdown {
-  width: 100%;
-  height: 42px;
-  padding: 0 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  background-color: #ffffff;
-  color: #0f172a;
-  font-family: inherit;
-  font-size: 13.5px;
-  font-weight: 600;
-  outline: none;
-  cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.booking-tier-dropdown:focus {
-  border-color: #5144ed;
-  box-shadow: 0 0 0 3px rgba(81, 68, 237, 0.12);
-}
-
-.breakdown-highlight-tier {
-  font-weight: 700;
-  color: #5144ed;
-}
-
-.booking-tier-dropdown{
-  background: #ffffff;
-  border: 1px solid #5144ed;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-
-  color: #5144ed; 
-  font-weight: 600;
-  font-size: 13.5px;
-  cursor: pointer;
-
-  padding: 6px 12px;
-  border-radius: 9999px; 
-  transition: all 0.2s ease-in-out;
-}
-
-.booking-tier-dropdown:hover {
-  background-color: #5144ed;
-  border-color: #9890f2;
-  color: #ffffff;
-  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.12);
-}
-
-.booking-tier-description{
-  font-size: 10px;
-  border: #bcbcbc;
-  text-align: justify;
-  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-}
-
 
 @media (max-width: 520px) {
   .booking-modal-overlay {

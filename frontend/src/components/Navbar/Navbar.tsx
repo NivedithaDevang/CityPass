@@ -8,7 +8,7 @@ import { API_BASE_URL } from "../../config/config";
 import { type City } from "../../types/auth";
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
 import { FaUserAlt } from "react-icons/fa";
-import { useNavigate, useSearchParams, NavLink } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation, Link } from "react-router-dom";
 
 // Check whether a city is active
 const isCityActive = (city: any): boolean => {
@@ -24,28 +24,34 @@ const isCityActive = (city: any): boolean => {
     );
   }
 
-  // If backend does not send status, consider it active
   return true;
 };
 
 function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
 
   const { user, setUser, clearUser } = useUser();
-
   const { selectedCity, setSelectedCity } = useCity();
 
   const [showAuth, setShowAuth] = useState<boolean>(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [cities, setCities] = useState<City[]>([]);
   const [isCityMenuOpen, setIsCityMenuOpen] = useState<boolean>(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] =
-    useState<boolean>(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
   const cityDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch cities only once
+  // Active pill indicators
+  const isForYouActive = location.pathname === "/";
+  const currentCategory = searchParams.get("category");
+  const isEventsBaseActive = location.pathname === "/events" && !currentCategory;
+  const isActivitiesActive =
+    location.pathname === "/events" && currentCategory?.toLowerCase() === "activities";
+  const isConcertsActive =
+    location.pathname === "/events" && currentCategory?.toLowerCase() === "concerts";
+
   useEffect(() => {
     const fetchCities = async () => {
       try {
@@ -57,7 +63,6 @@ function Navbar() {
 
         const data = await response.json();
 
-        // Support different backend response structures
         const cityList: City[] = Array.isArray(data)
           ? data
           : data?.city ??
@@ -68,13 +73,6 @@ function Navbar() {
 
         if (Array.isArray(cityList)) {
           setCities(cityList);
-
-          // Set first active city only if no city is selected
-          const firstActiveCity = cityList.find(isCityActive);
-
-          if (firstActiveCity && !selectedCity) {
-            setSelectedCity(firstActiveCity.name);
-          }
         } else {
           setCities([]);
         }
@@ -85,9 +83,9 @@ function Navbar() {
     };
 
     fetchCities();
-  }, [setSelectedCity, selectedCity]);
+  }, []);
 
-  // Close city dropdown when clicking outside
+  // Close dropdown on outside click
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (
@@ -130,7 +128,41 @@ function Navbar() {
     setIsMobileMenuOpen(false);
   };
 
-  // Only active cities should appear
+  // Synchronized city selection
+  
+const handleCitySelect = (cityName: string) => {
+  const isAll =
+    cityName === ALL_LOCATIONS || cityName === "ALL";
+
+  const nextCity = isAll ? ALL_LOCATIONS : cityName;
+
+  // Update shared state so every component sees the new city.
+  setSelectedCity(nextCity);
+  setIsCityMenuOpen(false);
+
+  // If the user is on Events, synchronize the URL too.
+  if (location.pathname === "/events") {
+    const params = new URLSearchParams(searchParams);
+
+    if (isAll) {
+      params.delete("city");
+    } else {
+      params.set("city", nextCity);
+    }
+
+    navigate(
+      {
+        pathname: "/events",
+        search: params.toString()
+          ? `?${params.toString()}`
+          : "",
+      },
+      { replace: true }
+    );
+  }
+};
+
+
   const activeCities = cities.filter(isCityActive);
 
   return (
@@ -140,16 +172,10 @@ function Navbar() {
         <div className="mobile-menu-button">
           <button
             type="button"
-            onClick={() =>
-              setIsMobileMenuOpen((open) => !open)
-            }
+            onClick={() => setIsMobileMenuOpen((open) => !open)}
             aria-label="Toggle navigation menu"
           >
-            {isMobileMenuOpen ? (
-              <X size={24} />
-            ) : (
-              <Menu size={24} />
-            )}
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
 
@@ -166,15 +192,11 @@ function Navbar() {
               alt="CityPass Icon"
               className="navbar-logo-icon"
             />
-
             <h2 className="logo">CityPass</h2>
           </div>
 
           {/* City Dropdown */}
-          <div
-            className="location city-dropdown"
-            ref={cityDropdownRef}
-          >
+          <div className="location city-dropdown" ref={cityDropdownRef}>
             <MapPin size={18} />
 
             <button
@@ -182,53 +204,32 @@ function Navbar() {
               className="city-trigger"
               aria-expanded={isCityMenuOpen}
               aria-haspopup="listbox"
-              onClick={() =>
-                setIsCityMenuOpen((isOpen) => !isOpen)
-              }
+              onClick={() => setIsCityMenuOpen((isOpen) => !isOpen)}
             >
-              <span>
-                {selectedCity || ALL_LOCATIONS}
-              </span>
-
+              <span>{selectedCity || ALL_LOCATIONS}</span>
               <ChevronDown
                 size={16}
                 className={
-                  isCityMenuOpen
-                    ? "city-chevron open"
-                    : "city-chevron"
+                  isCityMenuOpen ? "city-chevron open" : "city-chevron"
                 }
               />
             </button>
 
             {isCityMenuOpen && (
-              <div
-                className="city-menu"
-                role="listbox"
-                aria-label="Cities"
-              >
+              <div className="city-menu" role="listbox" aria-label="Cities">
                 {/* All Locations */}
                 <button
                   type="button"
                   role="option"
-                  aria-selected={
-                    selectedCity === ALL_LOCATIONS
-                  }
+                  aria-selected={!selectedCity || selectedCity === ALL_LOCATIONS}
                   className={`city-option ${
-                    selectedCity === ALL_LOCATIONS
-                      ? "selected"
-                      : ""
+                    !selectedCity || selectedCity === ALL_LOCATIONS ? "selected" : ""
                   }`}
-                  onClick={() => {
-                    setSelectedCity(ALL_LOCATIONS);
-                    setIsCityMenuOpen(false);
-                  }}
+                  onClick={() => handleCitySelect(ALL_LOCATIONS)}
                 >
                   <span>{ALL_LOCATIONS}</span>
-
-                  {selectedCity === ALL_LOCATIONS && (
-                    <span className="city-check">
-                      &#10003;
-                    </span>
+                  {(!selectedCity || selectedCity === ALL_LOCATIONS) && (
+                    <span className="city-check">&#10003;</span>
                   )}
                 </button>
 
@@ -237,26 +238,16 @@ function Navbar() {
                   <button
                     type="button"
                     role="option"
-                    aria-selected={
-                      selectedCity === city.name
-                    }
+                    aria-selected={selectedCity === city.name}
                     className={`city-option ${
-                      selectedCity === city.name
-                        ? "selected"
-                        : ""
+                      selectedCity === city.name ? "selected" : ""
                     }`}
                     key={city.id}
-                    onClick={() => {
-                      setSelectedCity(city.name);
-                      setIsCityMenuOpen(false);
-                    }}
+                    onClick={() => handleCitySelect(city.name)}
                   >
                     <span>{city.name}</span>
-
                     {selectedCity === city.name && (
-                      <span className="city-check">
-                        &#10003;
-                      </span>
+                      <span className="city-check">&#10003;</span>
                     )}
                   </button>
                 ))}
@@ -267,28 +258,33 @@ function Navbar() {
 
         {/* Desktop Navigation */}
         <div className="navbar-links">
-          <NavLink
+          <Link
             to="/"
-            end
-            className={({ isActive }) =>
-              isActive
-                ? "nav-item active"
-                : "nav-item"
-            }
+            className={`nav-item ${isForYouActive ? "active" : ""}`}
           >
             For You
-          </NavLink>
+          </Link>
 
-          <NavLink
+          <Link
             to="/events"
-            className={({ isActive }) =>
-              isActive
-                ? "nav-item active"
-                : "nav-item"
-            }
+            className={`nav-item ${isEventsBaseActive ? "active" : ""}`}
           >
             Events
-          </NavLink>
+          </Link>
+
+          <Link
+            to="/events?category=Activities"
+            className={`nav-item ${isActivitiesActive ? "active" : ""}`}
+          >
+            Activities
+          </Link>
+
+          <Link
+            to="/events?category=Concerts"
+            className={`nav-item ${isConcertsActive ? "active" : ""}`}
+          >
+            Concerts
+          </Link>
         </div>
 
         {/* Profile */}
@@ -306,30 +302,37 @@ function Navbar() {
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
           <div className="mobile-nav-menu">
-            <NavLink
+            <Link
               to="/"
-              end
-              className={({ isActive }) =>
-                isActive
-                  ? "mobile-nav-item active"
-                  : "mobile-nav-item"
-              }
+              className={`mobile-nav-item ${isForYouActive ? "active" : ""}`}
               onClick={closeMobileMenu}
             >
               For You
-            </NavLink>
+            </Link>
 
-            <NavLink
+            <Link
               to="/events"
-              className={({ isActive }) =>
-                isActive
-                  ? "mobile-nav-item active"
-                  : "mobile-nav-item"
-              }
+              className={`mobile-nav-item ${isEventsBaseActive ? "active" : ""}`}
               onClick={closeMobileMenu}
             >
               Events
-            </NavLink>
+            </Link>
+
+            <Link
+              to="/events?category=Activities"
+              className={`mobile-nav-item ${isActivitiesActive ? "active" : ""}`}
+              onClick={closeMobileMenu}
+            >
+              Activities
+            </Link>
+
+            <Link
+              to="/events?category=Concerts"
+              className={`mobile-nav-item ${isConcertsActive ? "active" : ""}`}
+              onClick={closeMobileMenu}
+            >
+              Concerts
+            </Link>
           </div>
         )}
 
@@ -337,9 +340,7 @@ function Navbar() {
         {showAuth && (
           <Auth
             onClose={() => setShowAuth(false)}
-            initialLogin={
-              searchParams.get("login") === "true"
-            }
+            initialLogin={searchParams.get("login") === "true"}
             onSuccess={(authenticatedUser) => {
               setUser(authenticatedUser);
               setShowAuth(false);

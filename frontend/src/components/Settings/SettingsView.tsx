@@ -5,7 +5,7 @@ import {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import { useUser } from "../../context/UserContext";
@@ -22,8 +22,14 @@ import {
   FaBullhorn,
   FaUserSlash,
   FaChevronRight,
+  FaCheck,
+  FaXmark,
+  FaClock,
+  FaCircleXmark,
+  FaRotateRight,
 } from "react-icons/fa6";
 import "./SettingsView.css";
+import { PASSWORD_RULES } from "../../config/passwordRules";
 
 interface City {
   id: number;
@@ -41,7 +47,63 @@ interface UserProfile {
   profile_image?: string;
 }
 
-const MAX_DOB = "2015-12-31";
+interface OrganizerRequestStatus {
+  status: "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+  rejection_reason?: string;
+}
+
+const calculateAge = (dobString: string): number => {
+  if (!dobString) return 0;
+  const birthDate = new Date(dobString);
+  const today = new Date();
+
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  const dayDiff = today.getDate() - birthDate.getDate();
+
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+    age--;
+  }
+
+  return age;
+};
+
+const formatDobForInput = (value: unknown): string => {
+  if (!value) return "";
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  if (typeof value === "string") {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+
+    const dmyMatch = value.match(/^(\d{2})[-/](\d{2})[-/](\d{4})/);
+    if (dmyMatch) {
+      return `${dmyMatch[3]}-${dmyMatch[2]}-${dmyMatch[1]}`;
+    }
+
+    const parsedDate = new Date(value);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      const year = parsedDate.getFullYear();
+      const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+      const day = String(parsedDate.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  return "";
+};
+
+const getMaxSelectableDob = (): string => {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 16);
+  return d.toISOString().split("T")[0];
+};
 
 const genderOptions = [
   { value: "FEMALE", label: "Female" },
@@ -130,7 +192,6 @@ function StyledDropdown({
     document.addEventListener("pointerdown", handlePointerDown);
 
     const selectedIndex = options.findIndex((option) => option.value === value);
-
     optionRefs.current[selectedIndex >= 0 ? selectedIndex : 0]?.focus();
 
     return () => {
@@ -237,28 +298,64 @@ function StyledDropdown({
   );
 }
 
+type TabKey = "profile" | "password" | "organizer" | "deactivate";
+
+const SLUG_TO_TAB: Record<string, TabKey> = {
+  profile: "profile",
+  "update-password": "password",
+  password: "password",
+  "change-password": "password",
+  "host-an-event": "organizer",
+  organizer: "organizer",
+  deactivate: "deactivate",
+};
+
+const TAB_TO_SLUG: Record<TabKey, string> = {
+  profile: "profile",
+  password: "update-password",
+  organizer: "host-an-event",
+  deactivate: "deactivate",
+};
+
 function SettingsView() {
   const navigate = useNavigate();
+  const { tabSlug } = useParams<{ tabSlug: string }>();
   const { user, setUser, clearUser } = useUser();
+
+  const activeTab: TabKey = (tabSlug && SLUG_TO_TAB[tabSlug]) || "profile";
+
+  const handleTabChange = (tab: TabKey) => {
+    navigate(`/settings/${TAB_TO_SLUG[tab]}`);
+  };
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cityDropdownRef = useRef<HTMLDivElement | null>(null);
   const cityDropdownButtonRef = useRef<HTMLButtonElement | null>(null);
   const cityOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
-  const [activeTab, setActiveTab] = useState("profile");
   const [isCityDropdownOpen, setIsCityDropdownOpen] = useState(false);
 
-  const [profile, setProfile] = useState<UserProfile>({
-    id: 0,
-    name: "",
-    email: "",
-    phone: "",
-    city_id: "",
-    dob: "",
-    gender: "",
-    profile_image: "",
-  });
+  const [profile, setProfile] = useState<UserProfile>(() => ({
+    id: user ? Number(user.id) || 0 : 0,
+    name: user?.name || "",
+    email: user?.email || "",
+    phone: (user as any)?.phone || "",
+    city_id: (user as any)?.city_id ?? "",
+    dob: formatDobForInput((user as any)?.dob),
+    gender: (user as any)?.gender || "",
+    profile_image: (user as any)?.profile_image || "",
+  }));
+
+  const [initialProfile, setInitialProfile] = useState<UserProfile | null>(() => ({
+    id: user ? Number(user.id) || 0 : 0,
+    name: user?.name || "",
+    email: user?.email || "",
+    phone: (user as any)?.phone || "",
+    city_id: (user as any)?.city_id ?? "",
+    dob: formatDobForInput((user as any)?.dob),
+    gender: (user as any)?.gender || "",
+    profile_image: (user as any)?.profile_image || "",
+  }));
 
   const [cities, setCities] = useState<City[]>([]);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -275,15 +372,16 @@ function SettingsView() {
   const [passwordMessage, setPasswordMessage] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
+  const allRulesPassed = PASSWORD_RULES.every((rule) => rule.check(newPassword));
+
   const [org, setOrg] = useState({
-    fullName: "",
+    fullName: user?.name || "",
     stageName: "",
-    category: "",
     city: "",
     id_proof_type: "",
     id_proof: "",
     email: user?.email || "",
-    phone: user?.phone || "",
+    phone: (user as any)?.phone || "",
     description: "",
   });
 
@@ -292,29 +390,85 @@ function SettingsView() {
   const [showOrgConfirmModal, setShowOrgConfirmModal] = useState(false);
   const [showOrgTermsModal, setShowOrgTermsModal] = useState(false);
 
+  const [orgRequestStatus, setOrgRequestStatus] = useState<OrganizerRequestStatus>({
+    status: "NONE",
+  });
+  const [isReapplying, setIsReapplying] = useState(false);
+
+  const [showAlreadyRequestedModal, setShowAlreadyRequestedModal] = useState(false);
+
   const [deactivateReason, setDeactivateReason] = useState("");
   const [otherDeactivateReason, setOtherDeactivateReason] = useState("");
   const [showDeactivateTerms, setShowDeactivateTerms] = useState(false);
   const [deactivateError, setDeactivateError] = useState("");
-  const [showDeactivateConfirmModal, setShowDeactivateConfirmModal] =
-    useState(false);
-  const [showDeactivateTermsModal, setShowDeactivateTermsModal] =
-    useState(false);
+  const [showDeactivateConfirmModal, setShowDeactivateConfirmModal] = useState(false);
+  const [showDeactivateTermsModal, setShowDeactivateTermsModal] = useState(false);
 
   useEffect(() => {
     fetchProfile();
     fetchCities();
+    checkExistingOrganizerRequest();
   }, []);
 
   useEffect(() => {
     if (user) {
+      setProfile((prev) => {
+        const nextName = prev.name || user.name || "";
+        const nextEmail = prev.email || user.email || "";
+        const nextPhone = prev.phone || (user as any).phone || "";
+        const nextDob = prev.dob || formatDobForInput((user as any).dob);
+        const nextGender = prev.gender || (user as any).gender || "";
+        const nextCityId = prev.city_id !== "" ? prev.city_id : ((user as any).city_id ?? "");
+        const nextImage = prev.profile_image || (user as any).profile_image || "";
+
+        const merged: UserProfile = {
+          ...prev,
+          id: prev.id || Number(user.id) || 0,
+          name: nextName,
+          email: nextEmail,
+          phone: nextPhone,
+          city_id: nextCityId,
+          dob: nextDob,
+          gender: nextGender,
+          profile_image: nextImage,
+        };
+
+        if (!initialProfile) {
+          setInitialProfile(merged);
+        }
+
+        return merged;
+      });
+
       setOrg((prev) => ({
         ...prev,
+        fullName: prev.fullName || user.name || "",
         email: prev.email || user.email || "",
-        phone: prev.phone || user.phone || "",
+        phone: prev.phone || (user as any).phone || "",
       }));
     }
   }, [user]);
+
+  const checkExistingOrganizerRequest = async () => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/v1/organiser-requests/status`,
+        { withCredentials: true }
+      );
+
+      const data = response.data;
+      const status = (data?.status || (data?.hasRequest ? "PENDING" : "NONE")).toUpperCase();
+
+      setOrgRequestStatus({
+        status: status as OrganizerRequestStatus["status"],
+        rejection_reason: data?.rejection_reason || data?.reason || data?.comment || "",
+      });
+    } catch (error: any) {
+      if (error.response?.status === 409) {
+        setOrgRequestStatus({ status: "PENDING" });
+      }
+    }
+  };
 
   useEffect(() => {
     if (!isCityDropdownOpen) return;
@@ -350,26 +504,40 @@ function SettingsView() {
       const userData = response.data?.user || response.data;
 
       if (userData) {
-        setProfile({
+        const rawDob =
+          userData.dob ||
+          userData.date_of_birth ||
+          userData.birthDate ||
+          userData.birth_date ||
+          (user as any)?.dob ||
+          "";
+
+        const loadedProfile: UserProfile = {
           id: userData.id || 0,
           name: userData.name || "",
           email: userData.email || "",
           phone: userData.phone || "",
           city_id: userData.city_id ?? "",
-          dob: userData.dob ? userData.dob.slice(0, 10) : "",
+          dob: formatDobForInput(rawDob),
           gender: userData.gender || "",
           profile_image: userData.profile_image || "",
-        });
+        };
+
+        setProfile(loadedProfile);
+        setInitialProfile(loadedProfile);
 
         setUser({
           id: String(userData.id || user?.id || ""),
           name: userData.name || user?.name || "",
           email: userData.email || user?.email || "",
           role: userData.role || user?.role,
-          phone: userData.phone ?? user?.phone,
+          phone: userData.phone ?? (user as any)?.phone,
+          dob: userData.dob ?? (user as any)?.dob,
+          city_id: userData.city_id ?? (user as any)?.city_id,
+          gender: userData.gender ?? (user as any)?.gender,
           profile_image: userData.profile_image || null,
           status: userData.status || user?.status,
-        });
+        } as any);
       }
     } catch (error) {
       console.error("Failed to load profile:", error);
@@ -391,6 +559,18 @@ function SettingsView() {
       console.error("Failed to load cities:", error);
     }
   };
+
+  const isProfileChanged = Boolean(
+    selectedImage !== null ||
+    (initialProfile && (
+      profile.name.trim() !== initialProfile.name.trim() ||
+      profile.email.trim().toLowerCase() !== initialProfile.email.trim().toLowerCase() ||
+      profile.phone.trim() !== initialProfile.phone.trim() ||
+      profile.city_id !== initialProfile.city_id ||
+      profile.dob !== initialProfile.dob ||
+      profile.gender !== initialProfile.gender
+    ))
+  );
 
   const getProfileImage = () => {
     if (imagePreview) return imagePreview;
@@ -498,32 +678,51 @@ function SettingsView() {
     setProfileMessage("");
     setProfileError("");
 
-    if (!profile.name.trim()) {
+    const trimmedName = profile.name.trim();
+    const trimmedEmail = profile.email.trim();
+    const trimmedPhone = profile.phone.trim();
+
+    if (!trimmedName) {
       setProfileError("Name is required.");
       return;
     }
 
-    if (!/^[a-zA-Z\s]+$/.test(profile.name.trim())) {
+    if (!/^[a-zA-Z\s]+$/.test(trimmedName)) {
       setProfileError("Name can only contain letters and spaces.");
       return;
     }
 
-    if (profile.phone && !/^\d{10}$/.test(profile.phone)) {
+    if (!trimmedEmail) {
+      setProfileError("Email address is required.");
+      return;
+    }
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setProfileError("Please enter a valid email address.");
+      return;
+    }
+
+    if (trimmedPhone && !/^\d{10}$/.test(trimmedPhone)) {
       setProfileError("Phone number must be exactly 10 digits.");
       return;
     }
 
-    if (profile.dob && profile.dob > MAX_DOB) {
-      setProfileError("Date of birth must be 31 December 2015 or earlier.");
-      return;
+    if (profile.dob) {
+      const age = calculateAge(profile.dob);
+      if (age < 16) {
+        setProfileError("You must be at least 16 years or older to register.");
+        return;
+      }
     }
 
     try {
       setLoading(true);
       const formData = new FormData();
 
-      formData.append("name", profile.name.trim());
-      formData.append("phone", profile.phone.trim());
+      formData.append("name", trimmedName);
+      formData.append("email", trimmedEmail.toLowerCase());
+      formData.append("phone", trimmedPhone);
       formData.append(
         "city_id",
         profile.city_id === "" ? "" : String(profile.city_id)
@@ -541,18 +740,33 @@ function SettingsView() {
 
       const updatedUser = response.data.user || response.data;
 
-      setProfile({
+      const savedProfile: UserProfile = {
         id: updatedUser.id,
         name: updatedUser.name || "",
         email: updatedUser.email || "",
         phone: updatedUser.phone || "",
         city_id: updatedUser.city_id ?? "",
-        dob: updatedUser.dob ? updatedUser.dob.slice(0, 10) : "",
+        dob: formatDobForInput(updatedUser.dob),
         gender: updatedUser.gender || "",
         profile_image: updatedUser.profile_image || "",
-      });
+      };
 
-      setUser(updatedUser);
+      setProfile(savedProfile);
+      setInitialProfile(savedProfile);
+
+      setUser({
+        id: String(updatedUser.id || user?.id || ""),
+        name: updatedUser.name || user?.name || "",
+        email: updatedUser.email || user?.email || "",
+        role: updatedUser.role || user?.role,
+        phone: updatedUser.phone ?? (user as any)?.phone,
+        dob: updatedUser.dob ?? (user as any)?.dob,
+        city_id: updatedUser.city_id ?? (user as any)?.city_id,
+        gender: updatedUser.gender ?? (user as any)?.gender,
+        profile_image: updatedUser.profile_image || null,
+        status: updatedUser.status || user?.status,
+      } as any);
+
       setSelectedImage(null);
 
       if (imagePreview) URL.revokeObjectURL(imagePreview);
@@ -580,6 +794,12 @@ function SettingsView() {
 
     if (newPassword !== confirmPassword) {
       setPasswordError("Passwords do not match.");
+      return;
+    }
+
+    const failedRule = PASSWORD_RULES.find((rule) => !rule.check(newPassword));
+    if (failedRule) {
+      setPasswordError(failedRule.label);
       return;
     }
 
@@ -717,7 +937,6 @@ function SettingsView() {
         {
           full_name: org.fullName.trim(),
           organization_name: org.stageName.trim(),
-          category: org.category.trim(),
           city: org.city.trim(),
           id_proof_type: org.id_proof_type,
           id_proof: org.id_proof.trim().toUpperCase(),
@@ -729,25 +948,28 @@ function SettingsView() {
       );
 
       setShowOrgConfirmModal(false);
-      setOrgMessage("Organizer request submitted successfully!");
-
-      setOrg({
-        fullName: "",
-        stageName: "",
-        category: "",
-        city: "",
-        id_proof_type: "",
-        id_proof: "",
-        email: user?.email || "",
-        phone: user?.phone || "",
-        description: "",
-      });
+      setOrgRequestStatus({ status: "PENDING" });
+      setIsReapplying(false);
     } catch (error: any) {
       setShowOrgConfirmModal(false);
-      setOrgError(
-        error.response?.data?.message ||
-          "Unable to submit organizer request. Please try again."
-      );
+
+      const status = error.response?.status;
+      const message = String(error.response?.data?.message || "").toLowerCase();
+
+      if (
+        status === 409 ||
+        message.includes("already") ||
+        message.includes("pending") ||
+        message.includes("submitted") ||
+        message.includes("exists")
+      ) {
+        setOrgRequestStatus({ status: "PENDING" });
+      } else {
+        setOrgError(
+          error.response?.data?.message ||
+            "Unable to submit organizer request. Please try again."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -832,8 +1054,8 @@ function SettingsView() {
           <aside className="settings-nav">
             <button
               type="button"
-              className={`nav-item ${activeTab === "profile" ? "active" : ""}`}
-              onClick={() => setActiveTab("profile")}
+              className={`setting-nav-item ${activeTab === "profile" ? "active" : ""}`}
+              onClick={() => handleTabChange("profile")}
             >
               <span className="nav-icon"><FaUser /></span>
               <div className="nav-info">
@@ -845,8 +1067,8 @@ function SettingsView() {
 
             <button
               type="button"
-              className={`nav-item ${activeTab === "password" ? "active" : ""}`}
-              onClick={() => setActiveTab("password")}
+              className={`setting-nav-item ${activeTab === "password" ? "active" : ""}`}
+              onClick={() => handleTabChange("password")}
             >
               <span className="nav-icon"><FaLock /></span>
               <div className="nav-info">
@@ -858,8 +1080,8 @@ function SettingsView() {
 
             <button
               type="button"
-              className={`nav-item ${activeTab === "organizer" ? "active" : ""}`}
-              onClick={() => setActiveTab("organizer")}
+              className={`setting-nav-item ${activeTab === "organizer" ? "active" : ""}`}
+              onClick={() => handleTabChange("organizer")}
             >
               <span className="nav-icon"><FaBullhorn /></span>
               <div className="nav-info">
@@ -871,8 +1093,8 @@ function SettingsView() {
 
             <button
               type="button"
-              className={`nav-item danger ${activeTab === "deactivate" ? "active" : ""}`}
-              onClick={() => setActiveTab("deactivate")}
+              className={`setting-nav-item danger ${activeTab === "deactivate" ? "active" : ""}`}
+              onClick={() => handleTabChange("deactivate")}
             >
               <span className="nav-icon"><FaUserSlash /></span>
               <div className="nav-info">
@@ -1075,11 +1297,12 @@ function SettingsView() {
                     </div>
 
                     <div className="form-group">
-                      <label htmlFor="dob">Date of Birth</label>
+                      <label htmlFor="dob">Date of Birth [DD-MM-YYYY]</label>
                       <input
                         id="dob"
                         type="date"
                         name="dob"
+                        max={getMaxSelectableDob()}
                         value={profile.dob}
                         onChange={handleProfileChange}
                       />
@@ -1121,7 +1344,7 @@ function SettingsView() {
                     <button
                       type="submit"
                       className="primary-button"
-                      disabled={loading}
+                      disabled={loading || !isProfileChanged}
                     >
                       {loading ? "Saving..." : "Save Changes"}
                     </button>
@@ -1134,7 +1357,7 @@ function SettingsView() {
               <section className="tab-pane">
                 <div className="heading-copy">
                   <h2>Change Password</h2>
-                  <p>Choose a secure password with at least 8 characters</p>
+                  <p>Choose a secure password meeting all requirements below</p>
                 </div>
 
                 <form onSubmit={handlePasswordSubmit} className="narrow-form">
@@ -1145,7 +1368,10 @@ function SettingsView() {
                         id="newPassword"
                         type={showNewPassword ? "text" : "password"}
                         value={newPassword}
-                        onChange={(event) => setNewPassword(event.target.value)}
+                        onChange={(event) => {
+                          setNewPassword(event.target.value);
+                          setPasswordError("");
+                        }}
                         placeholder="Enter new password"
                       />
                       <button
@@ -1159,16 +1385,38 @@ function SettingsView() {
                     </div>
                   </div>
 
-                  <br />
+                  {newPassword.length > 0 && (
+                    <div className="password-rules-box">
+                      {PASSWORD_RULES.map((rule) => {
+                        const passed = rule.check(newPassword);
+                        return (
+                          <div
+                            key={rule.id || rule.label}
+                            className={`rule-item ${passed ? "passed" : "unpassed"}`}
+                          >
+                            {passed ? (
+                              <FaCheck className="rule-icon passed" />
+                            ) : (
+                              <FaXmark className="rule-icon unpassed" />
+                            )}
+                            <span>{rule.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
-                  <div className="form-group">
+                  <div className="form-group form-group-spaced">
                     <label htmlFor="confirmPassword">Confirm Password</label>
                     <div className="input-with-action">
                       <input
                         id="confirmPassword"
                         type={showConfirmPassword ? "text" : "password"}
                         value={confirmPassword}
-                        onChange={(event) => setConfirmPassword(event.target.value)}
+                        onChange={(event) => {
+                          setConfirmPassword(event.target.value);
+                          setPasswordError("");
+                        }}
                         placeholder="Confirm new password"
                       />
                       <button
@@ -1190,11 +1438,11 @@ function SettingsView() {
                     <p className="status-banner error">{passwordError}</p>
                   )}
 
-                  <div className="action-row">
+                  <div className="action-row password-action-row">
                     <button
                       type="submit"
                       className="primary-button"
-                      disabled={loading}
+                      disabled={loading || !allRulesPassed || !confirmPassword || newPassword !== confirmPassword}
                     >
                       {loading ? "Updating..." : "Update Password"}
                     </button>
@@ -1213,166 +1461,252 @@ function SettingsView() {
                   </p>
                 </div>
 
-                <form
-                  onSubmit={handleOrganizerPreSubmit}
-                  className="org-form-grid"
-                  noValidate
-                >
-                  <div className="form-group">
-                    <label htmlFor="fullName">Full Name *</label>
-                    <input
-                      id="fullName"
-                      type="text"
-                      name="fullName"
-                      value={org.fullName}
-                      onChange={handleOrgChange}
-                      placeholder="Enter your full name"
-                      required
-                    />
-                  </div>
+                {/* 1. PENDING APPLICATION STATE */}
+                {orgRequestStatus.status === "PENDING" && !isReapplying && (
+                  <div className="org-status-card pending">
+                    <div className="org-status-icon-wrapper pending">
+                      <FaClock />
+                    </div>
 
-                  <div className="form-group full-width">
-                    <label htmlFor="stageName">Organisation Name *</label>
-                    <input
-                      id="stageName"
-                      type="text"
-                      name="stageName"
-                      value={org.stageName}
-                      onChange={handleOrgChange}
-                      placeholder="e.g. Acme Entertainment / The Acoustic Corner"
-                      maxLength={150}
-                      required
-                    />
-                  </div>
+                    <h3 className="org-status-title pending">
+                      Application Under Review
+                    </h3>
 
-                  <div className="form-group">
-                    <label htmlFor="orgCity">City *</label>
-                    <StyledDropdown
-                      id="orgCity"
-                      label="City"
-                      value={org.city}
-                      placeholder="Select city"
-                      options={cities.map((city) => ({
-                        value: city.name,
-                        label: city.name,
-                      }))}
-                      onChange={(city) =>
-                        handleOrgChange({
-                          target: { name: "city", value: city },
-                        } as ChangeEvent<HTMLSelectElement>)
-                      }
-                    />
+                    <p className="org-status-desc">
+                      You have already submitted an organiser request. Your application is currently under review by our admin team. Kindly wait for approval or updates via your registered email.
+                    </p>
                   </div>
+                )}
 
-                  <div className="form-group">
-                    <label htmlFor="orgEmail">Email *</label>
-                    <input
-                      id="orgEmail"
-                      type="email"
-                      name="email"
-                      value={org.email}
-                      disabled
-                      onChange={handleOrgChange}
-                      placeholder="contact@yourstage.com"
-                      maxLength={100}
-                      required
-                    />
+                {/* 2. REJECTED APPLICATION STATE */}
+                {orgRequestStatus.status === "REJECTED" && !isReapplying && (
+                  <div className="org-status-card rejected">
+                    <div className="org-status-icon-wrapper rejected">
+                      <FaCircleXmark />
+                    </div>
+
+                    <h3 className="org-status-title rejected">
+                      Application Rejected
+                    </h3>
+
+                    <p className="org-status-desc rejected">
+                      Your organiser application was reviewed and could not be approved at this time.
+                    </p>
+
+                    <div className="org-reason-box">
+                      <span className="org-reason-label">
+                        Reason Provided by Admin
+                      </span>
+                      <p className="org-reason-text">
+                        {orgRequestStatus.rejection_reason || "Incomplete or invalid details provided during submission."}
+                      </p>
+                    </div>
+
+                    <div className="org-reapply-action">
+                      <button
+                        type="button"
+                        className="primary-button org-reapply-btn"
+                        onClick={() => setIsReapplying(true)}
+                      >
+                        <FaRotateRight /> Edit and Re-apply
+                      </button>
+                    </div>
                   </div>
+                )}
 
-                  <div className="form-group">
-                    <label htmlFor="orgPhone">Phone Number *</label>
-                    <input
-                      id="orgPhone"
-                      type="text"
-                      name="phone"
-                      value={org.phone}
-                      onChange={handleOrgChange}
-                      placeholder="10-digit contact number"
-                      maxLength={10}
-                      required
-                    />
+                {/* 3. APPROVED STATE */}
+                {orgRequestStatus.status === "APPROVED" && (
+                  <div className="org-status-card approved">
+                    <div className="org-status-icon-wrapper approved">
+                      <FaCheck />
+                    </div>
+                    <h3 className="org-status-title approved">
+                      You are a Verified Organiser
+                    </h3>
+                    <p className="org-status-desc approved">
+                      Your organiser account is active! You can now publish events directly to CityPass.
+                    </p>
                   </div>
+                )}
 
-                  <div className="form-group full-width">
-                    <label htmlFor="id_proof_type">Valid ID Proof *</label>
-                    <StyledDropdown
-                      id="id_proof_type"
-                      label="Valid ID Proof"
-                      value={org.id_proof_type}
-                      placeholder="Select ID proof"
-                      options={idProofOptions}
-                      onChange={(proofType) =>
-                        handleOrgChange({
-                          target: {
-                            name: "id_proof_type",
-                            value: proofType,
-                          },
-                        } as ChangeEvent<HTMLSelectElement>)
-                      }
-                    />
-                  </div>
+                {/* 4. DEFAULT FORM STATE */}
+                {(orgRequestStatus.status === "NONE" || isReapplying) && (
+                  <form
+                    onSubmit={handleOrganizerPreSubmit}
+                    className="org-form-grid"
+                    noValidate
+                  >
+                    {isReapplying && (
+                      <div className="org-revision-banner">
+                        <span className="org-revision-text">
+                          You are revising your application based on previous admin feedback.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsReapplying(false)}
+                          className="org-revision-toggle-btn"
+                        >
+                          View previous decision
+                        </button>
+                      </div>
+                    )}
 
-                  {org.id_proof_type && (
-                    <div className="form-group full-width">
-                      <label htmlFor="id_proof">
-                        {selectedIdProof?.label} Number *
-                      </label>
+                    <div className="form-group">
+                      <label htmlFor="fullName">Full Name *</label>
                       <input
-                        id="id_proof"
+                        id="fullName"
                         type="text"
-                        name="id_proof"
-                        value={org.id_proof}
+                        name="fullName"
+                        value={org.fullName}
                         onChange={handleOrgChange}
-                        placeholder={
-                          selectedIdProof?.placeholder || "Enter ID proof number"
-                        }
-                        maxLength={
-                          org.id_proof_type === "aadhar"
-                            ? 12
-                            : org.id_proof_type === "pan"
-                            ? 10
-                            : 20
-                        }
+                        placeholder="Enter your full name"
                         required
                       />
                     </div>
-                  )}
 
-                  <div className="form-group full-width">
-                    <label htmlFor="orgDescription">Description *</label>
-                    <textarea
-                      id="orgDescription"
-                      name="description"
-                      rows={4}
-                      value={org.description}
-                      onChange={handleOrgChange}
-                      placeholder="Tell us about the events, performances, genres, and audience experiences you deliver..."
-                      required
-                    />
-                  </div>
+                    <div className="form-group full-width">
+                      <label htmlFor="stageName">Organisation Name *</label>
+                      <input
+                        id="stageName"
+                        type="text"
+                        name="stageName"
+                        value={org.stageName}
+                        onChange={handleOrgChange}
+                        placeholder="e.g. Acme Entertainment / The Acoustic Corner"
+                        maxLength={150}
+                        required
+                      />
+                    </div>
 
-                  {orgMessage && (
-                    <p className="status-banner success full-width">
-                      {orgMessage}
-                    </p>
-                  )}
+                    <div className="form-group">
+                      <label htmlFor="orgCity">City *</label>
+                      <StyledDropdown
+                        id="orgCity"
+                        label="City"
+                        value={org.city}
+                        placeholder="Select city"
+                        options={cities.map((city) => ({
+                          value: city.name,
+                          label: city.name,
+                        }))}
+                        onChange={(city) =>
+                          handleOrgChange({
+                            target: { name: "city", value: city },
+                          } as ChangeEvent<HTMLSelectElement>)
+                        }
+                      />
+                    </div>
 
-                  {orgError && (
-                    <p className="status-banner error full-width">
-                      {orgError}
-                    </p>
-                  )}
+                    <div className="form-group">
+                      <label htmlFor="orgEmail">Email *</label>
+                      <input
+                        id="orgEmail"
+                        type="email"
+                        name="email"
+                        value={org.email}
+                        disabled
+                        onChange={handleOrgChange}
+                        placeholder="contact@yourstage.com"
+                        maxLength={100}
+                        required
+                      />
+                    </div>
 
-                  <div className="action-row full-width">
-                    <button
-                      type="submit"
-                      className="primary-button"
-                      disabled={loading}
-                    >
-                      {loading ? "Submitting..." : "Submit Application"}
-                    </button>
-                  </div>
-                </form>
+                    <div className="form-group">
+                      <label htmlFor="orgPhone">Phone Number *</label>
+                      <input
+                        id="orgPhone"
+                        type="text"
+                        name="phone"
+                        value={org.phone}
+                        onChange={handleOrgChange}
+                        placeholder="10-digit contact number"
+                        maxLength={10}
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group full-width">
+                      <label htmlFor="id_proof_type">Valid ID Proof *</label>
+                      <StyledDropdown
+                        id="id_proof_type"
+                        label="Valid ID Proof"
+                        value={org.id_proof_type}
+                        placeholder="Select ID proof"
+                        options={idProofOptions}
+                        onChange={(proofType) =>
+                          handleOrgChange({
+                            target: {
+                              name: "id_proof_type",
+                              value: proofType,
+                            },
+                          } as ChangeEvent<HTMLSelectElement>)
+                        }
+                      />
+                    </div>
+
+                    {org.id_proof_type && (
+                      <div className="form-group full-width">
+                        <label htmlFor="id_proof">
+                          {selectedIdProof?.label} Number *
+                        </label>
+                        <input
+                          id="id_proof"
+                          type="text"
+                          name="id_proof"
+                          value={org.id_proof}
+                          onChange={handleOrgChange}
+                          placeholder={
+                            selectedIdProof?.placeholder || "Enter ID proof number"
+                          }
+                          maxLength={
+                            org.id_proof_type === "aadhar"
+                              ? 12
+                              : org.id_proof_type === "pan"
+                              ? 10
+                              : 20
+                          }
+                          required
+                        />
+                      </div>
+                    )}
+
+                    <div className="form-group full-width">
+                      <label htmlFor="orgDescription">Description *</label>
+                      <textarea
+                        id="orgDescription"
+                        name="description"
+                        rows={4}
+                        value={org.description}
+                        onChange={handleOrgChange}
+                        placeholder="Tell us about the events, performances, genres, and audience experiences you deliver..."
+                        required
+                      />
+                    </div>
+
+                    {orgMessage && (
+                      <p className="status-banner success full-width">
+                        {orgMessage}
+                      </p>
+                    )}
+
+                    {orgError && (
+                      <p className="status-banner error full-width">
+                        {orgError}
+                      </p>
+                    )}
+
+                    <div className="action-row full-width">
+                      <button
+                        type="submit"
+                        className="primary-button"
+                        disabled={loading}
+                      >
+                        {loading ? "Submitting..." : isReapplying ? "Resubmit Application" : "Submit Application"}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </section>
             )}
 
@@ -1500,7 +1834,6 @@ function SettingsView() {
         </div>
       </div>
 
-      {/* Confirmation Modal for Organiser Application */}
       <ConfirmationPopup
         isOpen={showOrgConfirmModal}
         title="Terms and Conditions to become an organiser"
@@ -1512,7 +1845,17 @@ function SettingsView() {
         onViewTerms={() => setShowOrgTermsModal(true)}
       />
 
-      {/* Confirmation Modal for Account Deactivation */}
+      <ConfirmationPopup
+        isOpen={showAlreadyRequestedModal}
+        title="Application Already Submitted"
+        message="You have already submitted an organiser request. Your application is currently under review by our admin team. Kindly wait for approval or updates via your registered email."
+        confirmText="Understood"
+        isLoading={false}
+        onConfirm={() => setShowAlreadyRequestedModal(false)}
+        onClose={() => setShowAlreadyRequestedModal(false)}
+        onViewTerms={() => {}}
+      />
+
       <ConfirmationPopup
         isOpen={showDeactivateConfirmModal}
         title="Account Deactivation Terms"

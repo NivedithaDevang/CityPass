@@ -502,3 +502,23 @@
   font-family: inherit;
   color: #1e1e2d;
 }
+
+.req-notice-banner{
+            display: "flex";
+            align-items: "center";
+            justify-content: "space-between";
+            background: "#ecfdf5";
+            color: "#065f46";
+            border: "1px solid #a7f3d0";
+            padding: "10px 16px";
+            border-radius: "8px";
+            margin-bottom: "16px";
+}
+
+.req-close-button{
+              background: "none";
+              border: "none";
+              cursor: "pointer";
+              color: "#065f46";
+            }
+

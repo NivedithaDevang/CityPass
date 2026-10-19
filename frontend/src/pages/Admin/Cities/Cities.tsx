@@ -246,7 +246,7 @@ function Cities() {
       setSuccess("City added successfully and set to ACTIVE.");
     } catch (err) {
       console.error("Failed to add city:", err);
-      setError("Failed to add city. Please check the details and try again.");
+      setError("City already exists. Please enter a new city name");
     } finally {
       setAddingCity(false);
     }

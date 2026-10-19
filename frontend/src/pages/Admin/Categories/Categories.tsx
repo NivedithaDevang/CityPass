@@ -96,7 +96,7 @@ function Categories() {
       setSuccess("Category added successfully.");
     } catch (err) {
       console.error("Failed to add category:", err);
-      setError("Failed to add category. Please try again.");
+      setError("Category already exists. Please add a new category");
     } finally {
       setAddingCategory(false);
     }

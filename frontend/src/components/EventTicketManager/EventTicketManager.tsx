@@ -1,12 +1,12 @@
 
 import { useEffect, useState, type FormEvent } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import {
-  assignTicketTemplate,
   createCustomEventTicket,
+  deleteEventTicket,
   getEventTickets,
-  getTicketTemplates,
+  updateEventTicket,
   type EventTicket,
-  type TicketTemplate,
 } from "../../services/eventTicketService";
 import "./EventTicketManager.css";
 
@@ -20,8 +20,7 @@ const EventTicketManager = ({
   onClose,
 }: EventTicketManagerProps) => {
   const [tickets, setTickets] = useState<EventTicket[]>([]);
-  const [templates, setTemplates] = useState<TicketTemplate[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [editingTicket, setEditingTicket] = useState<EventTicket | null>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -40,14 +39,10 @@ const EventTicketManager = ({
         setLoading(true);
         setError("");
 
-        const [eventTickets, availableTemplates] = await Promise.all([
-          getEventTickets(eventId),
-          getTicketTemplates(eventId),
-        ]);
+        const eventTickets = await getEventTickets(eventId);
 
         if (isMounted) {
           setTickets(eventTickets);
-          setTemplates(availableTemplates);
         }
       } catch (err) {
         console.error("Failed to load event tickets:", err);
@@ -70,56 +65,7 @@ const EventTicketManager = ({
   }, [eventId]);
 
   const reloadTickets = async () => {
-    const [eventTickets, availableTemplates] = await Promise.all([
-      getEventTickets(eventId),
-      getTicketTemplates(eventId),
-    ]);
-
-    setTickets(eventTickets);
-    setTemplates(availableTemplates);
-  };
-
-  const handleAssignTemplate = async () => {
-    if (!selectedTemplate) {
-      setError("Please select a ticket template.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError("");
-      setSuccess("");
-
-      await assignTicketTemplate(eventId, Number(selectedTemplate));
-
-      setSuccess("Ticket template assigned successfully.");
-      setSelectedTemplate("");
-
-      await reloadTickets();
-    } catch (err: unknown) {
-      console.error("Failed to assign ticket:", err);
-
-      if (
-        typeof err === "object" &&
-        err !== null &&
-        "response" in err
-      ) {
-        const response = (
-          err as {
-            response?: { data?: { message?: string } };
-          }
-        ).response;
-
-        setError(
-          response?.data?.message ||
-            "Unable to assign this ticket. It may already be assigned.",
-        );
-      } else {
-        setError("Unable to assign this ticket. Please try again.");
-      }
-    } finally {
-      setSaving(false);
-    }
+    setTickets(await getEventTickets(eventId));
   };
 
   const handleCreateCustomTicket = async (
@@ -148,17 +94,25 @@ const EventTicketManager = ({
       setError("");
       setSuccess("");
 
-      await createCustomEventTicket(eventId, {
+      const ticketData = {
         name: name.trim(),
         description: description.trim(),
         price: ticketPrice,
-      });
+      };
 
+      if (editingTicket) {
+        await updateEventTicket(eventId, editingTicket.id, ticketData);
+      } else {
+        await createCustomEventTicket(eventId, ticketData);
+      }
+
+      const wasEditing = Boolean(editingTicket);
+      setEditingTicket(null);
       setName("");
       setDescription("");
       setPrice("");
 
-      setSuccess("Custom ticket created successfully.");
+      setSuccess(wasEditing ? "Ticket updated successfully." : "Ticket added successfully.");
 
       await reloadTickets();
     } catch (err: unknown) {
@@ -177,14 +131,59 @@ const EventTicketManager = ({
 
         setError(
           response?.data?.message ||
-            "Unable to create the custom ticket.",
+            "Unable to save the ticket.",
         );
       } else {
-        setError("Unable to create the custom ticket. Please try again.");
+        setError("Unable to save the ticket. Please try again.");
       }
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEditTicket = (ticket: EventTicket) => {
+    setEditingTicket(ticket);
+    setName(ticket.name);
+    setDescription(ticket.description || "");
+    setPrice(String(ticket.price));
+    setError("");
+    setSuccess("");
+  };
+
+  const handleDeleteTicket = async (ticket: EventTicket) => {
+    if (!window.confirm(`Remove "${ticket.name}" from this event?`)) return;
+
+    try {
+      setSaving(true);
+      setError("");
+      setSuccess("");
+      await deleteEventTicket(eventId, ticket.id);
+      setTickets((current) => current.filter((item) => item.id !== ticket.id));
+      if (editingTicket?.id === ticket.id) {
+        setEditingTicket(null);
+        setName("");
+        setDescription("");
+        setPrice("");
+      }
+      setSuccess("Ticket removed successfully.");
+    } catch (err: unknown) {
+      console.error("Failed to remove event ticket:", err);
+      const response =
+        typeof err === "object" && err !== null && "response" in err
+          ? (err as { response?: { data?: { message?: string } } }).response
+          : undefined;
+      setError(response?.data?.message || "Unable to remove this ticket. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingTicket(null);
+    setName("");
+    setDescription("");
+    setPrice("");
+    setError("");
   };
 
   return (
@@ -206,7 +205,7 @@ const EventTicketManager = ({
           <div>
             <h2 id="ticket-manager-title">Manage Event Tickets</h2>
             <p>
-              Assign standard tickets or create custom tickets for this event.
+              Create and manage ticket categories for this event.
             </p>
           </div>
 
@@ -246,8 +245,7 @@ const EventTicketManager = ({
 
               {tickets.length === 0 ? (
                 <p className="ticket-empty">
-                  No tickets assigned yet. Assign a standard ticket or create
-                  a custom one below.
+                  No tickets created yet. Add ticket categories for this event below.
                 </p>
               ) : (
                 <div className="event-ticket-list">
@@ -263,6 +261,24 @@ const EventTicketManager = ({
                       <strong>
                         ₹{Number(ticket.price).toFixed(2)}
                       </strong>
+                      <div className="event-ticket-actions">
+                        <button
+                          type="button"
+                          onClick={() => handleEditTicket(ticket)}
+                          disabled={saving}
+                          aria-label={`Edit ${ticket.name}`}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteTicket(ticket)}
+                          disabled={saving}
+                          aria-label={`Remove ${ticket.name}`}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -270,53 +286,8 @@ const EventTicketManager = ({
             </div>
 
             <div className="ticket-manager-section">
-              <h3>Assign a standard ticket</h3>
-              <p>Choose from the admin ticket catalogue for this category.</p>
-
-              {templates.length === 0 ? (
-                <p className="ticket-empty">
-                  No standard templates are available for this event category.
-                </p>
-              ) : (
-                <>
-                  <label htmlFor="ticket-template">
-                    Select ticket template
-                  </label>
-
-                  <select
-                    id="ticket-template"
-                    value={selectedTemplate}
-                    onChange={(e) => {
-                      setSelectedTemplate(e.target.value);
-                      setError("");
-                      setSuccess("");
-                    }}
-                  >
-                    <option value="">Select a ticket template</option>
-
-                    {templates.map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.name} — ₹
-                        {Number(template.price).toFixed(2)}
-                      </option>
-                    ))}
-                  </select>
-
-                  <button
-                    type="button"
-                    className="ticket-primary-btn"
-                    onClick={handleAssignTemplate}
-                    disabled={saving || !selectedTemplate}
-                  >
-                    {saving ? "Please wait..." : "Assign Ticket"}
-                  </button>
-                </>
-              )}
-            </div>
-
-            <div className="ticket-manager-section">
-              <h3>Create a custom ticket</h3>
-              <p>Create a ticket specifically for this event.</p>
+              <h3>{editingTicket ? "Edit ticket category" : "Add a ticket category"}</h3>
+              <p>Ticket categories are managed by the organiser of this event.</p>
 
               <form onSubmit={handleCreateCustomTicket}>
                 <label htmlFor="custom-ticket-name">Ticket name</label>
@@ -358,8 +329,18 @@ const EventTicketManager = ({
                   className="ticket-primary-btn"
                   disabled={saving}
                 >
-                  {saving ? "Saving..." : "Create Custom Ticket"}
+                  {saving ? "Saving..." : editingTicket ? "Save Changes" : "Add Ticket"}
                 </button>
+                {editingTicket && (
+                  <button
+                    type="button"
+                    className="ticket-secondary-btn"
+                    onClick={cancelEditing}
+                    disabled={saving}
+                  >
+                    Cancel editing
+                  </button>
+                )}
               </form>
             </div>
           </>

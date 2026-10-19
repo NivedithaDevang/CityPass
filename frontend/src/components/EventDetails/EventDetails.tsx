@@ -12,7 +12,6 @@ import {
   FaArrowLeft,
   FaShieldAlt,
   FaChevronRight,
-  FaTicketAlt,
   FaExternalLinkAlt,
   FaClock,
   FaCheckCircle,
@@ -45,7 +44,6 @@ interface EventWithTickets extends Events {
   languages?: string | string[];
   age_restriction?: string;
   age_group?: string;
-  duration?: string;
   duration_hours?: number | string;
 }
 
@@ -302,7 +300,7 @@ function EventDetails() {
 
                     <span className="details-sub-tag">
                       <FaClock className="tag-icon" />{" "}
-                      {formatDurationDisplay(event.duration_hours, event.duration)}
+                      {formatDurationDisplay(event.duration_hours)}
                     </span>
                   </div>
 
@@ -479,38 +477,13 @@ function EventDetails() {
               </section>
 
               {/* Booking card */}
-              <aside className="details-sidebar">
                 <div className="booking-card">
                   <div className="booking-card-header">
                     <div>
-                      <div className="booking-icon-circle">
-                        <FaTicketAlt />
-                      </div>
-                      <span className="booking-card-title">Reserve Spot</span>
+                      <span className="booking-card-title">
+                        Reserve Spot</span>
                       <span className="booking-card-sub">Instant confirmation</span>
                     </div>
-                  </div>
-
-                  <div className="booking-price-container">
-                    <span className="price-tag-label">
-                      {tickets.length > 0
-                        ? "Selected ticket price"
-                        : "Tickets starting from"}
-                    </span>
-
-                    <p className="price-tag-amount">
-                      ₹
-                      {(selectedTicket
-                        ? Number(selectedTicket.price)
-                        : startingPrice
-                      ).toLocaleString("en-IN")}
-                    </p>
-
-                    {selectedTicket && (
-                      <p className="selected-ticket-summary">
-                        {selectedTicket.name}
-                      </p>
-                    )}
                   </div>
 
                   {!isDrawerOpen ? (
@@ -537,7 +510,6 @@ function EventDetails() {
                     Official verified ticket • 100% Secure Checkout
                   </p>
                 </div>
-              </aside>
             </div>
           </main>
         </div>

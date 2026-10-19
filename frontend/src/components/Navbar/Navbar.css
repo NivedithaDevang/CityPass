@@ -3,7 +3,6 @@
   top: 0;
   left: 0;
   right: 0;
-
   height: 72px;
 
   background: #ffffff;
@@ -17,9 +16,7 @@
   justify-content: space-between;
 
   padding: 0 32px;
-
   z-index: 100;
-
   box-sizing: border-box;
 }
 
@@ -33,14 +30,12 @@
   display: flex;
   align-items: center;
   gap: 10px;
-
   user-select: none;
 }
 
 .navbar-logo-icon {
   width: 52px;
   height: 52px;
-
   object-fit: contain;
 }
 
@@ -51,7 +46,7 @@
   letter-spacing: -0.05em;
   margin: 0;
   display: inline-block;
-color : #201970;
+  color: #201970;
 }
 
 .location.city-dropdown {
@@ -61,30 +56,30 @@ color : #201970;
   gap: 0;
 }
 
-/* Dedicated Red Map Pin Styling */
+/* Red Map Pin */
 .location.city-dropdown > svg {
-  color: #ef4444; /* Clean vibrant red */
+  color: #ef4444;
   stroke-width: 2.2;
   margin-right: 6px;
   filter: drop-shadow(0 1px 2px rgba(239, 68, 68, 0.25));
   flex-shrink: 0;
 }
 
-/* Location trigger button styled as a soft red pill */
+/* Location trigger button */
 .city-trigger {
-  background: #fef2f2; /* Soft subtle red background */
+  background: #fef2f2;
   border: 1px solid #fee2e2;
   display: flex;
   align-items: center;
   gap: 6px;
 
-  color: #991b1b; /* Deep readable red text */
+  color: #991b1b;
   font-weight: 600;
   font-size: 13.5px;
   cursor: pointer;
 
   padding: 6px 12px;
-  border-radius: 9999px; /* Pill shape matching the nav buttons */
+  border-radius: 9999px;
   transition: all 0.2s ease-in-out;
 }
 
@@ -153,45 +148,48 @@ color : #201970;
   color: #ef4444;
 }
 
+/* Desktop Links Container */
 .navbar-links {
   display: flex;
   align-items: center;
-  gap: 34px;
+  gap: 100px;
 }
-
 
 .nav-item {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   white-space: nowrap;
-
-  background-color: transparent !important;
-  color: #5144ed !important;
-  border: 1px solid transparent;
-
   text-decoration: none;
-  font-size: 14.5px;
-  font-weight: 600;
-  padding: 8px 18px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  border-radius: 1px;
   border-radius: 9999px;
-  transition: all 0.2s ease-in-out;
-}
+  color: #475569;
 
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
 
 .nav-item:hover {
-  background-color: #f1f0fd !important;
-  color: #3b2fb9 !important;
+  background-color: #f1f0fd;
+  color: #3b2fb9;
+  border-color: #c7d2fe;
+  border-radius: 99999px;
+  transform: translateY(-1px);
 }
-
 
 .nav-item.active {
-  background-color: #3b2fb9 !important; 
-  border-color: #3b2fb9 !important;
-  color: #ffffff !important;
+  background-color: #3b2fb9;
+  color: #ffffff;
+  border-color: #3b2fb9;
+  font-weight: 600;
+  box-shadow: 0 3px 10px rgba(59, 47, 185, 0.25);
 }
 
-
+/* Profile Area */
 .profile-area {
   display: flex;
   align-items: center;
@@ -200,32 +198,24 @@ color : #201970;
 .profile-area .profile {
   width: 40px;
   height: 40px;
-
   border-radius: 50%;
-
   border: 1px solid #e2e8f0;
-
   background-color: #f8fafc;
-
   color: #475569;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   cursor: pointer;
-
   transition: all 0.15s ease;
 }
 
 .profile-area .profile:hover {
   background-color: #eff0fe;
-
   border-color: #c7d2fe;
-
   color: #5144ed;
 }
 
+/* Mobile Menu */
 .mobile-menu-button {
   display: none;
 }
@@ -233,21 +223,14 @@ color : #201970;
 .mobile-menu-button button {
   width: 40px;
   height: 40px;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   border: none;
-
   background: transparent;
-
   color: #0f172a;
-
   border-radius: 8px;
-
   cursor: pointer;
-
   transition: background 0.15s ease;
 }
 
@@ -255,17 +238,15 @@ color : #201970;
   background-color: #f1f5f9;
 }
 
-
 .mobile-nav-menu {
   display: none;
 }
 
+/* Responsive Media Queries */
 @media (max-width: 768px) {
   .navbar {
     height: 64px;
-
     padding: 0 16px;
-
     gap: 12px;
   }
 
@@ -296,7 +277,6 @@ color : #201970;
 
   .city-trigger {
     font-size: 13px;
-
     padding: 4px 6px;
   }
 
@@ -307,51 +287,42 @@ color : #201970;
 
   .mobile-nav-menu {
     position: absolute;
-
     top: 64px;
     left: 0;
     right: 0;
-
     display: flex;
     flex-direction: column;
-
+    gap: 6px;
     background: #ffffff;
-
     border-bottom: 1px solid #e2e8f0;
-
-    box-shadow:
-      0 10px 25px rgba(15, 23, 42, 0.08);
-
-    padding: 8px 16px;
-
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+    padding: 12px 16px;
     z-index: 150;
   }
 
   .mobile-nav-item {
-    padding: 13px 12px;
-
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 16px;
     color: #475569;
-
     text-decoration: none;
-
     font-size: 14px;
-    font-weight: 600;
-
-    border-radius: 8px;
-
-    transition:
-      background 0.15s ease,
-      color 0.15s ease;
+    font-weight: 500;
+    border-radius: 9999px;
+    border: 1px solid #e2e8f0;
+    background-color: #f8fafc;
+    transition: background 0.15s ease, color 0.15s ease;
   }
 
   .mobile-nav-item:hover {
-    background-color: #f1f5f9;
-    color: #5144ed;
+    background-color: #f1f0fd;
+    color: #3b2fb9;
   }
 
   .mobile-nav-item.active {
-    background-color: #eff0fe;
-    color: #5144ed;
+    background-color: #3b2fb9;
+    color: #ffffff;
+    border-color: #3b2fb9;
   }
 }
 
@@ -388,7 +359,6 @@ color : #201970;
 
   .city-trigger span {
     max-width: 85px;
-
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

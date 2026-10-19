@@ -59,6 +59,22 @@ const statuses: EventStatusFilter[] = [
   "COMPLETED",
 ];
 
+const isEventToday = (dateValue?: string): boolean => {
+  if (!dateValue) return false;
+
+  const cleanPart = dateValue.includes("T")
+    ? dateValue.split("T")[0]
+    : dateValue.split(" ")[0];
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const todayStr = `${year}-${month}-${day}`;
+
+  return cleanPart === todayStr;
+};
+
 const formatEventDate = (value?: string) => {
   if (!value) return "Date to be announced";
 
@@ -162,14 +178,12 @@ function OrganiserEvents() {
 
       await cancelEvent(eventId, status);
 
-      // Update local events list to reflect CANCELLED status immediately
       setEvents((prev) =>
         prev.map((ev) =>
           Number(ev.id) === eventId ? { ...ev, status: "CANCELLED" } : ev
         )
       );
 
-      // Also update selectedEvent if its detail modal is currently open
       setSelectedEvent((prev) =>
         prev && Number(prev.id) === eventId
           ? { ...prev, status: "CANCELLED" }
@@ -292,7 +306,7 @@ function OrganiserEvents() {
 
     setNotice(
       wasEditing
-        ? "Event details updated successfully."
+        ? "Event updated and resubmitted for admin review."
         : "Event submitted for admin approval.",
     );
 
@@ -312,8 +326,15 @@ function OrganiserEvents() {
   };
 
   const openEditModal = (event: OrganiserEvent) => {
+    if (event.status === "PENDING" || event.status === "CANCELLED") return;
+
     setSelectedEvent(null);
     setEditingEvent(event);
+  };
+
+  const openTicketManager = (event: OrganiserEvent) => {
+    setSelectedEvent(null);
+    setTicketEventId(Number(event.id));
   };
 
   return (
@@ -448,12 +469,29 @@ function OrganiserEvents() {
             {pageEvents.map((event) => {
               const CategoryIcon = getCategoryIcon(event.category_name);
 
+              const isPending = event.status === "PENDING";
+              const isCancelled = event.status === "CANCELLED";
+              const isRejected = event.status === "REJECTED";
+              const isApproved = event.status === "APPROVED";
+
+              const isCardGrey = isPending || isCancelled || isRejected;
+
+              const eventDateMatchesToday = isEventToday(event.event_date);
+              const isCurrentlyLive = Boolean(liveEvents[event.id]);
+
+              // Can only toggle live if approved AND today's date matches (or already live and turning off)
+              const canGoLive =
+                isApproved && (eventDateMatchesToday || isCurrentlyLive);
+
+              const canCancel = isApproved;
+              const canEditOrResubmit = isApproved || isRejected;
+
               const imageUrl =
                 (event as any).image_url || (event as any).image;
 
               return (
                 <article
-                  className="org-grid-card"
+                  className={`org-grid-card ${isCardGrey ? "is-disabled" : ""}`}
                   key={event.id}
                   onClick={() => setSelectedEvent(event)}
                 >
@@ -493,7 +531,7 @@ function OrganiserEvents() {
                       <span>
                         {event.location ||
                           event.city_name ||
-                          "Location TBD"}
+                          "Location TBD"}, {event.city_name || "City yet to be announced"}
                       </span>
                     </p>
                   </div>
@@ -510,40 +548,61 @@ function OrganiserEvents() {
                       <h3 title={event.name}>{event.name}</h3>
                     </div>
 
-                    {/* Hidden entirely when event is cancelled */}
+                    {/* Controls row */}
                     {event.status !== "CANCELLED" && (
                       <div
                         className="go-live-container"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={Boolean(liveEvents[event.id])}
-                          className={`go-live-toggle ${
-                            liveEvents[event.id] ? "is-live" : ""
-                          }`}
-                          onClick={(e) => handleToggleLive(e, Number(event.id))}
-                        >
-                          <span className="go-live-switch">
-                            <span className="go-live-thumb" />
-                          </span>
-                          <span className="go-live-text">
-                            {liveEvents[event.id] ? "Live" : "Go Live"}
-                          </span>
-                        </button>
+                        <div className="go-live-stack">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={Boolean(liveEvents[event.id])}
+                            disabled={!canGoLive}
+                            className={`go-live-toggle ${
+                              liveEvents[event.id] ? "is-live" : ""
+                            } ${!canGoLive ? "btn-disabled" : ""}`}
+                            onClick={(e) => {
+                              if (canGoLive) {
+                                handleToggleLive(e, Number(event.id));
+                              }
+                            }}
+                          >
+                            <span className="go-live-switch">
+                              <span className="go-live-thumb" />
+                            </span>
+                            <span className="go-live-text">
+                              {liveEvents[event.id] ? "Live" : "Go Live"}
+                            </span>
+                          </button>
+
+                          {/* Non-intrusive hint explaining why toggle is inactive */}
+                          {!canGoLive && isApproved && !eventDateMatchesToday && (
+                            <span className="go-live-inline-hint">
+                              <Info size={11} /> Unlocks on event day
+                            </span>
+                          )}
+                        </div>
 
                         <button
                           type="button"
                           className="cancel-action-btn"
-                          disabled={actionLoading === Number(event.id)}
+                          disabled={!canCancel || actionLoading === Number(event.id)}
+                          title={
+                            !canCancel
+                              ? `Cannot cancel an event with status ${event.status}`
+                              : "Cancel Event"
+                          }
                           onClick={(e) => {
                             e.stopPropagation();
-                            setCancel({
-                              eventId: Number(event.id),
-                              eventName: event.name,
-                              status: "CANCELLED",
-                            });
+                            if (canCancel) {
+                              setCancel({
+                                eventId: Number(event.id),
+                                eventName: event.name,
+                                status: "CANCELLED",
+                              });
+                            }
                           }}
                         >
                           {actionLoading === Number(event.id) ? (
@@ -572,23 +631,33 @@ function OrganiserEvents() {
                       <div className="org-card-action-group">
                         <button
                           type="button"
-                          className="org-card-edit-btn"
-                          title="Edit event"
+                          className={`org-card-edit-btn ${isRejected ? "btn-resubmit" : ""}`}
+                          disabled={!canEditOrResubmit}
+                          title={
+                            isRejected
+                              ? "Edit details and re-submit for admin review"
+                              : !canEditOrResubmit
+                              ? `Cannot edit an event that is ${event.status.toLowerCase()}`
+                              : "Edit event"
+                          }
                           onClick={(e) => {
                             e.stopPropagation();
-                            setEditingEvent(event);
+                            if (canEditOrResubmit) {
+                              openEditModal(event);
+                            }
                           }}
                         >
                           <Edit size={13} />
-                          Edit
+                          {isRejected ? "Edit & Re-submit" : "Edit"}
                         </button>
 
                         <button
                           type="button"
                           className="org-card-action-btn"
+                          title="Manage Tickets"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setTicketEventId(Number(event.id));
+                            openTicketManager(event);
                           }}
                         >
                           <Tag size={13} />
@@ -650,10 +719,7 @@ function OrganiserEvents() {
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
           onEdit={() => openEditModal(selectedEvent)}
-          onManageTickets={(eventId) => {
-            setSelectedEvent(null);
-            setTicketEventId(eventId);
-          }}
+          onManageTickets={() => openTicketManager(selectedEvent)}
         />
       )}
 
@@ -721,7 +787,7 @@ function EventDetailsModal({
   event: OrganiserEvent;
   onClose: () => void;
   onEdit: () => void;
-  onManageTickets: (eventId: number) => void;
+  onManageTickets: () => void;
 }) {
   const imageUrl = (event as any).image_url || (event as any).image;
   const instructions =
@@ -729,7 +795,10 @@ function EventDetailsModal({
   const ageGroup =
     (event as any).age_group || (event as any).age_restriction || "All Ages";
 
-  // Lock scrolling behind the modal while mounted
+  const isRejected = event.status === "REJECTED";
+  const isApproved = event.status === "APPROVED";
+  const canEditOrResubmit = isApproved || isRejected;
+
   useEffect(() => {
     const originalBodyOverflow = document.body.style.overflow;
     const originalHtmlOverflow = document.documentElement.style.overflow;
@@ -978,6 +1047,8 @@ function EventDetailsModal({
               <span className="org-detail-footer-note">
                 {event.status === "PENDING"
                   ? "Awaiting review by platform administrator."
+                  : event.status === "REJECTED"
+                  ? "Please review feedback, edit details, and re-submit."
                   : "Public ticket sales unavailable."}
               </span>
             )}
@@ -987,7 +1058,8 @@ function EventDetailsModal({
             <button
               type="button"
               className="org-button-secondary org-detail-footer-btn"
-              onClick={() => onManageTickets(Number(event.id))}
+              title="Manage Tickets"
+              onClick={onManageTickets}
             >
               <Tag size={13} />
               Manage Tickets
@@ -995,11 +1067,19 @@ function EventDetailsModal({
 
             <button
               type="button"
-              className="org-button-primary org-detail-footer-btn"
+              className={`org-button-primary org-detail-footer-btn ${isRejected ? "btn-resubmit" : ""}`}
+              disabled={!canEditOrResubmit}
+              title={
+                isRejected
+                  ? "Edit details and re-submit for review"
+                  : !canEditOrResubmit
+                  ? `Cannot edit an event that is ${event.status.toLowerCase()}`
+                  : "Edit Event"
+              }
               onClick={onEdit}
             >
               <Edit size={14} />
-              Edit Event
+              {isRejected ? "Edit & Re-submit" : "Edit Event"}
             </button>
 
             <button

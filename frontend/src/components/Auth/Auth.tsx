@@ -13,6 +13,7 @@ interface ApiResponse {
   message: string;
   user?: User;
   token?: string;
+  userId?: number;
 }
 
 interface ApiErrorResponse {
@@ -30,6 +31,8 @@ interface AuthProps {
   redirectOnSuccess?: boolean;
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function Auth({
   onClose,
   onSuccess,
@@ -44,6 +47,7 @@ function Auth({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [dob, setDob] = useState("");
 
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [confirmFocused, setConfirmFocused] = useState(false);
@@ -51,7 +55,6 @@ function Auth({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // State to track deactivation modal and loading status
   const [showReactivatePrompt, setShowReactivatePrompt] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
 
@@ -62,10 +65,38 @@ function Auth({
   const isConfirmValid =
     confirmPassword.length > 0 && confirmPassword === password;
 
-  // Clears all input fields, focus trackers, and error messages
+  const calculateAge = (dobString: string): number => {
+    if (!dobString) return 0;
+
+    const birthDate = new Date(`${dobString}T00:00:00`);
+    const today = new Date();
+
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    const dayDiff = today.getDate() - birthDate.getDate();
+
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      age--;
+    }
+
+    return age;
+  };
+
+  const getMaxSelectableDob = (): string => {
+    const today = new Date();
+    today.setFullYear(today.getFullYear() - 16);
+
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
   const resetFormFields = () => {
     setName("");
     setEmail("");
+    setDob("");
     setPassword("");
     setConfirmPassword("");
     setPasswordFocused(false);
@@ -73,11 +104,65 @@ function Auth({
     setError(null);
   };
 
+  const handleSuccessfulAuth = (authenticatedUser: User) => {
+    setUser(authenticatedUser);
+    onSuccess(authenticatedUser);
+
+    resetFormFields();
+    onClose();
+
+    const normalizedRole = authenticatedUser.role?.toUpperCase() || "";
+    const isAdmin =
+      normalizedRole === "SUPER_ADMIN" ||
+      normalizedRole === "SUPERADMIN" ||
+      normalizedRole === "ADMIN";
+
+    if (normalizedRole === "ORGANIZER" || normalizedRole === "ORGANISER") {
+      navigate("/organiser/home");
+    } else if (isAdmin) {
+      navigate("/admin");
+    } else if (redirectOnSuccess) {
+      navigate("/");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
+    // Manual email validation
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError("Please enter your email address.");
+      return;
+    }
+
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    // Registration validations
     if (!isLogin) {
+      if (!name.trim()) {
+        setError("Please enter your full name.");
+        return;
+      }
+
+      if (!dob) {
+        setError("Please select your date of birth.");
+        return;
+      }
+
+      const age = calculateAge(dob);
+
+      if (age < 16) {
+        setError(
+          "You are not eligible to register for CityPass. You must be at least 16 years old."
+        );
+        return;
+      }
+
       if (!allRulesPassed) {
         setError("Please fulfill all password requirements.");
         return;
@@ -92,56 +177,74 @@ function Auth({
     setIsLoading(true);
 
     try {
-      const url = isLogin
-        ? `${API_BASE_URL}/v1/auth/login`
-        : `${API_BASE_URL}/v1/auth/register`;
+      if (isLogin) {
+        const response = await axios.post<ApiResponse>(
+          `${API_BASE_URL}/v1/auth/login`,
+          { email: trimmedEmail, password },
+          { withCredentials: true }
+        );
 
-      const payload = isLogin
-        ? { email, password }
-        : {
-            name,
-            email,
+        if (!response.data.user) {
+          setError("User details were not returned.");
+          return;
+        }
+
+        handleSuccessfulAuth(response.data.user);
+      } else {
+        const regResponse = await axios.post<ApiResponse>(
+          `${API_BASE_URL}/v1/auth/register`,
+          {
+            name: name.trim(),
+            email: trimmedEmail,
+            dob,
             password,
             confirmpassword: confirmPassword,
             role: "USER",
-          };
+          },
+          { withCredentials: true }
+        );
 
-      const response = await axios.post<ApiResponse>(url, payload, {
-        withCredentials: true,
-      });
+        if (regResponse.data.user) {
+          handleSuccessfulAuth(regResponse.data.user);
+          return;
+        }
 
-      if (!response.data.user) {
-        setError("User details were not returned.");
-        return;
-      }
+        try {
+          const loginResponse = await axios.post<ApiResponse>(
+            `${API_BASE_URL}/v1/auth/login`,
+            { email: trimmedEmail, password },
+            { withCredentials: true }
+          );
 
-      const loggedUser = response.data.user;
+          if (loginResponse.data.user) {
+            handleSuccessfulAuth(loginResponse.data.user);
+            return;
+          }
+        } catch {
+          // Fallback if auto-login fails
+        }
 
-      setUser(loggedUser);
-      onSuccess(loggedUser);
+        const fallbackUser: User = {
+          name: name.trim(),
+          email: trimmedEmail,
+          dob,
+          role: "USER",
+          status: "ACTIVE",
+          ...(regResponse.data.userId
+            ? { id: String(regResponse.data.userId) }
+            : {}),
+        } as User;
 
-      resetFormFields();
-      onClose();
-
-      const isAdmin =
-        loggedUser.role === "SUPER_ADMIN" ||
-        loggedUser.role === "ADMIN";
-
-      if (loggedUser.role === "ORGANIZER") {
-        navigate("/organiser/home");
-      } else if (isAdmin) {
-        navigate("/admin");
-      } else if (redirectOnSuccess) {
-        navigate("/");
+        handleSuccessfulAuth(fallbackUser);
       }
     } catch (err) {
       const axiosError = err as AxiosError<ApiErrorResponse>;
+
       const serverMessage =
         axiosError.response?.data?.message ||
         axiosError.response?.data?.error ||
         "";
 
-      // Detect deactivated account response
       if (
         serverMessage.toLowerCase().includes("deactivated") ||
         axiosError.response?.data?.code === "ACCOUNT_DEACTIVATED"
@@ -170,11 +273,12 @@ function Auth({
     try {
       const response = await axios.post<ApiResponse>(
         `${API_BASE_URL}/v1/users/reactivate-login`,
-        { email, password },
+        { email: email.trim(), password },
         { withCredentials: true }
       );
 
       const reactivatedUser = response.data.user;
+
       if (reactivatedUser) {
         setUser(reactivatedUser);
         onSuccess(reactivatedUser);
@@ -187,9 +291,11 @@ function Auth({
       navigate("/settings/profile");
     } catch (err) {
       const axiosError = err as AxiosError<ApiErrorResponse>;
+
       setError(
         axiosError.response?.data?.message || "Failed to reactivate account."
       );
+
       setShowReactivatePrompt(false);
     } finally {
       setIsReactivating(false);
@@ -225,6 +331,7 @@ function Auth({
               >
                 {isReactivating ? "Reactivating..." : "Yes, Reactivate"}
               </button>
+
               <button
                 type="button"
                 className="auth-cancel-btn"
@@ -238,22 +345,42 @@ function Auth({
         ) : (
           <>
             <h2>{isLogin ? "Welcome back" : "Create your account"}</h2>
-
             <p>
               {isLogin
                 ? "Login to explore CityPass"
                 : "Join CityPass and explore your city"}
             </p>
 
-            {error && <div className="auth-error-banner">{error}</div>}
+            {error && (
+              <div className="auth-error-banner" role="alert">
+                {error}
+              </div>
+            )}
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               {!isLogin && (
                 <input
                   type="text"
                   placeholder="Full Name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setError(null);
+                  }}
+                  required
+                />
+              )}
+
+              {!isLogin && (
+                <input
+                  type="date"
+                  placeholder="Enter your DOB"
+                  value={dob}
+                  max={getMaxSelectableDob()}
+                  onChange={(e) => {
+                    setDob(e.target.value);
+                    setError(null);
+                  }}
                   required
                 />
               )}
@@ -262,7 +389,10 @@ function Auth({
                 type="email"
                 placeholder="Email address"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError(null);
+                }}
                 required
               />
 
@@ -272,7 +402,10 @@ function Auth({
                   placeholder="Password"
                   value={password}
                   onFocus={() => setPasswordFocused(true)}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError(null);
+                  }}
                   required
                 />
 
@@ -280,7 +413,6 @@ function Auth({
                   <div className="live-rule-tray">
                     {PASSWORD_RULES.map((rule) => {
                       const passed = rule.check(password);
-
                       return (
                         <span
                           key={rule.id}
@@ -308,7 +440,10 @@ function Auth({
                     placeholder="Confirm Password"
                     value={confirmPassword}
                     onFocus={() => setConfirmFocused(true)}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      setError(null);
+                    }}
                     className={
                       confirmPassword.length > 0
                         ? isConfirmValid

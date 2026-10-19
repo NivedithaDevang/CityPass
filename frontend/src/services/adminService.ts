@@ -45,15 +45,15 @@ export const fetchAdminOrganiserRequests = async (
 };
 
 export const updateOrganizerStatus = async (
-  requestId: number,
-  status: string
+  id: number,
+  status: "APPROVED" | "REJECTED",
+  reason?: string
 ) => {
-  const response = await adminApi.patch(
-    `/organiser-requests/${requestId}/approve`,
-    { status }
+  return await axios.patch(
+    `${API_BASE_URL}/v1/admin/organiser-requests/${id}`,
+    { status, reason },
+    { withCredentials: true }
   );
-
-  return response.data;
 };
 
 export const fetchAdminOrganisers = async () => {
@@ -159,36 +159,6 @@ export const updateEventStatus = async (
     {
       status,
     }
-  );
-
-  return response.data;
-};
-
-export const fetchAdminTickets = async () => {
-  const response = await adminApi.get("/tickets");
-
-  return response.data;
-};
-
-export const addAdminTicket = async (data: {
-  name: string;
-  description?: string;
-  price: number;
-  category: string;
-}) => {
-  const response = await adminApi.post(
-    "/add-ticket",
-    data
-  );
-
-  return response.data;
-};
-
-export const deleteAdminTicket = async (
-  ticketId: number
-) => {
-  const response = await adminApi.patch(
-    `/tickets/${ticketId}/delete`
   );
 
   return response.data;

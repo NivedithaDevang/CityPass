@@ -490,6 +490,7 @@
     transform: rotate(360deg);
   }
 }
+
 .org-detail-backdrop {
   position: fixed;
   inset: 0;
@@ -617,7 +618,6 @@
   color: #0f172a;
 }
 
-/* Modal interior scroll isolation */
 .org-detail-content {
   padding: 20px 24px;
   display: flex;
@@ -887,6 +887,11 @@
   text-transform: uppercase;
 }
 
+.org-status-badge.approved { background: #dcfce7; color: #166534; }
+.org-status-badge.rejected { background: #fee2e2; color: #991b1b; }
+.org-status-badge.pending  { background: #fef3c7; color: #92400e; }
+.org-status-badge.cancelled{ background: #f1f5f9; color: #475569; }
+.org-status-badge.completed{ background: #e0e7ff; color: #3730a3; }
 
 .cancel-action-btn {
   margin-left: 120px;
@@ -910,14 +915,12 @@
   transform: translateY(-1px);
 }
 
-/* Container between card header and footer */
 .go-live-container {
   margin: 10px 0 14px 0;
   display: flex;
   align-items: center;
 }
 
-/* Base button */
 .go-live-toggle {
   display: inline-flex;
   align-items: center;
@@ -936,7 +939,6 @@
   border-color: #cbd5e1;
 }
 
-/* The pill track */
 .go-live-switch {
   width: 34px;
   height: 20px;
@@ -948,7 +950,6 @@
   transition: background-color 0.25s ease;
 }
 
-/* The circular slider thumb */
 .go-live-thumb {
   width: 16px;
   height: 16px;
@@ -958,7 +959,6 @@
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Label text */
 .go-live-text {
   font-size: 13px;
   font-weight: 600;
@@ -967,7 +967,6 @@
   transition: color 0.2s ease;
 }
 
-/* --- ACTIVE / LIVE STATE --- */
 .go-live-toggle.is-live {
   background: #fef2f2;
   border-color: #fecaca;
@@ -989,7 +988,6 @@
   gap: 6px;
 }
 
-/* Pulsing dot when live */
 .go-live-toggle.is-live .go-live-text::before {
   content: "";
   display: inline-block;
@@ -1015,11 +1013,153 @@
   }
 }
 
-.org-status-badge.approved { background: #dcfce7; color: #166534; }
-.org-status-badge.rejected { background: #fee2e2; color: #991b1b; }
-.org-status-badge.pending  { background: #fef3c7; color: #92400e; }
-.org-status-badge.cancelled{ background: #f1f5f9; color: #475569; }
-.org-status-badge.completed{ background: #e0e7ff; color: #3730a3; }
+/* Card Disabled / Greyed State (PENDING, REJECTED, CANCELLED) */
+.org-grid-card.is-disabled {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  opacity: 0.82;
+  box-shadow: none !important;
+}
+
+.org-grid-card.is-disabled .org-card-media {
+  filter: grayscale(85%) !important;
+}
+
+.org-grid-card.is-disabled .org-card-status-pill {
+  filter: grayscale(0%) !important;
+}
+
+/* Muted / Non-clickable Controls */
+.org-grid-card.is-disabled .org-card-action-btn,
+.org-grid-card.is-disabled .cancel-action-btn:disabled,
+.org-grid-card.is-disabled .go-live-toggle:disabled,
+.org-grid-card.is-disabled .go-live-toggle.btn-disabled,
+.org-card-action-btn:disabled,
+.org-card-edit-btn:disabled,
+.org-detail-footer-btn:disabled,
+.cancel-action-btn:disabled,
+.go-live-toggle:disabled,
+.go-live-toggle.btn-disabled {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  opacity: 0.45 !important;
+  box-shadow: none !important;
+}
+
+/* Edit & Re-submit Button (Active on grey cards for REJECTED status) */
+.org-grid-card.is-disabled .org-card-edit-btn.btn-resubmit,
+.org-card-edit-btn.btn-resubmit,
+.org-detail-footer-btn.btn-resubmit {
+  background-color: #5144ed !important;
+  color: #ffffff !important;
+  border: 1px solid #4336d6 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 6px rgba(81, 68, 237, 0.25) !important;
+}
+
+.org-grid-card.is-disabled .org-card-edit-btn.btn-resubmit:hover,
+.org-card-edit-btn.btn-resubmit:hover,
+.org-detail-footer-btn.btn-resubmit:hover {
+  background-color: #4336d6 !important;
+  transform: translateY(-1px);
+}
+
+/* Container for the tooltip */
+.go-live-tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Tooltip bubble hidden by default */
+.go-live-tooltip-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background-color: #0f172a;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+  padding: 6px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+  z-index: 100;
+}
+
+/* Downward indicator arrow */
+.go-live-tooltip-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #0f172a transparent transparent transparent;
+}
+
+/* Show smoothly when hovering over the toggle */
+.go-live-tooltip-wrapper:hover .go-live-tooltip-bubble {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Allow hover detection over the disabled button */
+.go-live-toggle.btn-disabled {
+  pointer-events: none;
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.go-live-tooltip-wrapper:hover {
+  cursor: not-allowed;
+}
+
+/* Stack container for the toggle and its micro-hint */
+.go-live-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+/* Subtle micro-hint below the locked button */
+.go-live-inline-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 0.01em;
+  padding-left: 2px;
+}
+
+.go-live-inline-hint svg {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+/* Disabled appearance for toggle */
+.go-live-toggle.btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 @media (max-width: 680px) {
   .org-cards-grid {

@@ -26,7 +26,6 @@ export type OrganiserEvent = {
   age_group?: string | null;
   age_restriction?: string | null;
   duration_hours?: number | string | null;
-  duration?: string | null;
   additional_instructions?: string | null;
   instructions?: string | null;
 };
@@ -48,7 +47,6 @@ export interface CreateOrganiserEventData {
   languages?: string | string[];
   age_restriction?: string;
   age_group?: string;
-  duration?: string;
   duration_hours?: number;
 }
 
@@ -70,16 +68,6 @@ export interface OrganiserBooking {
   booking_status: string | null;
 }
 
-export interface AdminTicketTemplate {
-  id: number;
-  name: string;
-  description?: string;
-  price: number;
-  category: string;
-  status: "ACTIVE" | "DELETED";
-}
-
-
 export interface CancelEvent {
   id: number;
   status: "CANCELLED"
@@ -94,11 +82,6 @@ const lookupApi = axios.create({
   baseURL: `${API_BASE_URL}/v1`,
   withCredentials: true,
 });
-
-export const fetchActiveAdminTickets = async (): Promise<AdminTicketTemplate[]> => {
-  const response = await lookupApi.get("/tickets");
-  return response.data?.tickets || [];
-};
 
 export const getOrganiserErrorMessage = (
   error: unknown,
@@ -122,10 +105,7 @@ export const fetchOrganiserBookings = async (): Promise<OrganiserBooking[]> => {
 };
 
 export const createOrganiserEvent = async (
-  data: CreateOrganiserEventData & {
-    ticket_category_name?: string;
-    ticket_tiers?: string;
-  }
+  data: CreateOrganiserEventData
 ): Promise<OrganiserEvent> => {
   const formData = new FormData();
 
@@ -152,23 +132,13 @@ export const createOrganiserEvent = async (
     formData.append("age_restriction", ageGroup);
   }
 
-  const durationVal = data.duration_hours !== undefined ? String(data.duration_hours) : data.duration;
-  if (durationVal) {
-    formData.append("duration", String(durationVal));
-    formData.append("duration_hours", String(durationVal));
+  if (data.duration_hours !== undefined) {
+    formData.append("duration_hours", String(data.duration_hours));
   }
 
   if (data.languages) {
     const langs = Array.isArray(data.languages) ? JSON.stringify(data.languages) : data.languages;
     formData.append("languages", langs);
-  }
-
-  if (data.ticket_category_name !== undefined) {
-    formData.append("ticket_category_name", data.ticket_category_name);
-  }
-
-  if (data.ticket_tiers !== undefined) {
-    formData.append("ticket_tiers", data.ticket_tiers);
   }
 
   if (data.image) {
@@ -253,4 +223,3 @@ export const liveEvent = async (
 
 
 export default organiserApi;
-

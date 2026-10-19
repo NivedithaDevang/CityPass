@@ -6,8 +6,7 @@ import {
   BsPersonFillCheck,
   BsCalendar2EventFill,
 } from "react-icons/bs";
-import { FaMapMarkerAlt } from "react-icons/fa";
-import { FaTag } from "react-icons/fa6";
+import { FaMapMarkerAlt, FaTag } from "react-icons/fa";
 import { IoPerson } from "react-icons/io5";
 
 import { fetchAdminEventRequests, fetchAdminOrganiserRequests } from "../../../services/adminService";
@@ -181,23 +180,6 @@ function AdminLayout() {
 
             <span className="sidebar-label">
               Users
-            </span>
-          </NavLink>
-
-          <NavLink
-            to="/admin/tickets"
-            className={({ isActive }) =>
-              isActive
-                ? "sidebar-nav-item active"
-                : "sidebar-nav-item"
-            }
-          >
-            <div className="nav-icon-wrapper">
-              <IoPerson className="sidebar-icon" />
-            </div>
-
-            <span className="sidebar-label">
-              Tickets
             </span>
           </NavLink>
 
