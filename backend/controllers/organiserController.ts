@@ -1,93 +1,95 @@
 import { Request, Response, NextFunction } from "express";
-import { getAllOrganisers,
-    getOrganiserByUserId,
- } from "../models/organiserModel.js";
-
+import AppError from "../types/appError.js";
+import {
+  getAllOrganisers,
+  getOrganiserByUserId,
+} from "../models/organiserModel.js";
 import { getEventsByOrganiser } from "../models/eventModel.js";
 import { getBookingsByOrganiserId } from "../models/bookingModel.js";
+import { validateId } from "../validators/idValidator.js";
 
+// GET /organisers
 export const getOrganisers = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
-    try {
+  try {
+    const organisers = await getAllOrganisers();
 
-        const organisers = await getAllOrganisers();
-
-        res.status(200).json({
-            message: "Organisers fetched successfully",
-            organisers: organisers
-        });
-
-    } catch (err) {
-        next(err);
-    }
+    return res.status(200).json({
+      success: true,
+      message: "Organisers fetched successfully",
+      organisers,
+    });
+  } catch (err) {
+    next(err);
+  }
 };
 
+// GET /organisers/my-events
 export const getMyEvents = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
+  try {
 
-    try {
+    const authenticatedUserId = req.user?.id;
 
-        const userId = req.user?.id;
-
-        if (!userId) {
-            return res.status(401).json({
-                message: "Unauthorized"
-            });
-        }
-
-
-        const organiser = await getOrganiserByUserId(userId);
-
-        if (!organiser) {
-            return res.status(404).json({
-                message: "Organiser profile not found"
-            });
-        }
-
-
-        const events = await getEventsByOrganiser(
-            organiser.id
-        );
-
-
-        res.status(200).json({
-            message: "Organiser events fetched successfully",
-            events
-        });
-
-    } catch (err) {
-        next(err);
+    if (!authenticatedUserId) {
+      throw new AppError("Authentication required", 401);
     }
+
+    const userId = validateId(authenticatedUserId);
+
+    const organiser = await getOrganiserByUserId(userId);
+
+    if (!organiser) {
+      throw new AppError("Organiser profile not found", 404);
+    }
+
+    const events = await getEventsByOrganiser(organiser.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Organiser events fetched successfully",
+      events,
+    });
+  } catch (err) {
+    next(err);
+  }
 };
 
+// GET /organisers/my-bookings
 export const getMyBookings = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
-    try {
-        const userId = req.user?.id;
-        if (!userId) {
-            return res.status(401).json({ message: "Unauthorized" });
-        }
+  try {
+    const authenticatedUserId = req.user?.id;
 
-        const organiser = await getOrganiserByUserId(userId);
-        if (!organiser) {
-            return res.status(404).json({ message: "Organiser profile not found" });
-        }
-
-        const bookings = await getBookingsByOrganiserId(organiser.id);
-        return res.status(200).json({
-            message: "Organiser bookings fetched successfully",
-            bookings
-        });
-    } catch (err) {
-        next(err);
+    if (!authenticatedUserId) {
+      throw new AppError("Authentication required", 401);
     }
+
+    const userId = validateId(authenticatedUserId);
+
+    const organiser = await getOrganiserByUserId(userId);
+
+    if (!organiser) {
+      throw new AppError("Organiser profile not found", 404);
+    }
+
+    const bookings = await getBookingsByOrganiserId(organiser.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Organiser bookings fetched successfully",
+      bookings,
+    });
+  } catch (err) {
+    next(err);
+  }
 };

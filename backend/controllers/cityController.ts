@@ -1,3 +1,6 @@
+import { Request, Response, NextFunction } from "express";
+import cloudinary from "../config/cloudinary.js";
+import AppError from "../types/appError.js";
 import {
   getActiveCities,
   getAllCities,
@@ -5,61 +8,43 @@ import {
   createCity,
   updateCity,
 } from "../models/cityModel.js";
-import cloudinary from "../config/cloudinary.js";
-import { Request, Response, NextFunction } from "express";
+import { validateId } from "../validators/idValidator.js";
 
 // Public: GET /v1/cities (returns only active cities)
-export const getCities = async (req: Request, res: Response) => {
+export const getCities = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const cities = await getActiveCities();
 
     return res.status(200).json({
+      success: true,
       message: "Cities fetched successfully",
       cities,
     });
   } catch (error) {
-    return res.status(500).json({
-      message: "Unable to fetch cities",
-    });
+    next(error);
   }
 };
 
 // Admin: GET /v1/admin/cities (returns all cities)
-export const getAdminCities = async (req: Request, res: Response) => {
+export const getAdminCities = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const cities = await getAllCities();
 
     return res.status(200).json({
+      success: true,
       message: "Admin cities fetched successfully",
       cities,
     });
   } catch (error) {
-    return res.status(500).json({
-      message: "Unable to fetch cities",
-    });
-  }
-};
-
-// Get single city by ID
-export const getCity = async (req: Request, res: Response) => {
-  try {
-    const id = Number(req.params.id);
-
-    const city = await getCityById(id);
-
-    if (!city) {
-      return res.status(404).json({
-        message: "City not found",
-      });
-    }
-
-    return res.status(200).json({
-      city,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: "Unable to fetch city",
-    });
+    next(error);
   }
 };
 
@@ -73,7 +58,7 @@ export const addCity = async (
   try {
     const { name, description } = req.body;
     if (typeof name !== "string" || !name.trim()) {
-      return res.status(400).json({ message: "City name is required" });
+      throw new AppError("City name is required", 400);
     }
 
     let imageUrl: string | null = null;
@@ -86,7 +71,7 @@ export const addCity = async (
           { folder: "citypass/city", resource_type: "image" },
           (error, result) => {
             if (error || !result) {
-              return reject(error || new Error("Cloudinary upload failed"));
+              return reject(new AppError("Cloudinary upload failed", 502));
             }
             resolve({
               secure_url: result.secure_url,
@@ -107,22 +92,26 @@ export const addCity = async (
     );
 
     return res.status(201).json({
+      success: true,
       message: "City created successfully",
       cityId,
       image: imageUrl,
     });
-  } catch (error) {
+  } catch (error: any) {
     if (uploadedPublicId) {
       try {
         await cloudinary.uploader.destroy(uploadedPublicId, {
           resource_type: "image",
         });
-      } catch {
-        return res.status(500).json({
-          message: "Unable to create city",
-        });
+      } catch (cleanupErr) {
+        console.error("Failed to cleanup Cloudinary upload:", cleanupErr);
       }
     }
+
+    if (error.code === "ER_DUP_ENTRY") {
+      return next(new AppError("A city with this name already exists", 409));
+    }
+
     next(error);
   }
 };
@@ -135,14 +124,33 @@ export const editCity = async (
 ) => {
   let uploadedPublicId: string | null = null;
   try {
-    const id = Number(req.params.id);
+    const id = validateId(req.params.id);
     const { name, description, is_active } = req.body;
     const imageFile = req.file;
 
-    if (Number.isNaN(id)) {
-      return res.status(400).json({
-        message: "Invalid city ID",
-      });
+    if (
+      is_active !== undefined &&
+      typeof is_active !== "boolean" &&
+      is_active !== "true" &&
+      is_active !== "false" &&
+      is_active !== 1 &&
+      is_active !== 0
+    ) {
+      throw new AppError("is_active must be true or false", 400);
+    }
+
+    if (
+      name === undefined &&
+      description === undefined &&
+      is_active === undefined &&
+      !imageFile
+    ) {
+      throw new AppError("At least one field is required to update", 400);
+    }
+
+    const existingCity = await getCityById(id);
+    if (!existingCity) {
+      throw new AppError("City not found", 404);
     }
 
     let newImageUrl: string | undefined;
@@ -158,7 +166,7 @@ export const editCity = async (
           },
           (error, result) => {
             if (error || !result) {
-              return reject(error || new Error("Cloudinary upload failed"));
+              return reject(new AppError("Cloudinary upload failed", 502));
             }
             resolve({
               secure_url: result.secure_url,
@@ -174,36 +182,10 @@ export const editCity = async (
       uploadedPublicId = uploadResult.public_id;
     }
 
-    if (
-      is_active !== undefined &&
-      typeof is_active !== "boolean" &&
-      is_active !== "true" &&
-      is_active !== "false" &&
-      is_active !== 1 &&
-      is_active !== 0
-    ) {
-      return res.status(400).json({
-        message: "is_active must be true or false",
-      });
-    }
-
     const parsedIsActive =
       is_active !== undefined
         ? is_active === true || is_active === "true" || Number(is_active) === 1
         : undefined;
-
-    if (
-      name === undefined &&
-      description === undefined &&
-      is_active === undefined &&
-      !imageFile
-    ) {
-      return res.status(400).json({
-        message: "At least one field is required to update",
-      });
-    }
-
-    const existingCity = await getCityById(id);
 
     const affectedRows = await updateCity(
       id,
@@ -214,23 +196,11 @@ export const editCity = async (
     );
 
     if (affectedRows === 0) {
-      if (uploadedPublicId) {
-        try {
-          await cloudinary.uploader.destroy(uploadedPublicId, {
-            resource_type: "image",
-          });
-        } catch {
-          // ignore cleanup failures
-        }
-      }
-
-      return res.status(404).json({
-        message: "City not found",
-      });
+      throw new AppError("City not found", 404);
     }
 
     // Clean up previous image from Cloudinary if replacing with a new one
-    if (imageFile && existingCity?.image) {
+    if (imageFile && existingCity.image) {
       const oldImageUrl = existingCity.image;
       try {
         const uploadIndex = oldImageUrl.indexOf("/upload/");
@@ -249,10 +219,11 @@ export const editCity = async (
     }
 
     return res.status(200).json({
+      success: true,
       message: "City updated successfully",
       image: newImageUrl || undefined,
     });
-  } catch (err) {
+  } catch (err: any) {
     if (uploadedPublicId) {
       try {
         await cloudinary.uploader.destroy(uploadedPublicId, {
@@ -262,6 +233,11 @@ export const editCity = async (
         // ignore cleanup failures
       }
     }
+
+    if (err.code === "ER_DUP_ENTRY") {
+      return next(new AppError("A city with this name already exists", 409));
+    }
+
     next(err);
   }
 };

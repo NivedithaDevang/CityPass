@@ -7,13 +7,11 @@ export type OrganizerRequestStatus =
     | "APPROVED"
     | "REJECTED";
 
-export type OrgReq = {
+export type OrganiserReq = {
     user_id?: number;
     organization_name: string;
     description: string;
 
-    // Foreign key IDs
-    category_id?: number;
     city_id?: number;
 
     id_proof?: string;
@@ -30,17 +28,14 @@ export type OrgReqRow = RowDataPacket & {
     status: OrganizerRequestStatus;
     slug?: string;
 
-    // IDs
-    category_id?: number;
     city_id?: number;
 
-    // Names returned through JOIN
-    category?: string;
     city?: string;
 
     id_proof?: string;
     email?: string;
     phone?: string;
+    rejection_reason?: string | null;
 };
 
 export const getActiveRequestByUserId = async (
@@ -54,16 +49,12 @@ export const getActiveRequestByUserId = async (
             o.description,
             o.status,
             o.slug,
-            o.category_id,
             o.city_id,
-            c.name AS category,
             ci.name AS city,
             o.id_proof,
             o.email,
             o.phone
         FROM organizer_requests o
-        LEFT JOIN categories c
-            ON o.category_id = c.id
         LEFT JOIN cities ci
             ON o.city_id = ci.id
         WHERE o.user_id = ?
@@ -76,6 +67,27 @@ export const getActiveRequestByUserId = async (
     return rows[0];
 };
 
+export const getLatestRequestByUserId = async (
+    userId: number
+): Promise<OrgReqRow | undefined> => {
+    const sql = `
+        SELECT
+            o.id,
+            o.user_id,
+            o.organization_name,
+            o.description,
+            o.status,
+            o.rejection_reason
+        FROM organizer_requests o
+        WHERE o.user_id = ?
+        ORDER BY o.id DESC
+        LIMIT 1
+    `;
+
+    const [rows] = await db.query<OrgReqRow[]>(sql, [userId]);
+    return rows[0];
+};
+
 export const getAllRequests = async (): Promise<OrgReqRow[]> => {
     const sql = `
         SELECT
@@ -85,16 +97,13 @@ export const getAllRequests = async (): Promise<OrgReqRow[]> => {
             o.description,
             o.status,
             o.slug,
-            o.category_id,
             o.city_id,
-            c.name AS category,
             ci.name AS city,
             o.id_proof,
             o.email,
-            o.phone
+            o.phone,
+            o.rejection_reason
         FROM organizer_requests o
-        LEFT JOIN categories c
-            ON o.category_id = c.id
         LEFT JOIN cities ci
             ON o.city_id = ci.id
         ORDER BY o.id DESC
@@ -116,16 +125,13 @@ export const getOrganizerRequestById = async (
             o.description,
             o.status,
             o.slug,
-            o.category_id,
             o.city_id,
-            c.name AS category,
             ci.name AS city,
             o.id_proof,
             o.email,
-            o.phone
+            o.phone,
+            o.rejection_reason
         FROM organizer_requests o
-        LEFT JOIN categories c
-            ON o.category_id = c.id
         LEFT JOIN cities ci
             ON o.city_id = ci.id
         WHERE o.id = ?
@@ -136,8 +142,53 @@ export const getOrganizerRequestById = async (
     return results[0];
 };
 
+export const resubmitRejectedRequest = async (
+    requestId: number,
+    userId: number,
+    request: OrganiserReq
+): Promise<ResultSetHeader> => {
+    const slug =
+        request.organization_name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)+/g, "") +
+        "-" +
+        Date.now();
+
+    const sql = `
+        UPDATE organizer_requests
+        SET
+            organization_name = ?,
+            description = ?,
+            slug = ?,
+            city_id = ?,
+            id_proof = ?,
+            email = ?,
+            phone = ?,
+            status = 'PENDING',
+            rejection_reason = NULL
+        WHERE id = ?
+          AND user_id = ?
+          AND status = 'REJECTED'
+    `;
+
+    const [result] = await db.execute<ResultSetHeader>(sql, [
+        request.organization_name,
+        request.description,
+        slug,
+        request.city_id ?? null,
+        request.id_proof ?? null,
+        request.email ?? null,
+        request.phone ?? null,
+        requestId,
+        userId,
+    ]);
+
+    return result;
+};
+
 export const createRequest = async (
-    request: OrgReq
+    request: OrganiserReq
 ): Promise<ResultSetHeader> => {
     const slug =
         request.organization_name
@@ -153,14 +204,13 @@ export const createRequest = async (
             organization_name,
             description,
             slug,
-            category_id,
             city_id,
             id_proof,
             email,
             phone,
             status
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await db.execute<ResultSetHeader>(sql, [
@@ -168,7 +218,6 @@ export const createRequest = async (
         request.organization_name,
         request.description,
         slug,
-        request.category_id ?? null,
         request.city_id ?? null,
         request.id_proof ?? null,
         request.email ?? null,

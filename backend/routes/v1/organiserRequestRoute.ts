@@ -1,14 +1,15 @@
 import express from "express";
 import {
-    getRequests,
-    addRequest
+    addRequest,
+    getMyRequestStatus,
 } from "../../controllers/organiserRequestController.js";
 import { authenticate } from "../../middleware/authMiddleware.js";
 
-const orgRequestRouter = express.Router();
+const organiserRequestRouter = express.Router();
 
-orgRequestRouter.post("/", authenticate, addRequest);
-orgRequestRouter.get("/", authenticate, getRequests);
+organiserRequestRouter.get("/status", authenticate, getMyRequestStatus);
+organiserRequestRouter.post("/", authenticate, addRequest);
 
 
-export default orgRequestRouter;
+
+export default organiserRequestRouter;

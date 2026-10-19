@@ -15,43 +15,6 @@ export type EventTicket = RowDataPacket & {
   status: "ACTIVE" | "DELETED";
 };
 
-export type TicketTemplate = RowDataPacket & {
-  id: number;
-  name: string;
-  description: string | null;
-  price: number;
-  category: string;
-};
-
-// Get active admin templates for an event's category
-export const getTemplatesByEventCategory = async (
-  eventId: number
-): Promise<TicketTemplate[]> => {
-  const sql = `
-    SELECT
-      t.id,
-      t.name,
-      t.description,
-      t.price,
-      t.category
-    FROM tickets t
-    INNER JOIN categories c
-      ON LOWER(TRIM(c.name)) = LOWER(TRIM(t.category))
-    INNER JOIN events e
-      ON e.category_id = c.id
-    WHERE e.id = ?
-      AND t.status = 'ACTIVE'
-    ORDER BY t.id DESC
-  `;
-
-  const [rows] = await db.query<TicketTemplate[]>(
-    sql,
-    [eventId]
-  );
-
-  return rows;
-};
-
 // Get tickets assigned to a specific event
 export const getEventTickets = async (
   eventId: number
@@ -106,42 +69,44 @@ export const createCustomEventTicket = async (
   return result;
 };
 
-// Assign an admin template to an event.
-// Copy the template's current details into the event.
-export const assignTemplateToEvent = async (
+export const updateEventTicket = async (
   eventId: number,
-  templateId: number
+  ticketId: number,
+  name: string,
+  description: string | null,
+  price: number
 ): Promise<ResultSetHeader> => {
   const sql = `
-    INSERT INTO event_tickets (
-      event_id,
-      ticket_id,
-      name,
-      description,
-      price,
-      status
-    )
-    SELECT
-      ?,
-      t.id,
-      t.name,
-      t.description,
-      t.price,
-      'ACTIVE'
-    FROM tickets t
-    INNER JOIN events e
-      ON e.id = ?
-    INNER JOIN categories c
-      ON c.id = e.category_id
-    WHERE t.id = ?
-      AND LOWER(TRIM(t.category)) = LOWER(TRIM(c.name))
-      AND t.status = 'ACTIVE'
+    UPDATE event_tickets
+    SET name = ?, description = ?, price = ?
+    WHERE id = ? AND event_id = ? AND status = 'ACTIVE'
   `;
 
-  const [result] = await db.execute<ResultSetHeader>(
-    sql,
-    [eventId, eventId, templateId]
-  );
+  const [result] = await db.execute<ResultSetHeader>(sql, [
+    name,
+    description,
+    price,
+    ticketId,
+    eventId,
+  ]);
+
+  return result;
+};
+
+export const deleteEventTicket = async (
+  eventId: number,
+  ticketId: number
+): Promise<ResultSetHeader> => {
+  const sql = `
+    UPDATE event_tickets
+    SET status = 'DELETED'
+    WHERE id = ? AND event_id = ? AND status = 'ACTIVE'
+  `;
+
+  const [result] = await db.execute<ResultSetHeader>(sql, [
+    ticketId,
+    eventId,
+  ]);
 
   return result;
 };

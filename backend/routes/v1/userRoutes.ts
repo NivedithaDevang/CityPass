@@ -2,7 +2,6 @@ import express from "express";
 
 import {
   getUser,
-  getUsers,
   updateProfile,
   changePassword,
   deactivateAccount,
@@ -41,12 +40,6 @@ userRouter.patch(
 userRouter.post(
   "/reactivate-login",
   reactivateAndLogin
-);
-
-userRouter.get(
-  "/",
-  authenticate,
-  getUsers
 );
 
 export default userRouter;

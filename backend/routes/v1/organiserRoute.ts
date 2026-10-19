@@ -9,8 +9,9 @@ import { handleValidation } from "../../middleware/validate.js";
 import upload from "../../middleware/upload.js";
 
 import {
-  addTemplateToEvent,
   addCustomEventTicket,
+  editCustomEventTicket,
+  removeCustomEventTicket,
 } from "../../controllers/eventTicketController.js";
 
 
@@ -26,6 +27,7 @@ organiserRouter.patch("/edit-event/:id", authenticate, checkOrganiserRole, uploa
 organiserRouter.patch("/cancel-event/:id", authenticate, checkOrganiserRole, cancelOrganiserEvent);
 organiserRouter.patch("/live-event/:id", authenticate, checkOrganiserRole, goEventLive);
 
-organiserRouter.post("/events/:eventId/tickets/template", authenticate, checkOrganiserRole, addTemplateToEvent);
 organiserRouter.post( "/events/:eventId/tickets/custom", authenticate, checkOrganiserRole, addCustomEventTicket);
+organiserRouter.patch("/events/:eventId/tickets/:ticketId", authenticate, checkOrganiserRole, editCustomEventTicket);
+organiserRouter.delete("/events/:eventId/tickets/:ticketId", authenticate, checkOrganiserRole, removeCustomEventTicket);
 export default organiserRouter;

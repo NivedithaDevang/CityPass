@@ -32,20 +32,6 @@ export const getAllCategory = async (): Promise<Category[]> => {
   return results;
 };
 
-// Get one category
-export const getCategoryById = async (
-  id: number
-): Promise<Category | undefined> => {
-  const sql = `
-    SELECT id, name, is_active
-    FROM categories
-    WHERE id = ?
-  `;
-
-  const [results] = await db.query<Category[]>(sql, [id]);
-  return results[0];
-};
-
 // Create category (defaults to TRUE)
 export const createCategory = async (name: string): Promise<number> => {
   const sql = `

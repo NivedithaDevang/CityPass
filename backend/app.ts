@@ -42,7 +42,6 @@ app.get("/health", async (_req: Request, res: Response) => {
       database: "connected",
     });
   } catch (error) {
-    console.error("Health check failed:", error);
     res.status(503).json({
       status: "error",
       database: "disconnected",

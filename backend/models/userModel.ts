@@ -48,8 +48,7 @@ export const getUserById = async (id: number): Promise<UserRow | undefined> => {
         dob,
         gender,
         profile_image,
-        status,
-        token_version
+        status
       FROM users
       WHERE id = ?
     `,
@@ -126,6 +125,7 @@ export const updateUserProfile = async (
   id: number,
   profile: {
     name: string;
+    email: string;
     phone: string | null;
     city_id: number | null;
     dob: string | null;
@@ -137,6 +137,7 @@ export const updateUserProfile = async (
     UPDATE users
     SET
       name = ?,
+      email = ?,
       phone = ?,
       city_id = ?,
       dob = ?,
@@ -147,6 +148,7 @@ export const updateUserProfile = async (
 
   const [results] = await db.query<ResultSetHeader>(sql, [
     profile.name,
+    profile.email,
     profile.phone,
     profile.city_id,
     profile.dob,
