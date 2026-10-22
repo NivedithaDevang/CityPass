@@ -45,7 +45,7 @@ export const getUserById = async (id: number): Promise<UserRow | undefined> => {
         role,
         phone,
         city_id,
-        dob,
+        DATE_FORMAT(dob, '%Y-%m-%d') AS dob,
         gender,
         profile_image,
         status
@@ -73,8 +73,8 @@ export const reactivateUser = async (
   id: number
 ): Promise<{ token_version: number }> => {
   await db.query(
-    `UPDATE users 
-     SET status = 'ACTIVE', deactivated_at = NULL, token_version = token_version + 1 
+    `UPDATE users
+     SET status = 'ACTIVE', token_version = token_version + 1
      WHERE id = ?`,
     [id]
   );
@@ -85,6 +85,25 @@ export const reactivateUser = async (
   );
 
   return { token_version: rows[0].token_version };
+};
+
+
+export const deactivateUser = async (
+  id: number,
+  reason: string
+): Promise<ResultSetHeader> => {
+  const sql = `
+    UPDATE users 
+    SET 
+      status = 'INACTIVE', 
+      deactivated_at = NOW(), 
+      deactivation_reason = ?, 
+      token_version = token_version + 1 
+    WHERE id = ? AND status = 'ACTIVE'
+  `;
+
+  const [result] = await db.query<ResultSetHeader>(sql, [reason, id]);
+  return result;
 };
 
 export const createUser = async (user: User) => {
@@ -182,6 +201,4 @@ export const getAllUsers = async () => {
 
   return results;
 };
-
-
 

@@ -1,5 +1,5 @@
 import express from "express";
-import { getOrganisers, getMyBookings, getMyEvents} from "../../controllers/organiserController.js";
+import { deactivateOrganiserAccount, getMyBookings, getMyEvents} from "../../controllers/organiserController.js";
 import { addEvent, cancelOrganiserEvent, goEventLive } from "../../controllers/eventController.js";
 import { authenticate } from "../../middleware/authMiddleware.js";
 import { checkOrganiserRole } from "../../middleware/roleMiddleware.js";
@@ -26,7 +26,7 @@ organiserRouter.post("/add-event",authenticate, checkOrganiserRole, upload.singl
 organiserRouter.patch("/edit-event/:id", authenticate, checkOrganiserRole, upload.single("image"), validateEvent, handleValidation, updateEvent);
 organiserRouter.patch("/cancel-event/:id", authenticate, checkOrganiserRole, cancelOrganiserEvent);
 organiserRouter.patch("/live-event/:id", authenticate, checkOrganiserRole, goEventLive);
-
+organiserRouter.patch("/deactivate", authenticate, checkOrganiserRole, deactivateOrganiserAccount);
 organiserRouter.post( "/events/:eventId/tickets/custom", authenticate, checkOrganiserRole, addCustomEventTicket);
 organiserRouter.patch("/events/:eventId/tickets/:ticketId", authenticate, checkOrganiserRole, editCustomEventTicket);
 organiserRouter.delete("/events/:eventId/tickets/:ticketId", authenticate, checkOrganiserRole, removeCustomEventTicket);

@@ -15,18 +15,18 @@ export const verifySuperAdminKey = (
   next: NextFunction
 ) => {
   try {
-    const userRole = req.user?.role?.toUpperCase();
+    const userRole = req.user?.role;
 
     if (userRole !== "SUPER_ADMIN") {
       throw new AppError("You do not have permission to access this action.", 403);
     }
 
     if (!ADMIN_SECRET_KEY) {
-      throw new AppError("The super admin key is not configured on the server.", 503);
+      throw new AppError("Admin verification is temporarily unavailable. Please try again later.", 503);
     }
 
     if (req.body?.secretKey !== ADMIN_SECRET_KEY) {
-      throw new AppError("The entered secret key is incorrect. Please try again", 401);
+      throw new AppError("P", 401);
     }
 
     return res.status(200).json({
@@ -47,20 +47,20 @@ export const approveOrganiser = async (
     const requestId = validateId(req.params.id);
 
     if (!Number.isInteger(requestId) || requestId <= 0) {
-      throw new AppError("A valid request id is required", 400);
+      throw new AppError("No organiser request found with the provided ID.", 400);
     }
 
     const { status, reason } = req.body ?? {};
 
     if (status !== "APPROVED" && status !== "REJECTED") {
-      throw new AppError("Status must be APPROVED or REJECTED", 400);
+      throw new AppError("Invalid request status provided. Expected 'APPROVED' or 'REJECTED'.", 400);
     }
 
     if (status === "APPROVED") {
       await approveOrganiserRequest(requestId);
     } else {
       if (typeof reason !== "string" || !reason.trim()) {
-        throw new AppError("A rejection reason is required", 400);
+        throw new AppError("Please specify why this request is being rejected.", 400);
       }
 
       if (reason.trim().length > 500) {
@@ -85,8 +85,8 @@ export const approveOrganiser = async (
       success: true,
       message:
         status === "APPROVED"
-          ? "Organiser request approved successfully"
-          : "Organiser request rejected successfully",
+          ? "The organiser request has been approved and account access granted."
+          : "The organiser request has been rejected, and the applicant has been notified.",
       status,
       requestId,
     });

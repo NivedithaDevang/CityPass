@@ -19,7 +19,6 @@ export const validateEvent = (
         instructions,
         additional_instructions,
         age_group,
-        age_restriction,
         duration_hours,
         languages,
     } = req.body;
@@ -168,11 +167,11 @@ export const validateEvent = (
         }
     }
 
-    const age = age_group ?? age_restriction;
+    const age = age_group;
 
     if (age !== undefined && typeof age !== "string") {
         return res.status(400).json({
-            message: "Age restriction must be a string",
+            message: "Age group must be a string",
         });
     }
 

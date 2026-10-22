@@ -203,7 +203,7 @@ const userId = validateId(authenticatedUserId);
       throw new AppError("Your account is currently deactivated", 403);
     }
 
-    const userEmail = user.email.toLowerCase().trim();
+    const userEmail = user.email.trim();
 
     res.status(200).json({
       success: true,

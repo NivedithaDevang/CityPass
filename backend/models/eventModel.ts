@@ -338,6 +338,24 @@ export const getEventsByOrganiser = async (organiserId: number): Promise<EventWi
   return results;
 };
 
+export const hasUpcomingOrganiserEvents = async (
+  organiserId: number
+): Promise<boolean> => {
+  const [rows] = await db.query<RowDataPacket[]>(
+    `
+      SELECT id
+      FROM events
+      WHERE organizer_id = ?
+        AND status IN ('PENDING', 'APPROVED')
+        AND (event_date >= CURRENT_DATE OR is_live = 1)
+      LIMIT 1
+    `,
+    [organiserId]
+  );
+
+  return rows.length > 0;
+};
+
 export const getAdminEventRequests = async (): Promise<AdminEventRequest[]> => {
   const sql = `
     SELECT

@@ -170,7 +170,6 @@ export const addEvent = async (
       capacity,
       languages,
       age_group,
-      age_restriction,
       duration_hours,
       instructions,
       additional_instructions,
@@ -235,7 +234,7 @@ const categoryId = validateId(category_id);
 
     const parsedDuration = parseDurationHours(duration_hours);
     const resolvedInstructions = (additional_instructions ?? instructions)?.trim() || null;
-    const resolvedAgeGroup = (age_group ?? age_restriction)?.trim() || null;
+    const resolvedAgeGroup = (age_group)?.trim() || null;
 
     const result = await createEvent({
       organizer_id: organiser.id,
@@ -322,7 +321,6 @@ export const updateEvent = async (
       status,
       languages,
       age_group,
-      age_restriction,
       duration_hours,
       instructions,
       additional_instructions,
@@ -388,8 +386,8 @@ export const updateEvent = async (
     if (languages !== undefined) {
       updatePayload.languages = languages;
     }
-    if (age_group !== undefined || age_restriction !== undefined) {
-      updatePayload.age_group = (age_group ?? age_restriction)?.trim() || null;
+    if (age_group !== undefined) {
+      updatePayload.age_group = (age_group)?.trim() || null;
     }
     if (duration_hours !== undefined) {
       updatePayload.duration_hours = parseDurationHours(duration_hours);

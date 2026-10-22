@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import { RowDataPacket } from "mysql2";
 import { db } from "../config/database.js";
 import AppError from "../types/appError.js";
-
+import cloudinary from "../config/cloudinary.js";
 import {
   getAllRequests,
   getOrganizerRequestById,
@@ -63,30 +63,6 @@ export const getRequests = async (
   }
 };
 
-// GET /v1/organisers/requests/:id
-export const getRequestById = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const id = validateId(req.params.id);
-    const request = await getOrganizerRequestById(id);
-
-    if (!request) {
-      throw new AppError("Organizer request not found.", 404);
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Organizer request fetched successfully",
-      request,
-    });
-  } catch (error) {
-    return next(error);
-  }
-};
-
 // POST /v1/organisers/requests
 export const addRequest = async (
   req: Request,
@@ -116,7 +92,7 @@ export const addRequest = async (
     const latestRequest = await getLatestRequestByUserId(userId);
 
     const organizationName =
-      req.body.organization_name ?? req.body.stageName;
+      req.body.organization_name || req.body.stageName;
 
     const description = req.body.description;
 
@@ -163,7 +139,6 @@ export const addRequest = async (
       );
     }
 
-  
     // Resolve city ID.
     let cityId: number;
 
@@ -196,22 +171,51 @@ export const addRequest = async (
 
 
     // Confirm the selected city is active.
-    
-const [cityCheck] = await db.query<IdRow[]>(
-  `SELECT id
-   FROM cities
-   WHERE id = ? AND is_active = 1
-   LIMIT 1`,
-  [cityId]
-);
+    const [cityCheck] = await db.query<IdRow[]>(
+      `SELECT id
+       FROM cities
+       WHERE id = ? AND is_active = 1
+       LIMIT 1`,
+      [cityId]
+    );
 
-if (cityCheck.length === 0) {
-  throw new AppError(
-    "Selected city is inactive or does not exist.",
-    400
-  );
-}
+    if (cityCheck.length === 0) {
+      throw new AppError(
+        "Selected city is inactive or does not exist.",
+        400
+      );
+    }
 
+    const uploadedFile = req.file;
+    if (!uploadedFile) {
+      throw new AppError(
+        "Please upload a document file for your ID proof.",
+        400
+      );
+    }
+
+    const cloudinaryResult = await new Promise<{
+      secure_url: string;
+    }>((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: "citypass/id-proof",
+          public_id: `user_${userId}_id_proof`,
+          overwrite: true,
+          resource_type: "auto",
+        },
+        (error, result) => {
+          if (error || !result) {
+            reject(new AppError("Cloudinary upload failed", 502));
+            return;
+          }
+
+          resolve({ secure_url: result.secure_url });
+        }
+      );
+
+      stream.end(uploadedFile.buffer);
+    });
 
     const requestData = {
       user_id: userId,
@@ -219,6 +223,7 @@ if (cityCheck.length === 0) {
       description: cleanDescription,
       city_id: cityId,
       id_proof: idProof,
+      id_proof_file: cloudinaryResult.secure_url,
       email,
       phone,
       status: "PENDING",

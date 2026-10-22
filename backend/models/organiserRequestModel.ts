@@ -15,6 +15,7 @@ export type OrganiserReq = {
     city_id?: number;
 
     id_proof?: string;
+    id_proof_file?: string | null;
     email?: string;
     phone?: string;
     status?: OrganizerRequestStatus;
@@ -33,6 +34,7 @@ export type OrgReqRow = RowDataPacket & {
     city?: string;
 
     id_proof?: string;
+    id_proof_file?: string | null;
     email?: string;
     phone?: string;
     rejection_reason?: string | null;
@@ -52,6 +54,7 @@ export const getActiveRequestByUserId = async (
             o.city_id,
             ci.name AS city,
             o.id_proof,
+            o.idproof_image AS id_proof_file,
             o.email,
             o.phone
         FROM organizer_requests o
@@ -100,6 +103,7 @@ export const getAllRequests = async (): Promise<OrgReqRow[]> => {
             o.city_id,
             ci.name AS city,
             o.id_proof,
+            o.idproof_image AS id_proof_file,
             o.email,
             o.phone,
             o.rejection_reason
@@ -128,6 +132,7 @@ export const getOrganizerRequestById = async (
             o.city_id,
             ci.name AS city,
             o.id_proof,
+            o.idproof_image AS id_proof_file,
             o.email,
             o.phone,
             o.rejection_reason
@@ -163,6 +168,7 @@ export const resubmitRejectedRequest = async (
             slug = ?,
             city_id = ?,
             id_proof = ?,
+            idproof_image = ?,
             email = ?,
             phone = ?,
             status = 'PENDING',
@@ -178,6 +184,7 @@ export const resubmitRejectedRequest = async (
         slug,
         request.city_id ?? null,
         request.id_proof ?? null,
+        request.id_proof_file ?? null,
         request.email ?? null,
         request.phone ?? null,
         requestId,
@@ -208,9 +215,10 @@ export const createRequest = async (
             id_proof,
             email,
             phone,
-            status
+            status,
+            idproof_image
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const [result] = await db.execute<ResultSetHeader>(sql, [
@@ -223,6 +231,7 @@ export const createRequest = async (
         request.email ?? null,
         request.phone ?? null,
         request.status ?? "PENDING",
+        request.id_proof_file ?? null
     ]);
 
     return result;

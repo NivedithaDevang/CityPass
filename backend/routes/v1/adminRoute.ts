@@ -1,6 +1,9 @@
 import express from "express";
 import { verifySuperAdminKey, approveOrganiser } from "../../controllers/adminController.js";
-import { getUsers } from "../../controllers/userController.js";
+import {
+  getAdminUserDetails,
+  getUsers,
+} from "../../controllers/userController.js";
 import { getCategories, addCategory, editCategory } from "../../controllers/categoryController.js";
 import { getCities, addCity, editCity } from "../../controllers/cityController.js";
 import { getAdminEventRequests, getEvents, updateEventStatus } from "../../controllers/eventController.js";
@@ -19,6 +22,7 @@ adminRouter.post("/verify-super-admin-key", authenticate, verifySuperAdminKey);
 adminRouter.use( authenticate, checkAdminRole );
 
 adminRouter.get( "/users", getUsers );
+adminRouter.get( "/users/:id/details", getAdminUserDetails );
 adminRouter.get( "/categories", getCategories );
 adminRouter.get( "/cities", getCities );
 adminRouter.get( "/events", getEvents);
@@ -30,13 +34,11 @@ adminRouter.get( "/organiser-requests", getRequests );
 adminRouter.post( "/add-city", validateCity, upload.single("image"), addCity );
 adminRouter.post( "/add-category", validateCategory, addCategory );
 
-
-adminRouter.patch( "/cities/:id", editCity );
 adminRouter.patch( "/categories/:id", editCategory );
 adminRouter.patch( "/events/:id/status", updateEventStatus );
+adminRouter.patch( "/cities/:id", upload.single("image"), editCity );
 adminRouter.patch( "/cities/:id", editCity );
-adminRouter.patch( "/cities/:id", editCity );
-adminRouter.patch( "/organiser-requests/:id", authenticate, checkAdminRole, approveOrganiser);
+adminRouter.patch( "/organiser-requests/:id", approveOrganiser);
 
 
 

@@ -6,14 +6,15 @@ import {
   updateUserProfile,
   getUserAuthByEmail,
   reactivateUser,
+  deactivateUser
 } from "../models/userModel.js";
 
 import cloudinary from "../config/cloudinary.js";
 import { NextFunction, Request, Response } from "express";
-import { ResultSetHeader } from "mysql2";
+import { RowDataPacket } from "mysql2";
+import { db } from "../config/database.js";
 import bcrypt from "bcrypt";
 import { saltRounds } from "../config/env.js";
-import { db } from "../config/database.js";
 import { generateUserToken } from "../middleware/tokenMiddleware.js";
 import AppError from "../types/appError.js";
 import { validateId } from "../validators/idValidator.js";
@@ -61,6 +62,231 @@ export const getUsers = async (
       success: true,
       message: "Users fetched successfully",
       users,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// GET /v1/admin/users/:id/details
+export const getAdminUserDetails = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = validateId(req.params.id);
+    const [userRows] = await db.query<RowDataPacket[]>(
+      `
+        SELECT u.*, c.name AS city_name
+        FROM users u
+        LEFT JOIN cities c ON c.id = u.city_id
+        WHERE u.id = ?
+        LIMIT 1
+      `,
+      [userId]
+    );
+
+    const userRow = userRows[0];
+    if (!userRow) {
+      throw new AppError("User not found", 404);
+    }
+
+    const [bookingRows] = await db.query<RowDataPacket[]>(
+      `
+        SELECT
+          b.id AS booking_id,
+          b.pass_id AS event_id,
+          b.event_ticket_id,
+          b.number_of_tickets,
+          b.total_amount,
+          b.booking_date,
+          b.status AS booking_status,
+          e.name AS event_name,
+          e.slug AS event_slug,
+          e.event_date,
+          e.time AS event_time,
+          e.location,
+          e.status AS event_status,
+          ci.name AS city_name,
+          c.name AS category_name,
+          et.name AS ticket_name
+        FROM bookings b
+        LEFT JOIN events e ON e.id = b.pass_id
+        LEFT JOIN cities ci ON ci.id = e.city_id
+        LEFT JOIN categories c ON c.id = e.category_id
+        LEFT JOIN event_tickets et
+          ON et.id = b.event_ticket_id AND et.event_id = e.id
+        WHERE b.user_id = ?
+        ORDER BY b.booking_date DESC, b.id DESC
+      `,
+      [userId]
+    );
+
+    const [organizerRows] = await db.query<RowDataPacket[]>(
+      "SELECT * FROM organizers WHERE user_id = ? ORDER BY id DESC LIMIT 1",
+      [userId]
+    );
+    const organizerRow = organizerRows[0] as Record<string, unknown> | undefined;
+
+    let organizer = null;
+    if (organizerRow) {
+      const organizerId = Number(organizerRow.id);
+      const [eventRows] = await db.query<
+        Array<RowDataPacket & { id: number; status?: string }>
+      >(
+        `
+          SELECT
+            e.*,
+            ci.name AS city_name,
+            c.name AS category_name
+          FROM events e
+          LEFT JOIN cities ci ON ci.id = e.city_id
+          LEFT JOIN categories c ON c.id = e.category_id
+          WHERE e.organizer_id = ?
+          ORDER BY e.id DESC
+        `,
+        [organizerId]
+      );
+      const [hostedBookingRows] = await db.query<RowDataPacket[]>(
+        `
+          SELECT
+            b.id AS booking_id,
+            b.pass_id AS event_id,
+            b.number_of_tickets,
+            b.total_amount,
+            b.booking_date,
+            b.status AS booking_status,
+            u.name AS customer_name,
+            u.email AS customer_email,
+            et.name AS ticket_name
+          FROM bookings b
+          INNER JOIN events e ON e.id = b.pass_id
+          LEFT JOIN users u ON u.id = b.user_id
+          LEFT JOIN event_tickets et
+            ON et.id = b.event_ticket_id AND et.event_id = e.id
+          WHERE e.organizer_id = ?
+          ORDER BY b.booking_date DESC, b.id DESC
+        `,
+        [organizerId]
+      );
+      const [requestRows] = await db.query<RowDataPacket[]>(
+        `
+          SELECT *
+          FROM organizer_requests
+          WHERE user_id = ?
+          ORDER BY id DESC
+        `,
+        [userId]
+      );
+
+      const hostedBookings = hostedBookingRows as Array<
+        Record<string, unknown>
+      >;
+      const events = eventRows.map((event) => {
+        const eventBookings = hostedBookings.filter(
+          (booking) => Number(booking.event_id) === Number(event.id)
+        );
+        const statusCounts = eventBookings.reduce<{ confirmed: number; cancelled: number }>(
+          (counts, booking) => {
+            const status = String(booking.booking_status || "").toUpperCase();
+            if (status === "CONFIRMED") counts.confirmed += 1;
+            if (status === "CANCELLED") counts.cancelled += 1;
+            return counts;
+          },
+          { confirmed: 0, cancelled: 0 }
+        );
+
+        return {
+          ...event,
+          booking_count: eventBookings.length,
+          confirmed_booking_count: statusCounts.confirmed,
+          cancelled_booking_count: statusCounts.cancelled,
+          bookings: eventBookings,
+        };
+      });
+
+      const requestHistory = requestRows.map((row) => {
+        const request = row as Record<string, unknown>;
+        return {
+          id: request.id,
+          organization_name: request.organization_name,
+          status: request.status,
+          description: request.description,
+          city_id: request.city_id,
+          email: request.email,
+          phone: request.phone,
+          id_proof: request.id_proof,
+          id_proof_file: request.ifproof_image ?? request.id_proof_file,
+          rejection_reason: request.rejection_reason,
+          created_at: request.created_at,
+          updated_at: request.updated_at,
+          approved_at: request.approved_at,
+        };
+      });
+      const approvedRequest = requestHistory.find(
+        (request) => request.status === "APPROVED"
+      );
+
+      organizer = {
+        id: organizerRow.id,
+        stage_name: organizerRow.stage_name,
+        email: organizerRow.email,
+        description: organizerRow.description,
+        status: organizerRow.status,
+        created_at: organizerRow.created_at,
+        deactivated_at: organizerRow.deactivated_at,
+        approved_at:
+          approvedRequest?.approved_at ??
+          approvedRequest?.updated_at ??
+          organizerRow.created_at ??
+          null,
+        request_history: requestHistory,
+        event_summary: {
+          total: events.length,
+          pending: events.filter((event) => event.status === "PENDING").length,
+          approved: events.filter((event) => event.status === "APPROVED").length,
+          rejected: events.filter((event) => event.status === "REJECTED").length,
+          cancelled: events.filter((event) => event.status === "CANCELLED").length,
+          completed: events.filter((event) => event.status === "COMPLETED").length,
+        },
+        events,
+      };
+    }
+
+    const user = {
+      id: userRow.id,
+      name: userRow.name,
+      email: userRow.email,
+      phone: userRow.phone,
+      role: userRow.role,
+      status: userRow.status,
+      city_id: userRow.city_id,
+      city_name: userRow.city_name,
+      dob: userRow.dob,
+      gender: userRow.gender,
+      profile_image: userRow.profile_image,
+      created_at: userRow.created_at,
+      updated_at: userRow.updated_at,
+      deactivated_at: userRow.deactivated_at,
+      deactivation_reason: userRow.deactivation_reason,
+      bookings: bookingRows,
+      booking_summary: {
+        total: bookingRows.length,
+        confirmed: bookingRows.filter(
+          (booking) => booking.booking_status === "CONFIRMED"
+        ).length,
+        cancelled: bookingRows.filter(
+          (booking) => booking.booking_status === "CANCELLED"
+        ).length,
+      },
+      organizer,
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: "User details fetched successfully",
+      user,
     });
   } catch (error) {
     return next(error);
@@ -310,6 +536,7 @@ export const changePassword = async (
 };
 
 // POST /v1/users/deactivate
+// POST /v1/users/deactivate
 export const deactivateAccount = async (
   req: Request,
   res: Response,
@@ -335,28 +562,17 @@ export const deactivateAccount = async (
       );
     }
 
-    if (reason.trim().length > 500) {
+    const trimmedReason = reason.trim();
+
+    if (trimmedReason.length > 500) {
       throw new AppError(
         "Deactivation reason cannot exceed 500 characters",
         400
       );
     }
 
-    const sql = `
-      UPDATE users
-      SET
-        status = 'INACTIVE',
-        deactivated_at = NOW(),
-        deactivation_reason = ?,
-        token_version = token_version + 1
-      WHERE id = ?
-        AND status = 'ACTIVE'
-    `;
-
-    const [result] = await db.query<ResultSetHeader>(sql, [
-      reason.trim(),
-      userId,
-    ]);
+    // Call the model function
+    const result = await deactivateUser(userId, trimmedReason);
 
     if (result.affectedRows === 0) {
       throw new AppError(
@@ -383,7 +599,6 @@ export const deactivateAccount = async (
     return next(error);
   }
 };
-
 // POST /v1/users/reactivate
 export const reactivateAndLogin = async (
   req: Request,

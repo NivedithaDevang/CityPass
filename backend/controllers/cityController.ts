@@ -188,12 +188,12 @@ export const editCity = async (
         : undefined;
 
     const affectedRows = await updateCity(
-      id,
-      name !== undefined ? String(name).trim() : undefined,
-      newImageUrl,
-      description !== undefined ? String(description).trim() : undefined,
-      parsedIsActive
-    );
+  id,
+  name !== undefined ? name.trim() : undefined,
+  newImageUrl,
+  description !== undefined ? description.trim() : undefined,
+  parsedIsActive
+);
 
     if (affectedRows === 0) {
       throw new AppError("City not found", 404);

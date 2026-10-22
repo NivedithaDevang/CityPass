@@ -1,9 +1,6 @@
 import express from "express";
 import {
     getEvents,
-    getActivities,
-    getConcerts,
-    updateEvent,
     getEventDetailsBySlug
 } from "../../controllers/eventController.js";
 
