@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
-import { type Events } from "../../types/auth";
+import { type City, type Events } from "../../types/auth";
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
 import { FaMapPin, FaMicrophone, FaLaughSquint } from "react-icons/fa";
 import { MdSportsFootball, MdTheaterComedy } from "react-icons/md";
@@ -10,6 +10,13 @@ import { IoFastFoodSharp } from "react-icons/io5";
 import { FaPaintbrush, FaMountain } from "react-icons/fa6";
 import type { IconType } from "react-icons";
 import "./EventSection.css";
+
+type EventCardData = Events & {
+  city?: string | { name?: string } | null;
+  poster_url?: string | null;
+  image_url?: string | null;
+  image?: string | null;
+};
 
 const isUpcomingEvent = (event: Events): boolean => {
   if (!event.event_date) return false;
@@ -40,7 +47,8 @@ const isUpcomingEvent = (event: Events): boolean => {
 function EventSection() {
   const navigate = useNavigate();
   const { selectedCity } = useCity(); // Access current selected city
-  const [events, setEvents] = useState<Events[]>([]);
+  const [events, setEvents] = useState<EventCardData[]>([]);
+  const [cityIdMap, setCityIdMap] = useState<Record<string | number, string>>({});
 
   const categoryIcons: Record<string, IconType> = {
     Music: FaMicrophone,
@@ -69,7 +77,7 @@ function EventSection() {
       try {
         const response = await axios.get(`${API_BASE_URL}/v1/events/events`);
         const rawData = response.data;
-        const eventList: Events[] = Array.isArray(rawData)
+        const eventList: EventCardData[] = Array.isArray(rawData)
           ? rawData
           : rawData?.events || rawData?.data || [];
         setEvents(eventList);
@@ -81,6 +89,55 @@ function EventSection() {
 
     fetchEvents();
   }, []);
+
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/v1/cities`);
+        const data = response.data;
+        const cityList: City[] = Array.isArray(data)
+          ? data
+          : data?.cities || data?.city || data?.data?.cities || data?.data || [];
+
+        if (!Array.isArray(cityList)) {
+          console.error("Cities response is not an array:", data);
+          return;
+        }
+
+        const idMap: Record<string | number, string> = {};
+        cityList.forEach((city) => {
+          const name = city?.name?.trim();
+          if (name && city.id !== undefined && city.id !== null) {
+            idMap[city.id] = name;
+          }
+        });
+        setCityIdMap(idMap);
+      } catch (error) {
+        console.error("Error fetching cities:", error);
+      }
+    };
+
+    fetchCities();
+  }, []);
+
+  const getResolvedCityName = (event: EventCardData): string => {
+    if (event.city_name && typeof event.city_name === "string") {
+      return event.city_name.trim();
+    }
+    if (event.city && typeof event.city === "string") {
+      return event.city.trim();
+    }
+    if (
+      typeof event.city === "object" &&
+      typeof event.city?.name === "string"
+    ) {
+      return event.city.name.trim();
+    }
+    if (event.city_id != null && cityIdMap[event.city_id]) {
+      return cityIdMap[event.city_id];
+    }
+    return "";
+  };
 
   const formatEventDate = (eventDate?: string) => {
     if (!eventDate) return "Date to be announced";
@@ -98,7 +155,7 @@ function EventSection() {
   };
 
   // Filter events by selected city (supports event.city or matches inside event.location)
-  const filteredEvents = events.filter((event: any) => {
+  const filteredEvents = events.filter((event) => {
     if (!isUpcomingEvent(event)) return false;
 
     if (!selectedCity || selectedCity === ALL_LOCATIONS) {
@@ -106,7 +163,7 @@ function EventSection() {
     }
 
     const targetCity = selectedCity.trim().toLowerCase();
-    const eventCity = (event.city || "").trim().toLowerCase();
+    const eventCity = getResolvedCityName(event).toLowerCase();
     const eventLocation = (event.location || "").trim().toLowerCase();
 
     return (
@@ -115,8 +172,8 @@ function EventSection() {
     );
   });
 
-  // Limit display to the first 8 matching events
-  const displayedEvents = filteredEvents.slice(0, 8);
+  // Limit display to the first 5 matching events
+  const displayedEvents = filteredEvents.slice(0, 5);
 
   return (
     <section className="eventsec-section">
@@ -133,6 +190,7 @@ function EventSection() {
       <div className="eventsec-grid">
         {displayedEvents.map((event) => {
           const CategoryIcon = getCategoryIcon(event.category_name);
+          const cityName = getResolvedCityName(event);
           const eventBackgrounds = [
             "/eventBG/image1.png",
             "/eventBG/image2.png",
@@ -140,9 +198,9 @@ function EventSection() {
           ];
           const fallbackImage = eventBackgrounds[event.id % eventBackgrounds.length];
           const eventImage =
-            (event as any).poster_url ||
-            (event as any).image_url ||
-            (event as any).image ||
+            event.poster_url ||
+            event.image_url ||
+            event.image ||
             fallbackImage;
 
           return (
@@ -174,13 +232,16 @@ function EventSection() {
                 </span>
                 <p className="eventsec-location">
                   <FaMapPin className="eventsec-location-pin" />
-                  {event.location || (event as any).city_name || "Location to be announced"}
+                  {event.location || cityName || "Location to be announced"}
                 </p>
               </div>
 
               <div className="eventsec-card-content">
                 <span className="event-date">
                   {formatEventDate(event.event_date)}
+                </span>
+                <span className="event-date">
+                  {cityName || "City to be announced"}
                 </span>
                 <div className="eventsec-title-row">
                   <h3>{event.name || "Untitled event"}</h3>

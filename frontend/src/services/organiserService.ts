@@ -24,7 +24,6 @@ export type OrganiserEvent = {
   rejection_reason?: string | null;
   languages?: string | string[] | null;
   age_group?: string | null;
-  age_restriction?: string | null;
   duration_hours?: number | string | null;
   additional_instructions?: string | null;
   instructions?: string | null;
@@ -45,7 +44,6 @@ export interface CreateOrganiserEventData {
   instructions?: string;
   additional_instructions?: string;
   languages?: string | string[];
-  age_restriction?: string;
   age_group?: string;
   duration_hours?: number;
 }
@@ -126,10 +124,9 @@ export const createOrganiserEvent = async (
     formData.append("instructions", instructions);
   }
 
-  const ageGroup = data.age_group || data.age_restriction;
+  const ageGroup = data.age_group;
   if (ageGroup) {
     formData.append("age_group", ageGroup);
-    formData.append("age_restriction", ageGroup);
   }
 
   if (data.duration_hours !== undefined) {
@@ -221,5 +218,8 @@ export const liveEvent = async (
   return response.data;
 };
 
+export const deactivateOrganiser = async (): Promise<void> => {
+  await organiserApi.patch("/deactivate");
+};
 
 export default organiserApi;

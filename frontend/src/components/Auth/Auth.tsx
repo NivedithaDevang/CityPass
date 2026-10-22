@@ -32,6 +32,7 @@ interface AuthProps {
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_REGEX = /^[A-Za-z\s.'-]+$/;
 
 function Auth({
   onClose,
@@ -53,6 +54,7 @@ function Auth({
   const [confirmFocused, setConfirmFocused] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const [showReactivatePrompt, setShowReactivatePrompt] = useState(false);
@@ -102,6 +104,25 @@ function Auth({
     setPasswordFocused(false);
     setConfirmFocused(false);
     setError(null);
+    setNameError(null);
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setName(val);
+    setError(null);
+
+    if (!val) {
+      setNameError(null);
+      return;
+    }
+
+    // Check if user entered numbers or invalid characters
+    if (!NAME_REGEX.test(val)) {
+      setNameError("Name can only contain letters and spaces (no numbers or special characters).");
+    } else {
+      setNameError(null);
+    }
   };
 
   const handleSuccessfulAuth = (authenticatedUser: User) => {
@@ -144,8 +165,20 @@ function Auth({
 
     // Registration validations
     if (!isLogin) {
-      if (!name.trim()) {
+      const trimmedName = name.trim();
+
+      if (!trimmedName) {
         setError("Please enter your full name.");
+        return;
+      }
+
+      if (!NAME_REGEX.test(trimmedName)) {
+        setError("Name can only contain letters and spaces.");
+        return;
+      }
+
+      if (trimmedName.length < 2) {
+        setError("Name must be at least 2 characters long.");
         return;
       }
 
@@ -359,16 +392,32 @@ function Auth({
 
             <form onSubmit={handleSubmit} noValidate>
               {!isLogin && (
-                <input
-                  type="text"
-                  placeholder="Full Name"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    setError(null);
-                  }}
-                  required
-                />
+                <div className="input-group">
+                  <input
+                    type="text"
+                    placeholder="Full Name"
+                    value={name}
+                    onChange={handleNameChange}
+                    className={nameError ? "input-match-fail" : ""}
+                    required
+                  />
+                  {nameError && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        fontSize: "0.8rem",
+                        color: "#ef4444",
+                        marginTop: "4px",
+                        paddingLeft: "4px",
+                      }}
+                    >
+                      <FaTimesCircle />
+                      <span>{nameError}</span>
+                    </div>
+                  )}
+                </div>
               )}
 
               {!isLogin && (
@@ -482,7 +531,7 @@ function Auth({
                 className="auth-submit"
                 disabled={
                   isLoading ||
-                  (!isLogin && (!allRulesPassed || !isConfirmValid))
+                  (!isLogin && (Boolean(nameError) || !allRulesPassed || !isConfirmValid))
                 }
               >
                 {isLoading

@@ -42,7 +42,6 @@ interface EventWithTickets extends Events {
   instructions?: string;
   additional_instructions?: string;
   languages?: string | string[];
-  age_restriction?: string;
   age_group?: string;
   duration_hours?: number | string;
 }
@@ -295,7 +294,7 @@ function EventDetails() {
                     </span>
 
                     <span className="details-sub-tag">
-                      {event.age_group || event.age_restriction || "All Ages"}
+                      {event.age_group || "All Ages"}
                     </span>
 
                     <span className="details-sub-tag">

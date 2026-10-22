@@ -34,7 +34,7 @@ export const Footer = () => {
             <ul className="footer-nav-list">
               <li><Link to="/">Home</Link></li>
               <li><Link to="/events">Explore Cities</Link></li>
-              <li><Link to="/settings">Host an Event</Link></li>
+              <li><Link to="/settings/host-an-event">Host an Event</Link></li>
               <li><Link to="/settings">My Account</Link></li>
             </ul>
           </div>

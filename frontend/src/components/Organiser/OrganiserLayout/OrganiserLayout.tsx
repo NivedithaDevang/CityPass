@@ -2,6 +2,7 @@ import axios from "axios";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../../config/config";
 import {CalendarDays, LayoutDashboard, LogOut, Plus, Settings, Users } from "lucide-react";
+import { FaUserSlash } from "react-icons/fa";
 import "./OrganiserLayout.css";
 
 const authApi = axios.create({ 
@@ -53,6 +54,12 @@ export const OrganiserLayout = () => {
           <NavLink to="/organiser/attendees">
           <Users size={17} />
           <span>Bookings & attendees</span>
+          </NavLink>
+
+          <NavLink to="/organiser/deactivate">
+          <FaUserSlash
+ size={17} />
+          <span>Deactivate Organiser Account</span>
           </NavLink>
 
         </nav>

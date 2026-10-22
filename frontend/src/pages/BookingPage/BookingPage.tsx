@@ -1,7 +1,7 @@
 
 import Navbar from "../../components/Navbar/Navbar";
 import { Footer } from "../../components/Footer/Footer";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import { useUser } from "../../context/UserContext";
@@ -369,7 +369,7 @@ function DigitalTicketModal({
 }
 
 export function BookingPage() {
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const navigate = useNavigate();
 
   const [bookings, setBookings] = useState<BookingItem[]>([]);
@@ -389,7 +389,7 @@ export function BookingPage() {
   const [cancelError, setCancelError] = useState<string | null>(null);
 
   // Fetch the latest bookings from the backend.
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     const response = await axios.get(
       `${API_BASE_URL}/v1/bookings`,
       { withCredentials: true }
@@ -399,10 +399,21 @@ export function BookingPage() {
       response.data.bookings || response.data.booking || [];
 
     setBookings(Array.isArray(list) ? list : [list]);
-  };
+  }, []);
 
   useEffect(() => {
+    if (userLoading) return;
+
+    let cancelled = false;
+
     const loadBookings = async () => {
+      if (!user) {
+        setBookings([]);
+        setError("Unable to load bookings. Please sign in and try again.");
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError("");
@@ -411,16 +422,24 @@ export function BookingPage() {
       } catch (err) {
         console.error("Error loading bookings:", err);
 
-        setError(
-          "Unable to load bookings. Please sign in and try again."
-        );
+        if (!cancelled) {
+          setError(
+            "Unable to load bookings. Please sign in and try again."
+          );
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     void loadBookings();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchBookings, user, userLoading]);
 
   // Open the cancellation modal with the correct default options.
   const openCancelModal = (booking: BookingItem) => {

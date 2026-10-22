@@ -27,6 +27,8 @@ import {
   FaClock,
   FaCircleXmark,
   FaRotateRight,
+  FaPaperclip,
+  FaFileLines,
 } from "react-icons/fa6";
 import "./SettingsView.css";
 import { PASSWORD_RULES } from "../../config/passwordRules";
@@ -329,6 +331,7 @@ function SettingsView() {
   };
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const idFileInputRef = useRef<HTMLInputElement | null>(null);
   const cityDropdownRef = useRef<HTMLDivElement | null>(null);
   const cityDropdownButtonRef = useRef<HTMLButtonElement | null>(null);
   const cityOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -383,7 +386,10 @@ function SettingsView() {
     email: user?.email || "",
     phone: (user as any)?.phone || "",
     description: "",
+    idproof_image: ""
   });
+
+  const [idProofFile, setIdProofFile] = useState<File | null>(null);
 
   const [orgMessage, setOrgMessage] = useState("");
   const [orgError, setOrgError] = useState("");
@@ -837,6 +843,7 @@ function SettingsView() {
         id_proof_type: value,
         id_proof: "",
       }));
+      setIdProofFile(null);
     } else if (name === "id_proof") {
       setOrg((prev) => ({
         ...prev,
@@ -846,6 +853,20 @@ function SettingsView() {
       setOrg((prev) => ({ ...prev, [name]: value }));
     }
 
+    setOrgMessage("");
+    setOrgError("");
+  };
+
+  const handleIdProofFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setOrgError("ID proof file size must be less than 10 MB.");
+      return;
+    }
+
+    setIdProofFile(file);
     setOrgMessage("");
     setOrgError("");
   };
@@ -925,6 +946,11 @@ function SettingsView() {
       return;
     }
 
+    if (!idProofFile) {
+      setOrgError("Please upload a document file (image, PDF, or scan) of your ID proof.");
+      return;
+    }
+
     setShowOrgConfirmModal(true);
   };
 
@@ -932,24 +958,36 @@ function SettingsView() {
     try {
       setLoading(true);
 
+      const formData = new FormData();
+      formData.append("full_name", org.fullName.trim());
+      formData.append("organization_name", org.stageName.trim());
+      formData.append("city", org.city.trim());
+      formData.append("id_proof_type", org.id_proof_type);
+      formData.append("id_proof", org.id_proof.trim().toUpperCase());
+      formData.append("email", org.email.trim());
+      formData.append("phone", org.phone.trim());
+      formData.append("description", org.description.trim());
+      formData.append("idproof_image", org.idproof_image);
+
+      if (idProofFile) {
+        formData.append("id_proof_file", idProofFile);
+      }
+
       await axios.post(
         `${API_BASE_URL}/v1/organiser-requests`,
+        formData,
         {
-          full_name: org.fullName.trim(),
-          organization_name: org.stageName.trim(),
-          city: org.city.trim(),
-          id_proof_type: org.id_proof_type,
-          id_proof: org.id_proof.trim().toUpperCase(),
-          email: org.email.trim(),
-          phone: org.phone.trim(),
-          description: org.description.trim(),
-        },
-        { withCredentials: true }
+          withCredentials: true,
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
       );
 
       setShowOrgConfirmModal(false);
       setOrgRequestStatus({ status: "PENDING" });
       setIsReapplying(false);
+      setIdProofFile(null);
     } catch (error: any) {
       setShowOrgConfirmModal(false);
 
@@ -1473,7 +1511,7 @@ function SettingsView() {
                     </h3>
 
                     <p className="org-status-desc">
-                      You have already submitted an organiser request. Your application is currently under review by our admin team. Kindly wait for approval or updates via your registered email.
+                      You have submitted an organiser request. Your application is currently under review by our admin team. Kindly wait for approval or updates via your registered email.
                     </p>
                   </div>
                 )}
@@ -1646,29 +1684,90 @@ function SettingsView() {
                     </div>
 
                     {org.id_proof_type && (
-                      <div className="form-group full-width">
-                        <label htmlFor="id_proof">
-                          {selectedIdProof?.label} Number *
-                        </label>
-                        <input
-                          id="id_proof"
-                          type="text"
-                          name="id_proof"
-                          value={org.id_proof}
-                          onChange={handleOrgChange}
-                          placeholder={
-                            selectedIdProof?.placeholder || "Enter ID proof number"
-                          }
-                          maxLength={
-                            org.id_proof_type === "aadhar"
-                              ? 12
-                              : org.id_proof_type === "pan"
-                              ? 10
-                              : 20
-                          }
-                          required
-                        />
-                      </div>
+                      <>
+                        <div className="form-group full-width">
+                          <label htmlFor="id_proof">
+                            {selectedIdProof?.label} Number *
+                          </label>
+                          <input
+                            id="id_proof"
+                            type="text"
+                            name="id_proof"
+                            value={org.id_proof}
+                            onChange={handleOrgChange}
+                            placeholder={
+                              selectedIdProof?.placeholder || "Enter ID proof number"
+                            }
+                            maxLength={
+                              org.id_proof_type === "aadhar"
+                                ? 12
+                                : org.id_proof_type === "pan"
+                                ? 10
+                                : 20
+                            }
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group full-width">
+                          <label htmlFor="id_proof_file">
+                            Upload {selectedIdProof?.label} Document (Image or PDF) *
+                          </label>
+
+                          <div
+                            style={{
+                              border: "1px dashed var(--border-color, #374151)",
+                              borderRadius: "8px",
+                              padding: "16px",
+                              textAlign: "center",
+                              background: "rgba(255, 255, 255, 0.02)",
+                              cursor: "pointer",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: "8px",
+                            }}
+                            onClick={() => idFileInputRef.current?.click()}
+                          >
+                            <input
+                              ref={idFileInputRef}
+                              id="id_proof_file"
+                              type="file"
+                              accept="image/*,application/pdf"
+                              style={{ display: "none" }}
+                              onChange={handleIdProofFileChange}
+                            />
+
+                            {idProofFile ? (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  color: "#3b82f6",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                <FaFileLines size={20} />
+                                <span>{idProofFile.name}</span>
+                                <span style={{ color: "#9ca3af", fontSize: "0.85rem" }}>
+                                  ({(idProofFile.size / (1024 * 1024)).toFixed(2)} MB)
+                                </span>
+                              </div>
+                            ) : (
+                              <>
+                                <FaPaperclip size={22} style={{ color: "#9ca3af" }} />
+                                <span style={{ fontSize: "0.9rem", color: "#d1d5db" }}>
+                                  Click or tap to upload document
+                                </span>
+                                <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+                                  Supports JPG, PNG, WEBP, or PDF (Max 10 MB)
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </>
                     )}
 
                     <div className="form-group full-width">

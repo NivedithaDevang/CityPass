@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Clock,
   Edit,
+  FileEdit,
   Globe2,
   Info,
   Loader2,
@@ -14,6 +15,7 @@ import {
   Plus,
   Search,
   Tag,
+  Trash2,
   TrendingUp,
   UserCheck,
   X,
@@ -38,6 +40,13 @@ import {
 
 import { CreateEventModal } from "../CreateEventModal/CreateEventModal";
 import EventTicketManager from "../../../components/EventTicketManager/EventTicketManager";
+import { useUser } from "../../../context/UserContext";
+import {
+  deleteOrganiserEventDraft,
+  getOrganiserEventDrafts,
+  saveOrganiserEventDraft,
+  type OrganiserEventDraft,
+} from "../../../services/organiserEventDrafts";
 import "./OrganiserEvents.css";
 
 type EventStatusFilter = "ALL" | OrganiserEvent["status"];
@@ -142,6 +151,7 @@ const getCategoryIcon = (categoryName?: string | null) => {
 
 function OrganiserEvents() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useUser();
 
   const [events, setEvents] = useState<OrganiserEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,12 +166,20 @@ function OrganiserEvents() {
 
   const [editingEvent, setEditingEvent] =
     useState<OrganiserEvent | null>(null);
+  const [drafts, setDrafts] = useState<OrganiserEventDraft[]>([]);
+  const [editingDraft, setEditingDraft] =
+    useState<OrganiserEventDraft | null>(null);
+  const [draftsLoading, setDraftsLoading] = useState(true);
+  const [draftsError, setDraftsError] = useState("");
 
   const [notice, setNotice] = useState("");
   const [ticketEventId, setTicketEventId] = useState<number | null>(null);
 
   const isCreateOpen =
-    searchParams.get("create") === "1" || Boolean(editingEvent);
+    searchParams.get("create") === "1" ||
+    Boolean(editingEvent) ||
+    Boolean(editingDraft);
+  const organiserId = String(user?.id ?? "");
 
   const [cancel, setCancel] = useState<Decision | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -260,6 +278,36 @@ function OrganiserEvents() {
     void loadEvents();
   }, [loadEvents]);
 
+  useEffect(() => {
+    if (!organiserId) return;
+
+    let active = true;
+
+    getOrganiserEventDrafts(organiserId)
+      .then((savedDrafts) => {
+        if (active) {
+          setDrafts(savedDrafts);
+          setDraftsError("");
+        }
+      })
+      .catch((draftError: unknown) => {
+        if (active) {
+          setDraftsError(
+            draftError instanceof Error
+              ? draftError.message
+              : "Could not load saved drafts.",
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setDraftsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [organiserId]);
+
   const filteredEvents = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
 
@@ -292,6 +340,7 @@ function OrganiserEvents() {
 
   const closeFormModal = () => {
     setEditingEvent(null);
+    setEditingDraft(null);
 
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete("create");
@@ -322,7 +371,56 @@ function OrganiserEvents() {
 
   const openCreateModal = () => {
     setEditingEvent(null);
+    setEditingDraft(null);
     setSearchParams({ create: "1" });
+  };
+
+  const saveDraft = async (draft: OrganiserEventDraft) => {
+    if (!organiserId) {
+      throw new Error("Your organiser account could not be identified.");
+    }
+
+    const savedDraft = { ...draft, organiserId };
+    await saveOrganiserEventDraft(savedDraft);
+    setDrafts((current) => [
+      savedDraft,
+      ...current.filter((item) => item.id !== savedDraft.id),
+    ]);
+    setNotice("Event draft saved on this device.");
+    window.setTimeout(() => setNotice(""), 5000);
+  };
+
+  const removeDraft = async (draftId: string) => {
+    try {
+      await deleteOrganiserEventDraft(draftId);
+      setDrafts((current) => current.filter((draft) => draft.id !== draftId));
+      setDraftsError("");
+    } catch (draftError: unknown) {
+      setDraftsError(
+        draftError instanceof Error
+          ? draftError.message
+          : "Could not delete this draft.",
+      );
+    }
+  };
+
+  const submitDraft = async (draftId: string) => {
+    try {
+      await deleteOrganiserEventDraft(draftId);
+      setDrafts((current) => current.filter((draft) => draft.id !== draftId));
+    } catch {
+      setDraftsError(
+        "The event was submitted, but its saved draft could not be removed. You can delete it from saved drafts.",
+      );
+    }
+  };
+
+  const openDraft = (draft: OrganiserEventDraft) => {
+    setEditingEvent(null);
+    setEditingDraft(draft);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("create");
+    setSearchParams(nextParams, { replace: true });
   };
 
   const openEditModal = (event: OrganiserEvent) => {
@@ -368,6 +466,69 @@ function OrganiserEvents() {
             <X size={16} />
           </button>
         </div>
+      )}
+
+      {(draftsLoading || draftsError || drafts.length > 0) && (
+        <section className="org-saved-drafts" aria-labelledby="org-saved-drafts-title">
+          <div className="org-saved-drafts-heading">
+            <div>
+              <span className="org-eyebrow">NOT SUBMITTED</span>
+              <h2 id="org-saved-drafts-title">Saved drafts</h2>
+            </div>
+            <span className="org-saved-drafts-count">{drafts.length}</span>
+          </div>
+
+          {draftsLoading && (
+            <p className="org-drafts-message" role="status">
+              Loading saved drafts...
+            </p>
+          )}
+
+          {draftsError && (
+            <p className="org-drafts-error" role="alert">
+              {draftsError}
+            </p>
+          )}
+
+          {!draftsLoading && drafts.length > 0 && (
+            <div className="org-drafts-grid">
+              {drafts.map((draft) => (
+                <article className="org-draft-card" key={draft.id}>
+                  <div>
+                    <span className="org-draft-status">DRAFT</span>
+                    <h3>{draft.formData.name.trim() || "Untitled event"}</h3>
+                    <p>
+                      Last saved{" "}
+                      {new Date(draft.updatedAt).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <div className="org-draft-actions">
+                    <button
+                      type="button"
+                      className="org-draft-edit"
+                      onClick={() => openDraft(draft)}
+                    >
+                      <FileEdit size={15} />
+                      Edit & submit
+                    </button>
+                    <button
+                      type="button"
+                      className="org-draft-delete"
+                      onClick={() => void removeDraft(draft.id)}
+                      aria-label={`Delete ${draft.formData.name || "untitled event"} draft`}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
       )}
 
       <div className="org-event-toolbar">
@@ -712,6 +873,10 @@ function OrganiserEvents() {
         onClose={closeFormModal}
         onEventSaved={handleEventSaved}
         eventToEdit={editingEvent}
+        draftToEdit={editingDraft}
+        organiserId={organiserId}
+        onDraftSaved={saveDraft}
+        onDraftSubmitted={submitDraft}
       />
 
       {selectedEvent && (
@@ -792,8 +957,7 @@ function EventDetailsModal({
   const imageUrl = (event as any).image_url || (event as any).image;
   const instructions =
     (event as any).additional_instructions || (event as any).instructions;
-  const ageGroup =
-    (event as any).age_group || (event as any).age_restriction || "All Ages";
+  const ageGroup = (event as any).age_group || "All Ages";
 
   const isRejected = event.status === "REJECTED";
   const isApproved = event.status === "APPROVED";
@@ -974,7 +1138,7 @@ function EventDetailsModal({
             </div>
 
             <div className="org-detail-metric-card">
-              <span className="metric-label">Capacity</span>
+              <span className="metric-label">Total Spots</span>
               <span className="metric-value">{event.capacity || "—"}</span>
               <span className="metric-sub">Max attendees</span>
             </div>

@@ -4,6 +4,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
   type ReactNode,
 } from "react";
 
@@ -31,6 +32,7 @@ interface UserProviderProps {
 export function UserProvider({ children }: UserProviderProps) {
   const [user, setUserState] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const sessionRequestVersion = useRef(0);
 
   const [profileImage, setProfileImageState] =
     useState<string | null>(null);
@@ -62,6 +64,7 @@ export function UserProvider({ children }: UserProviderProps) {
 
   const setUser = useCallback(
     (newUser: User | null) => {
+      sessionRequestVersion.current += 1;
       setUserState(newUser);
 
       setProfileImageState(
@@ -73,6 +76,8 @@ export function UserProvider({ children }: UserProviderProps) {
 
   useEffect(() => {
     const checkSession = async () => {
+      const requestVersion = sessionRequestVersion.current;
+
       try {
         const response = await axios.get(
           `${API_BASE_URL}/v1/auth/profile`,
@@ -81,9 +86,13 @@ export function UserProvider({ children }: UserProviderProps) {
           }
         );
 
+        if (requestVersion !== sessionRequestVersion.current) return;
+
         setUser(response.data.user);
-      } catch (error) {
-        setUser(null);
+      } catch {
+        if (requestVersion === sessionRequestVersion.current) {
+          setUser(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -94,6 +103,7 @@ export function UserProvider({ children }: UserProviderProps) {
 
 
   const clearUser = useCallback(() => {
+    sessionRequestVersion.current += 1;
     setUserState(null);
     setProfileImageState(null);
   }, []);

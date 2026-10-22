@@ -16,6 +16,10 @@ import {
   type OrganiserLookupOption,
 } from "../../../services/organiserService";
 import { createCustomEventTicket } from "../../../services/eventTicketService";
+import {
+  type OrganiserEventDraft,
+  type OrganiserEventDraftForm,
+} from "../../../services/organiserEventDrafts";
 import "./CreateEventModal.css";
 
 interface CreateEventModalProps {
@@ -23,6 +27,10 @@ interface CreateEventModalProps {
   onClose: () => void;
   onEventSaved: (savedEvent: OrganiserEvent) => void;
   eventToEdit?: OrganiserEvent | null;
+  draftToEdit?: OrganiserEventDraft | null;
+  organiserId: string;
+  onDraftSaved: (draft: OrganiserEventDraft) => Promise<void>;
+  onDraftSubmitted: (draftId: string) => Promise<void>;
 }
 
 export interface TicketDraft {
@@ -32,20 +40,7 @@ export interface TicketDraft {
   price: string;
 }
 
-interface FormState {
-  name: string;
-  description: string;
-  instructions: string;
-  location: string;
-  city_id: string;
-  category_id: string;
-  event_date: string;
-  time: string;
-  price: number | "";
-  capacity: string;
-  age_restriction: string;
-  duration: string;
-}
+type FormState = OrganiserEventDraftForm;
 
 const initialFormState: FormState = {
   name: "",
@@ -58,7 +53,7 @@ const initialFormState: FormState = {
   time: "",
   price: "",
   capacity: "",
-  age_restriction: "All Ages",
+  age_group: "All Ages",
   duration: "2 Hours",
 };
 
@@ -79,7 +74,7 @@ const AVAILABLE_LANGUAGES = [
   "Gujarati",
 ];
 
-const AGE_RESTRICTIONS = ["All Ages", "3+", "7+", "12+", "16+", "18+", "21+"];
+const AGE_GROUPS = ["All Ages", "3+", "7+", "12+", "16+", "18+", "21+"];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
 
@@ -88,6 +83,10 @@ export const CreateEventModal = ({
   onClose,
   onEventSaved,
   eventToEdit,
+  draftToEdit,
+  organiserId,
+  onDraftSaved,
+  onDraftSubmitted,
 }: CreateEventModalProps) => {
   const [formData, setFormData] = useState<FormState>(initialFormState);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([
@@ -130,9 +129,8 @@ export const CreateEventModal = ({
           eventToEdit.capacity !== undefined && eventToEdit.capacity !== null
             ? String(eventToEdit.capacity)
             : "",
-        age_restriction:
+        age_group:
           (eventToEdit as any).age_group ||
-          (eventToEdit as any).age_restriction ||
           "All Ages",
         duration:
           (eventToEdit as any).duration_hours !== undefined &&
@@ -155,6 +153,17 @@ export const CreateEventModal = ({
 
       const existingImg = (eventToEdit as any).image_url || (eventToEdit as any).image;
       if (existingImg) setImagePreview(existingImg);
+    } else if (draftToEdit) {
+      setFormData({
+        ...draftToEdit.formData,
+        age_group: draftToEdit.formData.age_group || "All Ages",
+      });
+      setSelectedLanguages(draftToEdit.selectedLanguages);
+      setTickets(draftToEdit.tickets);
+      setImage(draftToEdit.image);
+      setImagePreview(
+        draftToEdit.image ? URL.createObjectURL(draftToEdit.image) : "",
+      );
     } else {
       setFormData(initialFormState);
       setSelectedLanguages(["English"]);
@@ -165,7 +174,7 @@ export const CreateEventModal = ({
       ]);
     }
     setIsLightboxOpen(false);
-  }, [isOpen, eventToEdit]);
+  }, [isOpen, eventToEdit, draftToEdit]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -344,8 +353,7 @@ export const CreateEventModal = ({
           instructions: formData.instructions.trim() || undefined,
           additional_instructions: formData.instructions.trim() || undefined,
           languages: languagesPayload,
-          age_restriction: formData.age_restriction,
-          age_group: formData.age_restriction,
+          age_group: formData.age_group,
           duration: formData.duration.trim() || "2 Hours",
           duration_hours: formData.duration.trim() || "2 Hours",
           location: formData.location.trim() || undefined,
@@ -374,6 +382,7 @@ export const CreateEventModal = ({
         }
 
         onEventSaved(createdEvent);
+        if (draftToEdit) await onDraftSubmitted(draftToEdit.id);
         requestClose();
       } catch (submitError: unknown) {
         setError(
@@ -429,12 +438,10 @@ export const CreateEventModal = ({
 
     const originalAge = (
       (eventToEdit as any).age_group ||
-      (eventToEdit as any).age_restriction ||
       "All Ages"
     ).trim();
-    if (formData.age_restriction !== originalAge) {
-      patchPayload.age_group = formData.age_restriction;
-      patchPayload.age_restriction = formData.age_restriction;
+    if (formData.age_group !== originalAge) {
+      patchPayload.age_group = formData.age_group;
     }
 
     const originalDuration = String(
@@ -472,6 +479,39 @@ export const CreateEventModal = ({
     }
   };
 
+  const handleSaveDraft = async () => {
+    if (isEditMode || submitting) return;
+
+    setError(null);
+    setSubmitting(true);
+
+    const now = new Date().toISOString();
+    const draft: OrganiserEventDraft = {
+      id: draftToEdit?.id ?? crypto.randomUUID(),
+      organiserId: draftToEdit?.organiserId ?? organiserId,
+      createdAt: draftToEdit?.createdAt ?? now,
+      updatedAt: now,
+      formData: { ...formData },
+      selectedLanguages: [...selectedLanguages],
+      tickets: tickets.map((ticket) => ({ ...ticket })),
+      image,
+    };
+
+    try {
+      await onDraftSaved(draft);
+      requestClose();
+    } catch (saveError: unknown) {
+      setError(
+        getOrganiserErrorMessage(
+          saveError,
+          "Could not save your draft. Please try again.",
+        ),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <>
       <div
@@ -489,10 +529,18 @@ export const CreateEventModal = ({
           <header className="org-modal-header">
             <div>
               <span className="org-modal-eyebrow">
-                {isEditMode ? "EDIT & RESUBMIT" : "NEW LISTING"}
+                {isEditMode
+                  ? "EDIT & RESUBMIT"
+                  : draftToEdit
+                    ? "EDIT SAVED DRAFT"
+                    : "NEW LISTING"}
               </span>
               <h3 id="org-create-title">
-                {isEditMode ? "Edit event details" : "Create an event"}
+                {isEditMode
+                  ? "Edit event details"
+                  : draftToEdit
+                    ? "Edit saved draft"
+                    : "Create an event"}
               </h3>
             </div>
 
@@ -638,14 +686,14 @@ export const CreateEventModal = ({
             </div>
 
             <label className="org-form-field" htmlFor="event-age">
-              <span>Age restriction</span>
+              <span>Age group</span>
               <select
                 id="event-age"
-                name="age_restriction"
-                value={formData.age_restriction}
+                name="age_group"
+                value={formData.age_group}
                 onChange={handleChange}
               >
-                {AGE_RESTRICTIONS.map((age) => (
+                {AGE_GROUPS.map((age) => (
                   <option key={age} value={age}>
                     {age}
                   </option>
@@ -842,6 +890,17 @@ export const CreateEventModal = ({
                   Cancel
                 </button>
 
+                {!isEditMode && (
+                  <button
+                    type="button"
+                    className="org-button-secondary org-save-draft-button"
+                    onClick={() => void handleSaveDraft()}
+                    disabled={submitting}
+                  >
+                    {submitting ? "Saving..." : "Save as draft"}
+                  </button>
+                )}
+
                 <button
                   type="submit"
                   className="org-button-primary"
@@ -855,7 +914,7 @@ export const CreateEventModal = ({
                   ) : isEditMode ? (
                     "Submit for review"
                   ) : (
-                    "Submit for approval"
+                    "Submit for review"
                   )}
                 </button>
               </div>

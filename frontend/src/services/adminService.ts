@@ -17,6 +17,11 @@ export const fetchAdminUsers = async () => {
   return response.data;
 };
 
+export const fetchAdminUserDetails = async (userId: number) => {
+  const response = await adminApi.get(`/users/${userId}/details`);
+  return response.data.user;
+};
+
 
 export const fetchAdminEvents = async () => {
   const response = await adminApi.get("/events");
@@ -104,11 +109,23 @@ export const updateCity = async (
     name?: string;
     description?: string;
     is_active?: boolean;
+    image?: File | null;
   }
 ) => {
+  const formData = new FormData();
+
+  if (data.name !== undefined) formData.append("name", data.name);
+  if (data.description !== undefined) {
+    formData.append("description", data.description);
+  }
+  if (data.is_active !== undefined) {
+    formData.append("is_active", String(data.is_active));
+  }
+  if (data.image) formData.append("image", data.image);
+
   const response = await adminApi.patch(
     `/cities/${cityId}`,
-    data
+    formData
   );
 
   return response.data;

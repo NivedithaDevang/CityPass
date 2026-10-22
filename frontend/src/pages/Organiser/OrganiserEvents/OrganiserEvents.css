@@ -95,6 +95,156 @@
   background: rgba(22, 101, 52, 0.1);
 }
 
+.org-saved-drafts {
+  display: grid;
+  gap: 18px;
+  padding: 24px 28px; 
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  width: 100%;
+}
+
+.org-saved-drafts-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.org-saved-drafts-heading .org-eyebrow {
+  margin-bottom: 3px;
+}
+
+.org-saved-drafts-heading h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.org-saved-drafts-count,
+.org-draft-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.org-saved-drafts-count {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+}
+
+/* Increased min card width to 380px so titles have ample room before wrapping */
+.org-drafts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+.org-draft-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  padding: 16px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fbfcfe;
+}
+
+/* Container for text side to constrain flex child and prevent overflow */
+.org-draft-card > div:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Allows long titles like "The Great Dim Sum & Dumpling Masterclass" to wrap cleanly */
+.org-draft-card h3 {
+  margin: 6px 0 4px;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.org-draft-card p,
+.org-drafts-message,
+.org-drafts-error {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.org-drafts-error {
+  color: #b91c1c;
+}
+
+.org-draft-status {
+  min-height: 20px;
+  padding: 2px 8px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+.org-draft-actions {
+  display: flex;
+  flex: 0 0 auto; /* Keeps buttons locked at full size without getting compressed */
+  align-items: center;
+  gap: 8px;
+}
+
+.org-draft-edit,
+.org-draft-delete {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.org-draft-edit {
+  padding: 0 12px;
+}
+
+.org-draft-delete {
+  width: 36px;
+  color: #b42336;
+}
+
+.org-draft-edit:hover,
+.org-draft-delete:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.org-draft-delete:hover {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
 .org-event-toolbar {
   display: flex;
   align-items: center;
@@ -1162,6 +1312,19 @@
 }
 
 @media (max-width: 680px) {
+  .org-draft-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .org-draft-actions {
+    width: 100%;
+  }
+
+  .org-draft-edit {
+    flex: 1;
+  }
+
   .org-cards-grid {
     grid-template-columns: 1fr;
   }

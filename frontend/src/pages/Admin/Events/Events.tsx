@@ -80,8 +80,6 @@ function Events() {
     return () => { active = false; };
   }, []);
 
-  const pendingCount = requests.filter((request) => request.status === "PENDING").length;
-
   const filtered = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
     return requests.filter((request) => {
@@ -130,10 +128,7 @@ function Events() {
           <p>Review submitted events before they appear on CityPass.</p>
         </div>
 
-        <div className="event-requests-pending">
-          <span>{pendingCount}</span>
-          <small>Pending review</small>
-        </div>
+      
       </div>
 
       {notice && (

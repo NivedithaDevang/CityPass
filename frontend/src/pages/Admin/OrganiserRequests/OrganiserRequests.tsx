@@ -7,9 +7,12 @@ import {
 import { 
   FaCheck, 
   FaXmark, 
-  FaEye 
+  FaEye,
+  FaArrowUpRightFromSquare,
+  FaFileLines
 } from "react-icons/fa6";
 import { MdOutlineSearch } from "react-icons/md";
+import { API_BASE_URL } from "../../../config/config";
 
 interface OrganiserRequest {
   name: string | undefined;
@@ -19,14 +22,17 @@ interface OrganiserRequest {
   status: string;
   category?: string;
   city?: string;
+  id_proof_type?: string;
   id_proof?: string;
+  id_proof_url?: string;
+  id_proof_file?: string;
   email?: string;
   phone?: string;
 }
 
 const REJECTION_REASONS = [
   "Incomplete or misleading information",
-  "Invalid identification / PAN card",
+  "Invalid identification / ID document",
   "Duplicate or fraudulent request",
   "Violates platform terms and conditions",
   "Other"
@@ -130,6 +136,17 @@ function OrganiserRequests() {
     handleStatusUpdate(approvingRequest.id, "APPROVED");
   };
 
+  // Helper to resolve the attached document URL (Cloudinary https URL or server path)
+  const getDocumentUrl = (req?: OrganiserRequest | null): string => {
+    if (!req) return "";
+    const rawUrl = req.id_proof_url || req.id_proof_file;
+    if (!rawUrl) return "";
+    if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+      return rawUrl;
+    }
+    return `${API_BASE_URL}${rawUrl.startsWith("/") ? "" : "/"}${rawUrl}`;
+  };
+
   const filtered = useMemo(() => {
     return requests.filter((r) => {
       const orgName = (r.organization_name || "").toLowerCase();
@@ -168,7 +185,7 @@ function OrganiserRequests() {
             <MdOutlineSearch />
             <input
               type="text"
-              placeholder="Search org, city, email, PAN..."
+              placeholder="Search org, city, email, ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -194,12 +211,10 @@ function OrganiserRequests() {
       </div>
 
       {notice && (
-        <div
-          className="req-notice-banner"
-        >
+        <div className="req-notice-banner">
           <span>{notice}</span>
-          <button className="req-close-button"
-            
+          <button 
+            className="req-close-button"
             onClick={() => setNotice("")}
           >
             <FaXmark />
@@ -324,16 +339,54 @@ function OrganiserRequests() {
                   <span className="meta-tile-value">{viewingRequest.organization_name || "Organisation name not provided"}</span>
                 </div>
                 <div className="meta-tile">
-                  <span className="meta-tile-label">PAN / Tax ID</span>
-                  <span className="meta-tile-value mono-val">{viewingRequest.id_proof || "N/A"}</span>
-                </div>
-                <div className="meta-tile">
                   <span className="meta-tile-label">Phone Number</span>
                   <span className="meta-tile-value">{viewingRequest.phone || "—"}</span>
                 </div>
                 <div className="meta-tile full-width">
                   <span className="meta-tile-label">Primary Email</span>
                   <span className="meta-tile-value email-val">{viewingRequest.email || "—"}</span>
+                </div>
+
+                {/* ID Details & Document View */}
+                <div className="meta-tile full-width">
+                  <span className="meta-tile-label">
+                    {viewingRequest.id_proof_type ? `${viewingRequest.id_proof_type.toUpperCase()} Proof & Document` : "ID Proof"}
+                  </span>
+                  
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", marginTop: "6px" }}>
+                    <span className="meta-tile-value mono-val">
+                      {viewingRequest.id_proof || "N/A"}
+                    </span>
+
+                    {getDocumentUrl(viewingRequest) ? (
+                      <a
+                        href={getDocumentUrl(viewingRequest)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "6px 14px",
+                          borderRadius: "6px",
+                          backgroundColor: "#3b82f6",
+                          color: "#ffffff",
+                          fontSize: "0.85rem",
+                          fontWeight: 500,
+                          textDecoration: "none",
+                          transition: "background 0.2s",
+                        }}
+                      >
+                        <FaFileLines />
+                        <span>View ID Document</span>
+                        <FaArrowUpRightFromSquare size={12} />
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
+                        No document file attached
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 

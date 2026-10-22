@@ -912,6 +912,16 @@
   cursor: not-allowed;
 }
 
+.org-save-draft-button {
+  border-color: #c7d2fe;
+  color: #4338ca;
+}
+
+.org-save-draft-button:hover:not(:disabled) {
+  border-color: #a5b4fc;
+  background: #eef2ff;
+}
+
 .org-spin {
   animation: org-spin 0.8s linear infinite;
 }
