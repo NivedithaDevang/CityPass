@@ -30,6 +30,7 @@ export interface Category {
   name: string;
   description?: string;
   is_active: boolean;
+  image?: string | null;
 }
 
 export interface Activities {

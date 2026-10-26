@@ -10,6 +10,7 @@ import {
   addCity,
 } from "../../../services/adminService";
 import { FaImage } from "react-icons/fa6";
+import ImageCropModal from "../../../components/ImageCropModal/ImageCropModal";
 
 interface AdminCity {
   id: number;
@@ -63,6 +64,10 @@ function Cities() {
   const [editCityImage, setEditCityImage] = useState<File | null>(null);
   const [editCityImagePreview, setEditCityImagePreview] = useState("");
 
+  // Crop Modal States
+  const [rawImageSource, setRawImageSource] = useState<string | null>(null);
+  const [cropTarget, setCropTarget] = useState<"ADD" | "EDIT" | null>(null);
+
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -70,16 +75,55 @@ function Cities() {
 
   useEffect(() => {
     if (!cityImagePreview) return;
-    return () => URL.revokeObjectURL(cityImagePreview);
+    return () => {
+      if (cityImagePreview.startsWith("blob:")) URL.revokeObjectURL(cityImagePreview);
+    };
   }, [cityImagePreview]);
 
   useEffect(() => {
     if (!editCityImagePreview) return;
-    // Only revoke blob object URLs created from selected files
-    if (editCityImagePreview.startsWith("blob:")) {
-      return () => URL.revokeObjectURL(editCityImagePreview);
-    }
+    return () => {
+      if (editCityImagePreview.startsWith("blob:")) URL.revokeObjectURL(editCityImagePreview);
+    };
   }, [editCityImagePreview]);
+
+  const closeCropModal = () => {
+    if (rawImageSource?.startsWith("blob:")) {
+      URL.revokeObjectURL(rawImageSource);
+    }
+    setRawImageSource(null);
+    setCropTarget(null);
+  };
+
+  const onFileInputChange = (
+    e: ChangeEvent<HTMLInputElement>,
+    target: "ADD" | "EDIT"
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Please select a JPG, PNG, or WebP image.");
+      e.target.value = "";
+      return;
+    }
+
+    setRawImageSource(URL.createObjectURL(file));
+    setCropTarget(target);
+    e.target.value = "";
+  };
+
+  const applyImageCrop = (file: File) => {
+    const previewUrl = URL.createObjectURL(file);
+    if (cropTarget === "ADD") {
+      setCityImage(file);
+      setCityImagePreview(previewUrl);
+    } else if (cropTarget === "EDIT") {
+      setEditCityImage(file);
+      setEditCityImagePreview(previewUrl);
+    }
+    closeCropModal();
+  };
 
   const loadCities = async () => {
     try {
@@ -94,10 +138,6 @@ function Cities() {
           response?.data?.cities ??
           response?.data ??
           [];
-
-      if (!Array.isArray(list)) {
-        throw new Error("Invalid cities response");
-      }
 
       const formattedCities: AdminCity[] = list.map(
         (city: CityApiResponse) => ({
@@ -189,27 +229,6 @@ function Cities() {
     setEditCityImagePreview("");
   };
 
-  const handleEditCityImageChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] || null;
-    if (!file) return;
-
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setError("City image must be a JPG, PNG, or WEBP file.");
-      event.target.value = "";
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError("City image must be smaller than 5 MB.");
-      event.target.value = "";
-      return;
-    }
-
-    setError(null);
-    setEditCityImage(file);
-    setEditCityImagePreview(URL.createObjectURL(file));
-  };
-
   const handleUpdateCity = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -245,9 +264,12 @@ function Cities() {
       handleCancelEdit();
       await loadCities();
       setSuccess("City updated successfully.");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to update city:", err);
-      setError("Failed to update city. Please try again.");
+      setError(
+        err?.response?.data?.message ||
+          "Failed to update city. Please try again."
+      );
     } finally {
       setSavingCity(false);
     }
@@ -276,33 +298,15 @@ function Cities() {
 
       await loadCities();
       setSuccess("City added successfully and set to ACTIVE.");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to add city:", err);
-      setError("City already exists. Please enter a new city name.");
+      setError(
+        err?.response?.data?.message ||
+          "City already exists. Please enter a new city name."
+      );
     } finally {
       setAddingCity(false);
     }
-  };
-
-  const handleCityImageChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] || null;
-    if (!file) return;
-
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setError("City image must be a JPG, PNG, or WEBP file.");
-      event.target.value = "";
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError("City image must be smaller than 5 MB.");
-      event.target.value = "";
-      return;
-    }
-
-    setError(null);
-    setCityImage(file);
-    setCityImagePreview(URL.createObjectURL(file));
   };
 
   return (
@@ -362,28 +366,22 @@ function Cities() {
           </div>
 
           <div className="city-form-group">
-            <label htmlFor="cityImage">
-              City Image 
-            </label>
+            <label htmlFor="cityImage">City Image</label>
             <input
               id="cityImage"
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              onChange={handleCityImageChange}
+              onChange={(e) => onFileInputChange(e, "ADD")}
             />
             {cityImagePreview && (
               <div className="city-image-preview">
                 <img src={cityImagePreview} alt="City preview" />
-                <span>{cityImage?.name}</span>
+                <span>Cropped Image</span>
                 <button
                   type="button"
                   onClick={() => {
                     setCityImage(null);
                     setCityImagePreview("");
-                    const input = document.getElementById(
-                      "cityImage"
-                    ) as HTMLInputElement | null;
-                    if (input) input.value = "";
                   }}
                 >
                   Remove image
@@ -565,22 +563,19 @@ function Cities() {
                 />
               </div>
 
-              {/* City Image Upload in Edit Modal */}
               <div className="city-form-group">
-                <label htmlFor="editCityImage">
-                  City Image
-                </label>
+                <label htmlFor="editCityImage">City Image</label>
                 <input
                   id="editCityImage"
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  onChange={handleEditCityImageChange}
+                  onChange={(e) => onFileInputChange(e, "EDIT")}
                 />
                 {editCityImagePreview && (
                   <div className="city-image-preview">
                     <img src={editCityImagePreview} alt="City preview" />
                     <span>
-                      {editCityImage ? editCityImage.name : "Current Image"}
+                      {editCityImage ? "New Cropped Image" : "Current Image"}
                     </span>
                   </div>
                 )}
@@ -631,6 +626,17 @@ function Cities() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Interactive Crop Modal */}
+      {rawImageSource && (
+        <ImageCropModal
+          imageSrc={rawImageSource}
+          title="Crop and rotate city image"
+          cropShape="round"
+          onCancel={closeCropModal}
+          onApply={applyImageCrop}
+        />
       )}
     </div>
   );

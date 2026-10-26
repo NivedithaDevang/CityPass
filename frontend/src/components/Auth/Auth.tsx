@@ -70,7 +70,7 @@ function Auth({
   const calculateAge = (dobString: string): number => {
     if (!dobString) return 0;
 
-    const birthDate = new Date(`${dobString}T00:00:00`);
+    const birthDate = new Date(`${dobString}`);
     const today = new Date();
 
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -132,18 +132,22 @@ function Auth({
     resetFormFields();
     onClose();
 
-    const normalizedRole = authenticatedUser.role?.toUpperCase() || "";
+    const normalizedRole =
+      authenticatedUser.role?.toUpperCase().trim().replace(/[\s-]+/g, "_") ||
+      "";
     const isAdmin =
       normalizedRole === "SUPER_ADMIN" ||
       normalizedRole === "SUPERADMIN" ||
       normalizedRole === "ADMIN";
 
-    if (normalizedRole === "ORGANIZER" || normalizedRole === "ORGANISER") {
-      navigate("/organiser/home");
-    } else if (isAdmin) {
-      navigate("/admin");
-    } else if (redirectOnSuccess) {
-      navigate("/");
+    if (redirectOnSuccess) {
+      if (normalizedRole === "ORGANIZER" || normalizedRole === "ORGANISER") {
+        navigate("/organiser");
+      } else if (isAdmin) {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
     }
   };
 

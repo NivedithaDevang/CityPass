@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "../context/AuthContext";
 import { CityProvider } from "../context/CityContext";
+import Navbar from "../components/Navbar/Navbar";
+import { Footer } from "../components/Footer/Footer";
 
 // User Pages
 import Home from "../pages/Home/Home";
@@ -24,6 +26,7 @@ function AppRoutes() {
       {/* AuthProvider wraps all routes so useAuth() is accessible everywhere */}
       <AuthProvider>
         <CityProvider>
+          <Navbar />
           <Routes>
             <Route path="/" element={<Home />} />
 
@@ -52,6 +55,7 @@ function AppRoutes() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <Footer />
         </CityProvider>
       </AuthProvider>
     </BrowserRouter>

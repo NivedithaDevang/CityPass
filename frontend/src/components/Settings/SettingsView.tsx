@@ -7,6 +7,8 @@ import {
 } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { API_BASE_URL } from "../../config/config";
 import { useUser } from "../../context/UserContext";
 import Navbar from "../Navbar/Navbar";
@@ -32,6 +34,7 @@ import {
 } from "react-icons/fa6";
 import "./SettingsView.css";
 import { PASSWORD_RULES } from "../../config/passwordRules";
+import ImageCropModal from "../ImageCropModal/ImageCropModal";
 
 interface City {
   id: number;
@@ -54,20 +57,18 @@ interface OrganizerRequestStatus {
   rejection_reason?: string;
 }
 
-const calculateAge = (dobString: string): number => {
+// Year difference: current year minus entered birth year
+const getYearDifference = (dobString: string): number => {
   if (!dobString) return 0;
-  const birthDate = new Date(dobString);
-  const today = new Date();
+  const birthYear = new Date(dobString).getFullYear();
+  if (isNaN(birthYear)) return 0;
+  return new Date().getFullYear() - birthYear;
+};
 
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  const dayDiff = today.getDate() - birthDate.getDate();
-
-  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-    age--;
-  }
-
-  return age;
+const parseDobToDate = (dobString: string): Date | null => {
+  if (!dobString) return null;
+  const d = new Date(dobString);
+  return isNaN(d.getTime()) ? null : d;
 };
 
 const formatDobForInput = (value: unknown): string => {
@@ -99,12 +100,6 @@ const formatDobForInput = (value: unknown): string => {
   }
 
   return "";
-};
-
-const getMaxSelectableDob = (): string => {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - 16);
-  return d.toISOString().split("T")[0];
 };
 
 const genderOptions = [
@@ -324,7 +319,27 @@ function SettingsView() {
   const { tabSlug } = useParams<{ tabSlug: string }>();
   const { user, setUser, clearUser } = useUser();
 
-  const activeTab: TabKey = (tabSlug && SLUG_TO_TAB[tabSlug]) || "profile";
+  const normalizedRole = (user?.role || "").toUpperCase().replace(/[\s_-]/g, "");
+  const isSuperAdmin =
+    normalizedRole === "SUPERADMIN" ||
+    normalizedRole === "ADMIN";
+
+  const isOrganiser =
+    user?.role?.toUpperCase() === "ORGANISER" ||
+    user?.role?.toUpperCase() === "ORGANIZER";
+
+  const requestedTab: TabKey = (tabSlug && SLUG_TO_TAB[tabSlug]) || "profile";
+
+  const activeTab: TabKey =
+    isSuperAdmin && (requestedTab === "organizer" || requestedTab === "deactivate")
+      ? "profile"
+      : requestedTab;
+
+  useEffect(() => {
+    if (isSuperAdmin && (requestedTab === "organizer" || requestedTab === "deactivate")) {
+      navigate("/settings/profile", { replace: true });
+    }
+  }, [isSuperAdmin, requestedTab, navigate]);
 
   const handleTabChange = (tab: TabKey) => {
     navigate(`/settings/${TAB_TO_SLUG[tab]}`);
@@ -363,6 +378,7 @@ function SettingsView() {
   const [cities, setCities] = useState<City[]>([]);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [cropImageSource, setCropImageSource] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [profileMessage, setProfileMessage] = useState("");
@@ -386,7 +402,7 @@ function SettingsView() {
     email: user?.email || "",
     phone: (user as any)?.phone || "",
     description: "",
-    idproof_image: ""
+    idproof_image: "",
   });
 
   const [idProofFile, setIdProofFile] = useState<File | null>(null);
@@ -410,11 +426,17 @@ function SettingsView() {
   const [showDeactivateConfirmModal, setShowDeactivateConfirmModal] = useState(false);
   const [showDeactivateTermsModal, setShowDeactivateTermsModal] = useState(false);
 
+  // Maximum selectable birth date (16 years before today)
+  const maxEligibleDate = new Date();
+  maxEligibleDate.setFullYear(maxEligibleDate.getFullYear() - 16);
+
   useEffect(() => {
     fetchProfile();
     fetchCities();
-    checkExistingOrganizerRequest();
-  }, []);
+    if (!isSuperAdmin) {
+      checkExistingOrganizerRequest();
+    }
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     if (user) {
@@ -568,14 +590,14 @@ function SettingsView() {
 
   const isProfileChanged = Boolean(
     selectedImage !== null ||
-    (initialProfile && (
-      profile.name.trim() !== initialProfile.name.trim() ||
-      profile.email.trim().toLowerCase() !== initialProfile.email.trim().toLowerCase() ||
-      profile.phone.trim() !== initialProfile.phone.trim() ||
-      profile.city_id !== initialProfile.city_id ||
-      profile.dob !== initialProfile.dob ||
-      profile.gender !== initialProfile.gender
-    ))
+      (initialProfile &&
+        (profile.name.trim() !== initialProfile.name.trim() ||
+          profile.email.trim().toLowerCase() !==
+            initialProfile.email.trim().toLowerCase() ||
+          profile.phone.trim() !== initialProfile.phone.trim() ||
+          profile.city_id !== initialProfile.city_id ||
+          profile.dob !== initialProfile.dob ||
+          profile.gender !== initialProfile.gender))
   );
 
   const getProfileImage = () => {
@@ -607,6 +629,27 @@ function SettingsView() {
 
     setProfileMessage("");
     setProfileError("");
+  };
+
+  // DatePicker selection handler with immediate age check
+  const handleDateChange = (date: Date | null) => {
+    if (!date) {
+      setProfile((prev) => ({ ...prev, dob: "" }));
+      return;
+    }
+
+    const formatted = formatDobForInput(date);
+    setProfile((prev) => ({ ...prev, dob: formatted }));
+    setProfileMessage("");
+
+    const yearDiff = new Date().getFullYear() - date.getFullYear();
+    if (yearDiff < 16) {
+      setProfileError(
+        "You are not eligible to use CityPass. You must be at least 16 years or older."
+      );
+    } else {
+      setProfileError("");
+    }
   };
 
   const handleCitySelect = (cityId: number | "") => {
@@ -670,13 +713,24 @@ function SettingsView() {
       return;
     }
 
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
-
-    const previewUrl = URL.createObjectURL(file);
-    setSelectedImage(file);
-    setImagePreview(previewUrl);
+    setCropImageSource(URL.createObjectURL(file));
+    e.target.value = "";
     setProfileMessage("");
     setProfileError("");
+  };
+
+  const closeImageCrop = () => {
+    if (cropImageSource?.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSource);
+    }
+    setCropImageSource(null);
+  };
+
+  const applyImageCrop = (file: File) => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setSelectedImage(file);
+    setImagePreview(URL.createObjectURL(file));
+    closeImageCrop();
   };
 
   const handleProfileSave = async (e: FormEvent) => {
@@ -715,9 +769,11 @@ function SettingsView() {
     }
 
     if (profile.dob) {
-      const age = calculateAge(profile.dob);
-      if (age < 16) {
-        setProfileError("You must be at least 16 years or older to register.");
+      const yearDiff = getYearDifference(profile.dob);
+      if (yearDiff < 16) {
+        setProfileError(
+          "You are not eligible to use CityPass. You must be at least 16 years or older."
+        );
         return;
       }
     }
@@ -947,7 +1003,9 @@ function SettingsView() {
     }
 
     if (!idProofFile) {
-      setOrgError("Please upload a document file (image, PDF, or scan) of your ID proof.");
+      setOrgError(
+        "Please upload a document file (image, PDF, or scan) of your ID proof."
+      );
       return;
     }
 
@@ -1080,6 +1138,15 @@ function SettingsView() {
 
   return (
     <>
+      {cropImageSource && (
+        <ImageCropModal
+          imageSrc={cropImageSource}
+          title="Crop and rotate profile photo"
+          cropShape="round"
+          onCancel={closeImageCrop}
+          onApply={applyImageCrop}
+        />
+      )}
       <Navbar />
 
       <div className="settings-page">
@@ -1092,10 +1159,14 @@ function SettingsView() {
           <aside className="settings-nav">
             <button
               type="button"
-              className={`setting-nav-item ${activeTab === "profile" ? "active" : ""}`}
+              className={`setting-nav-item ${
+                activeTab === "profile" ? "active" : ""
+              }`}
               onClick={() => handleTabChange("profile")}
             >
-              <span className="nav-icon"><FaUser /></span>
+              <span className="nav-icon">
+                <FaUser />
+              </span>
               <div className="nav-info">
                 <h3>Profile</h3>
                 <p>Personal info &amp; contact details</p>
@@ -1105,10 +1176,14 @@ function SettingsView() {
 
             <button
               type="button"
-              className={`setting-nav-item ${activeTab === "password" ? "active" : ""}`}
+              className={`setting-nav-item ${
+                activeTab === "password" ? "active" : ""
+              }`}
               onClick={() => handleTabChange("password")}
             >
-              <span className="nav-icon"><FaLock /></span>
+              <span className="nav-icon">
+                <FaLock />
+              </span>
               <div className="nav-info">
                 <h3>Change Password</h3>
                 <p>Security and authentication</p>
@@ -1116,31 +1191,43 @@ function SettingsView() {
               <FaChevronRight className="nav-arrow" />
             </button>
 
-            <button
-              type="button"
-              className={`setting-nav-item ${activeTab === "organizer" ? "active" : ""}`}
-              onClick={() => handleTabChange("organizer")}
-            >
-              <span className="nav-icon"><FaBullhorn /></span>
-              <div className="nav-info">
-                <h3>Host an Event</h3>
-                <p>Become a verified organiser</p>
-              </div>
-              <FaChevronRight className="nav-arrow" />
-            </button>
+            {!isSuperAdmin && (
+              <>
+                <button
+                  type="button"
+                  className={`setting-nav-item ${
+                    activeTab === "organizer" ? "active" : ""
+                  }`}
+                  onClick={() => handleTabChange("organizer")}
+                >
+                  <span className="nav-icon">
+                    <FaBullhorn />
+                  </span>
+                  <div className="nav-info">
+                    <h3>Host an Event</h3>
+                    <p>Become a verified organiser</p>
+                  </div>
+                  <FaChevronRight className="nav-arrow" />
+                </button>
 
-            <button
-              type="button"
-              className={`setting-nav-item danger ${activeTab === "deactivate" ? "active" : ""}`}
-              onClick={() => handleTabChange("deactivate")}
-            >
-              <span className="nav-icon"><FaUserSlash /></span>
-              <div className="nav-info">
-                <h3>Deactivate Account</h3>
-                <p>Pause or close your profile</p>
-              </div>
-              <FaChevronRight className="nav-arrow" />
-            </button>
+                <button
+                  type="button"
+                  className={`setting-nav-item danger ${
+                    activeTab === "deactivate" ? "active" : ""
+                  }`}
+                  onClick={() => handleTabChange("deactivate")}
+                >
+                  <span className="nav-icon">
+                    <FaUserSlash />
+                  </span>
+                  <div className="nav-info">
+                    <h3>Deactivate Account</h3>
+                    <p>Pause or close your profile</p>
+                  </div>
+                  <FaChevronRight className="nav-arrow" />
+                </button>
+              </>
+            )}
           </aside>
 
           <main className="settings-panel">
@@ -1167,7 +1254,9 @@ function SettingsView() {
                           className="avatar-img"
                         />
                       ) : (
-                        <div className="default-avatar"><FaUser /></div>
+                        <div className="default-avatar">
+                          <FaUser />
+                        </div>
                       )}
 
                       <button
@@ -1264,8 +1353,8 @@ function SettingsView() {
                           }}
                         >
                           <span className="city-select-label">
-                            {cities.find((city) => city.id === profile.city_id)?.name ||
-                              "Select your city"}
+                            {cities.find((city) => city.id === profile.city_id)
+                              ?.name || "Select your city"}
                           </span>
 
                           <FaChevronRight
@@ -1291,14 +1380,19 @@ function SettingsView() {
                                 profile.city_id === "" ? "selected" : ""
                               }`}
                               onClick={() => handleCitySelect("")}
-                              onKeyDown={(event) => handleCityOptionKeyDown(event, 0)}
+                              onKeyDown={(event) =>
+                                handleCityOptionKeyDown(event, 0)
+                              }
                               ref={(element) => {
                                 cityOptionRefs.current[0] = element;
                               }}
                             >
                               <span>Select your city</span>
                               {profile.city_id === "" && (
-                                <span className="city-option-check" aria-hidden="true">
+                                <span
+                                  className="city-option-check"
+                                  aria-hidden="true"
+                                >
                                   ✓
                                 </span>
                               )}
@@ -1323,7 +1417,10 @@ function SettingsView() {
                               >
                                 <span>{city.name}</span>
                                 {profile.city_id === city.id && (
-                                  <span className="city-option-check" aria-hidden="true">
+                                  <span
+                                    className="city-option-check"
+                                    aria-hidden="true"
+                                  >
                                     ✓
                                   </span>
                                 )}
@@ -1334,15 +1431,21 @@ function SettingsView() {
                       </div>
                     </div>
 
+                    {/* DatePicker Field */}
                     <div className="form-group">
                       <label htmlFor="dob">Date of Birth [DD-MM-YYYY]</label>
-                      <input
+                      <DatePicker
                         id="dob"
-                        type="date"
-                        name="dob"
-                        max={getMaxSelectableDob()}
-                        value={profile.dob}
-                        onChange={handleProfileChange}
+                        selected={parseDobToDate(profile.dob)}
+                        onChange={handleDateChange}
+                        dateFormat="dd-MM-yyyy"
+                        placeholderText="Select date of birth"
+                        maxDate={maxEligibleDate}
+                        showYearDropdown
+                        showMonthDropdown
+                        dropdownMode="select"
+                        className="city-select has-value"
+                        autoComplete="off"
                       />
                     </div>
 
@@ -1416,7 +1519,9 @@ function SettingsView() {
                         type="button"
                         className="toggle-visibility-btn"
                         onClick={() => setShowNewPassword(!showNewPassword)}
-                        aria-label={showNewPassword ? "Hide password" : "Show password"}
+                        aria-label={
+                          showNewPassword ? "Hide password" : "Show password"
+                        }
                       >
                         {showNewPassword ? <FaEyeSlash /> : <FaEye />}
                       </button>
@@ -1430,7 +1535,9 @@ function SettingsView() {
                         return (
                           <div
                             key={rule.id || rule.label}
-                            className={`rule-item ${passed ? "passed" : "unpassed"}`}
+                            className={`rule-item ${
+                              passed ? "passed" : "unpassed"
+                            }`}
                           >
                             {passed ? (
                               <FaCheck className="rule-icon passed" />
@@ -1460,8 +1567,12 @@ function SettingsView() {
                       <button
                         type="button"
                         className="toggle-visibility-btn"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        aria-label={
+                          showConfirmPassword ? "Hide password" : "Show password"
+                        }
                       >
                         {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                       </button>
@@ -1480,7 +1591,12 @@ function SettingsView() {
                     <button
                       type="submit"
                       className="primary-button"
-                      disabled={loading || !allRulesPassed || !confirmPassword || newPassword !== confirmPassword}
+                      disabled={
+                        loading ||
+                        !allRulesPassed ||
+                        !confirmPassword ||
+                        newPassword !== confirmPassword
+                      }
                     >
                       {loading ? "Updating..." : "Update Password"}
                     </button>
@@ -1489,7 +1605,7 @@ function SettingsView() {
               </section>
             )}
 
-            {activeTab === "organizer" && (
+            {!isSuperAdmin && activeTab === "organizer" && (
               <section className="tab-pane">
                 <div className="heading-copy">
                   <h2>Host an Event</h2>
@@ -1499,7 +1615,6 @@ function SettingsView() {
                   </p>
                 </div>
 
-                {/* 1. PENDING APPLICATION STATE */}
                 {orgRequestStatus.status === "PENDING" && !isReapplying && (
                   <div className="org-status-card pending">
                     <div className="org-status-icon-wrapper pending">
@@ -1511,12 +1626,13 @@ function SettingsView() {
                     </h3>
 
                     <p className="org-status-desc">
-                      You have submitted an organiser request. Your application is currently under review by our admin team. Kindly wait for approval or updates via your registered email.
+                      You have submitted an organiser request. Your application is
+                      currently under review by our admin team. Kindly wait for
+                      approval or updates via your registered email.
                     </p>
                   </div>
                 )}
 
-                {/* 2. REJECTED APPLICATION STATE */}
                 {orgRequestStatus.status === "REJECTED" && !isReapplying && (
                   <div className="org-status-card rejected">
                     <div className="org-status-icon-wrapper rejected">
@@ -1528,7 +1644,8 @@ function SettingsView() {
                     </h3>
 
                     <p className="org-status-desc rejected">
-                      Your organiser application was reviewed and could not be approved at this time.
+                      Your organiser application was reviewed and could not be
+                      approved at this time.
                     </p>
 
                     <div className="org-reason-box">
@@ -1536,7 +1653,8 @@ function SettingsView() {
                         Reason Provided by Admin
                       </span>
                       <p className="org-reason-text">
-                        {orgRequestStatus.rejection_reason || "Incomplete or invalid details provided during submission."}
+                        {orgRequestStatus.rejection_reason ||
+                          "Incomplete or invalid details provided during submission."}
                       </p>
                     </div>
 
@@ -1552,7 +1670,6 @@ function SettingsView() {
                   </div>
                 )}
 
-                {/* 3. APPROVED STATE */}
                 {orgRequestStatus.status === "APPROVED" && (
                   <div className="org-status-card approved">
                     <div className="org-status-icon-wrapper approved">
@@ -1562,12 +1679,12 @@ function SettingsView() {
                       You are a Verified Organiser
                     </h3>
                     <p className="org-status-desc approved">
-                      Your organiser account is active! You can now publish events directly to CityPass.
+                      Your organiser account is active! You can now publish
+                      events directly to CityPass.
                     </p>
                   </div>
                 )}
 
-                {/* 4. DEFAULT FORM STATE */}
                 {(orgRequestStatus.status === "NONE" || isReapplying) && (
                   <form
                     onSubmit={handleOrganizerPreSubmit}
@@ -1577,7 +1694,8 @@ function SettingsView() {
                     {isReapplying && (
                       <div className="org-revision-banner">
                         <span className="org-revision-text">
-                          You are revising your application based on previous admin feedback.
+                          You are revising your application based on previous admin
+                          feedback.
                         </span>
                         <button
                           type="button"
@@ -1696,7 +1814,8 @@ function SettingsView() {
                             value={org.id_proof}
                             onChange={handleOrgChange}
                             placeholder={
-                              selectedIdProof?.placeholder || "Enter ID proof number"
+                              selectedIdProof?.placeholder ||
+                              "Enter ID proof number"
                             }
                             maxLength={
                               org.id_proof_type === "aadhar"
@@ -1711,7 +1830,8 @@ function SettingsView() {
 
                         <div className="form-group full-width">
                           <label htmlFor="id_proof_file">
-                            Upload {selectedIdProof?.label} Document (Image or PDF) *
+                            Upload {selectedIdProof?.label} Document (Image or PDF)
+                            *
                           </label>
 
                           <div
@@ -1750,17 +1870,40 @@ function SettingsView() {
                               >
                                 <FaFileLines size={20} />
                                 <span>{idProofFile.name}</span>
-                                <span style={{ color: "#9ca3af", fontSize: "0.85rem" }}>
-                                  ({(idProofFile.size / (1024 * 1024)).toFixed(2)} MB)
+                                <span
+                                  style={{
+                                    color: "#9ca3af",
+                                    fontSize: "0.85rem",
+                                  }}
+                                >
+                                  (
+                                  {(
+                                    idProofFile.size /
+                                    (1024 * 1024)
+                                  ).toFixed(2)}{" "}
+                                  MB)
                                 </span>
                               </div>
                             ) : (
                               <>
-                                <FaPaperclip size={22} style={{ color: "#9ca3af" }} />
-                                <span style={{ fontSize: "0.9rem", color: "#d1d5db" }}>
+                                <FaPaperclip
+                                  size={22}
+                                  style={{ color: "#9ca3af" }}
+                                />
+                                <span
+                                  style={{
+                                    fontSize: "0.9rem",
+                                    color: "#d1d5db",
+                                  }}
+                                >
                                   Click or tap to upload document
                                 </span>
-                                <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+                                <span
+                                  style={{
+                                    fontSize: "0.75rem",
+                                    color: "#9ca3af",
+                                  }}
+                                >
                                   Supports JPG, PNG, WEBP, or PDF (Max 10 MB)
                                 </span>
                               </>
@@ -1801,7 +1944,11 @@ function SettingsView() {
                         className="primary-button"
                         disabled={loading}
                       >
-                        {loading ? "Submitting..." : isReapplying ? "Resubmit Application" : "Submit Application"}
+                        {loading
+                          ? "Submitting..."
+                          : isReapplying
+                          ? "Resubmit Application"
+                          : "Submit Application"}
                       </button>
                     </div>
                   </form>
@@ -1809,14 +1956,45 @@ function SettingsView() {
               </section>
             )}
 
-            {activeTab === "deactivate" && (
+            {!isSuperAdmin && activeTab === "deactivate" && (
               <section className="tab-pane">
                 <div className="heading-copy">
                   <h2>Deactivate Account</h2>
                   <p>Temporarily suspend your CityPass access</p>
                 </div>
 
-                {!showDeactivateTerms ? (
+                {isOrganiser ? (
+                  <div
+                    className="org-status-card approved"
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      textAlign: "center",
+                      gap: "12px",
+                      padding: "2rem",
+                    }}
+                  >
+                    <div className="org-status-icon-wrapper approved">
+                      <FaCheck />
+                    </div>
+                    <h3 className="org-status-title approved">
+                      You are a Verified Organiser
+                    </h3>
+                    <p className="org-status-desc approved" style={{ maxWidth: "500px" }}>
+                      Organiser accounts cannot be deactivated directly from user settings.
+                      Please go to your organiser dashboard to manage or deactivate your account.
+                    </p>
+                    <button
+                      type="button"
+                      className="primary-button"
+                      style={{ marginTop: "8px" }}
+                      onClick={() => navigate("/organiser/deactivate")}
+                    >
+                      Go to Organiser Dashboard
+                    </button>
+                  </div>
+                ) : !showDeactivateTerms ? (
                   <div className="deactivate-card">
                     <h3>Before you proceed</h3>
                     <p>
@@ -1837,7 +2015,8 @@ function SettingsView() {
                     <div className="deactivate-reason-header">
                       <h3>Why are you leaving?</h3>
                       <p>
-                        Please select the reason that best describes your decision.
+                        Please select the reason that best describes your
+                        decision.
                       </p>
                     </div>
 

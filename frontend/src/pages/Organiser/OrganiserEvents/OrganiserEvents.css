@@ -1148,6 +1148,69 @@
   animation: pulse-dot 1.4s infinite ease-in-out;
 }
 
+/* Card Disabled / Greyed State (PENDING, REJECTED, CANCELLED, COMPLETED) */
+.org-grid-card.is-disabled {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  opacity: 0.82;
+  box-shadow: none !important;
+}
+
+.org-grid-card.is-disabled .org-card-media {
+  filter: grayscale(85%) !important;
+}
+
+.org-grid-card.is-disabled .org-card-status-pill {
+  filter: grayscale(0%) !important;
+}
+
+/* Completed Card Specific Styling */
+.org-grid-card.is-completed {
+  opacity: 0.72;
+  cursor: pointer;
+}
+
+.org-grid-card.is-completed:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+}
+
+.org-grid-card.is-completed .org-card-date {
+  color: #64748b;
+}
+
+.org-card-status-pill.completed {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.org-status-badge.completed {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.org-grid-card.is-disabled .org-card-action-btn:disabled,
+.org-grid-card.is-disabled .org-card-edit-btn:disabled,
+.org-grid-card.is-disabled .cancel-action-btn:disabled,
+.org-grid-card.is-disabled .go-live-toggle:disabled,
+.org-grid-card.is-disabled .go-live-toggle.btn-disabled,
+.org-card-action-btn:disabled,
+.org-card-edit-btn:disabled,
+.org-detail-footer-btn:disabled,
+.cancel-action-btn:disabled,
+.go-live-toggle:disabled,
+.go-live-toggle.btn-disabled {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  opacity: 0.45 !important;
+  box-shadow: none !important;
+}
+
 @keyframes pulse-dot {
   0% {
     transform: scale(0.9);

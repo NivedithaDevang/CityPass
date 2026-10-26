@@ -5,6 +5,9 @@ import {
   type FormEvent,
 } from "react";
 import { ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import ImageCropModal from "../../../components/ImageCropModal/ImageCropModal";
 
 import {
   createOrganiserEvent,
@@ -78,6 +81,37 @@ const AGE_GROUPS = ["All Ages", "3+", "7+", "12+", "16+", "18+", "21+"];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
 
+const getTodayMidnight = (): Date => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const extractCleanDate = (dateVal?: string): string => {
+  if (!dateVal) return "";
+  if (dateVal.includes("T")) return dateVal.split("T")[0];
+  if (dateVal.includes(" ")) return dateVal.split(" ")[0];
+  return dateVal;
+};
+
+const parseDateStringToDate = (dateStr?: string): Date | null => {
+  if (!dateStr) return null;
+  const clean = extractCleanDate(dateStr);
+  const [yearStr, monthStr, dayStr] = clean.split("-");
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+  return new Date(year, month - 1, day);
+};
+
+const formatDateToYMD = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 export const CreateEventModal = ({
   isOpen,
   onClose,
@@ -94,11 +128,10 @@ export const CreateEventModal = ({
   ]);
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [cropImageSource, setCropImageSource] = useState<string | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
-  // Dynamic ticket categories created alongside the event
   const [tickets, setTickets] = useState<TicketDraft[]>(defaultInitialTickets);
-
   const [cities, setCities] = useState<OrganiserLookupOption[]>([]);
   const [categories, setCategories] = useState<OrganiserLookupOption[]>([]);
 
@@ -122,16 +155,17 @@ export const CreateEventModal = ({
         location: eventToEdit.location || "",
         city_id: String((eventToEdit as any).city_id || ""),
         category_id: String((eventToEdit as any).category_id || ""),
-        event_date: eventToEdit.event_date ? eventToEdit.event_date.slice(0, 10) : "",
+        event_date: extractCleanDate(eventToEdit.event_date),
         time: eventToEdit.time ? eventToEdit.time.slice(0, 5) : "",
-        price: eventToEdit.price !== undefined && eventToEdit.price !== null ? Number(eventToEdit.price) : "",
+        price:
+          eventToEdit.price !== undefined && eventToEdit.price !== null
+            ? Number(eventToEdit.price)
+            : "",
         capacity:
           eventToEdit.capacity !== undefined && eventToEdit.capacity !== null
             ? String(eventToEdit.capacity)
             : "",
-        age_group:
-          (eventToEdit as any).age_group ||
-          "All Ages",
+        age_group: (eventToEdit as any).age_group || "All Ages",
         duration:
           (eventToEdit as any).duration_hours !== undefined &&
           (eventToEdit as any).duration_hours !== null
@@ -151,11 +185,13 @@ export const CreateEventModal = ({
         }
       }
 
-      const existingImg = (eventToEdit as any).image_url || (eventToEdit as any).image;
+      const existingImg =
+        (eventToEdit as any).image_url || (eventToEdit as any).image;
       if (existingImg) setImagePreview(existingImg);
     } else if (draftToEdit) {
       setFormData({
         ...draftToEdit.formData,
+        event_date: extractCleanDate(draftToEdit.formData.event_date),
         age_group: draftToEdit.formData.age_group || "All Ages",
       });
       setSelectedLanguages(draftToEdit.selectedLanguages);
@@ -169,9 +205,7 @@ export const CreateEventModal = ({
       setSelectedLanguages(["English"]);
       setImage(null);
       setImagePreview("");
-      setTickets([
-        { name: "", description: "", price: "" },
-      ]);
+      setTickets([{ name: "", description: "", price: "" }]);
     }
     setIsLightboxOpen(false);
   }, [isOpen, eventToEdit, draftToEdit]);
@@ -187,11 +221,15 @@ export const CreateEventModal = ({
       .then(([cityOptions, categoryOptions]) => {
         if (!active) return;
         setCities(cityOptions.filter((option) => option.is_active !== false));
-        setCategories(categoryOptions.filter((option) => option.is_active !== false));
+        setCategories(
+          categoryOptions.filter((option) => option.is_active !== false),
+        );
       })
       .catch((lookupError: unknown) => {
         if (active) {
-          setError(getOrganiserErrorMessage(lookupError, "Unable to load form data."));
+          setError(
+            getOrganiserErrorMessage(lookupError, "Unable to load form data."),
+          );
         }
       })
       .finally(() => {
@@ -227,7 +265,9 @@ export const CreateEventModal = ({
   };
 
   const handleChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    event: ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value, type } = event.target;
     setError(null);
@@ -246,9 +286,34 @@ export const CreateEventModal = ({
     }));
   };
 
+  // Immediate past date check when the user picks a date
+  const handleDateChange = (date: Date | null) => {
+    setError(null);
+
+    if (!date) {
+      setFormData((current) => ({ ...current, event_date: "" }));
+      return;
+    }
+
+    const todayMidnight = getTodayMidnight();
+    const chosenMidnight = new Date(date);
+    chosenMidnight.setHours(0, 0, 0, 0);
+
+    if (chosenMidnight.getTime() < todayMidnight.getTime()) {
+      setFormData((current) => ({ ...current, event_date: "" }));
+      setError("Past dates are not allowed. Please select today or a future date.");
+      return;
+    }
+
+    setFormData((current) => ({
+      ...current,
+      event_date: formatDateToYMD(date),
+    }));
+  };
+
   const toggleLanguage = (lang: string) => {
     setSelectedLanguages((prev) =>
-      prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang]
+      prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang],
     );
   };
 
@@ -269,11 +334,23 @@ export const CreateEventModal = ({
       return;
     }
 
-    setImage(file);
-    setImagePreview(URL.createObjectURL(file));
+    setCropImageSource(URL.createObjectURL(file));
+    event.target.value = "";
   };
 
-  // Ticket categories management inside the modal
+  const closeImageCrop = () => {
+    if (cropImageSource?.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSource);
+    }
+    setCropImageSource(null);
+  };
+
+  const applyImageCrop = (file: File) => {
+    setImage(file);
+    setImagePreview(URL.createObjectURL(file));
+    closeImageCrop();
+  };
+
   const handleAddTicket = () => {
     setTickets((prev) => [
       ...prev,
@@ -291,11 +368,11 @@ export const CreateEventModal = ({
   const handleTicketChange = (
     index: number,
     field: keyof TicketDraft,
-    value: string
+    value: string,
   ) => {
     setError(null);
     setTickets((prev) =>
-      prev.map((t, i) => (i === index ? { ...t, [field]: value } : t))
+      prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)),
     );
   };
 
@@ -304,7 +381,11 @@ export const CreateEventModal = ({
     setError(null);
 
     const parsedCapacity = Number(formData.capacity);
-    if (!formData.capacity.trim() || isNaN(parsedCapacity) || parsedCapacity < 1) {
+    if (
+      !formData.capacity.trim() ||
+      isNaN(parsedCapacity) ||
+      parsedCapacity < 1
+    ) {
       return setError("Capacity must be at least 1 attendee.");
     }
 
@@ -312,7 +393,20 @@ export const CreateEventModal = ({
       return setError("Please select at least one language for the event.");
     }
 
-    // Validate tickets if creating new event
+    const cleanDate = extractCleanDate(formData.event_date);
+    const cleanTime = formData.time ? formData.time.slice(0, 5) : "";
+
+    if (!cleanDate || !cleanTime) {
+      return setError("Date and start time are required.");
+    }
+
+    // Secondary validation block on submit
+    const todayMidnight = getTodayMidnight();
+    const chosenDate = parseDateStringToDate(cleanDate);
+    if (!chosenDate || chosenDate.getTime() < todayMidnight.getTime()) {
+      return setError("Past dates are not allowed. Please select today or a future date.");
+    }
+
     if (!isEditMode) {
       if (tickets.length === 0) {
         return setError("Please add at least one ticket category.");
@@ -325,7 +419,9 @@ export const CreateEventModal = ({
         }
         const parsedP = Number(t.price);
         if (t.price.trim() === "" || isNaN(parsedP) || parsedP < 0) {
-          return setError(`Ticket category "${t.name}" needs a valid price (₹).`);
+          return setError(
+            `Ticket category "${t.name}" needs a valid price (₹).`,
+          );
         }
       }
     }
@@ -336,12 +432,11 @@ export const CreateEventModal = ({
       if (!formData.name.trim()) return setError("Event name is required.");
       if (!formData.city_id || !formData.category_id)
         return setError("Choose a city and category.");
-      if (!formData.event_date || !formData.time)
-        return setError("Date and time are required.");
       if (!image) return setError("Please upload an event image.");
 
-      // Calculate lowest ticket price as event base starting price
-      const validPrices = tickets.map((t) => Number(t.price)).filter((p) => !isNaN(p));
+      const validPrices = tickets
+        .map((t) => Number(t.price))
+        .filter((p) => !isNaN(p));
       const minStartingPrice = validPrices.length ? Math.min(...validPrices) : 0;
 
       try {
@@ -359,16 +454,17 @@ export const CreateEventModal = ({
           location: formData.location.trim() || undefined,
           city_id: Number(formData.city_id),
           category_id: Number(formData.category_id),
-          event_date: formData.event_date,
-          time: formData.time,
+          event_date: cleanDate,
+          time: cleanTime,
           price: minStartingPrice,
           capacity: parsedCapacity,
           image,
         } as any);
 
-        const newEventId = Number(createdEvent.id || (createdEvent as any).event?.id);
+        const newEventId = Number(
+          createdEvent.id || (createdEvent as any).event?.id,
+        );
 
-        // Assign ticket categories directly to the created event
         if (newEventId) {
           await Promise.all(
             tickets.map((t) =>
@@ -376,8 +472,8 @@ export const CreateEventModal = ({
                 name: t.name.trim(),
                 description: t.description.trim(),
                 price: Number(t.price),
-              })
-            )
+              }),
+            ),
           );
         }
 
@@ -386,7 +482,10 @@ export const CreateEventModal = ({
         requestClose();
       } catch (submitError: unknown) {
         setError(
-          getOrganiserErrorMessage(submitError, "Could not submit event. Please try again.")
+          getOrganiserErrorMessage(
+            submitError,
+            "Could not submit event. Please try again.",
+          ),
         );
       } finally {
         setSubmitting(false);
@@ -407,17 +506,23 @@ export const CreateEventModal = ({
     if (formData.location.trim() !== (eventToEdit.location || "").trim()) {
       patchPayload.location = formData.location.trim();
     }
-    if (formData.city_id && Number(formData.city_id) !== Number((eventToEdit as any).city_id)) {
+    if (
+      formData.city_id &&
+      Number(formData.city_id) !== Number((eventToEdit as any).city_id)
+    ) {
       patchPayload.city_id = Number(formData.city_id);
     }
-    if (formData.category_id && Number(formData.category_id) !== Number((eventToEdit as any).category_id)) {
+    if (
+      formData.category_id &&
+      Number(formData.category_id) !== Number((eventToEdit as any).category_id)
+    ) {
       patchPayload.category_id = Number(formData.category_id);
     }
-    if (formData.event_date && formData.event_date !== (eventToEdit.event_date || "").slice(0, 10)) {
-      patchPayload.event_date = formData.event_date;
+    if (cleanDate && cleanDate !== extractCleanDate(eventToEdit.event_date)) {
+      patchPayload.event_date = cleanDate;
     }
-    if (formData.time && formData.time !== (eventToEdit.time || "").slice(0, 5)) {
-      patchPayload.time = formData.time;
+    if (cleanTime && cleanTime !== (eventToEdit.time || "").slice(0, 5)) {
+      patchPayload.time = cleanTime;
     }
     if (parsedCapacity !== Number(eventToEdit.capacity)) {
       patchPayload.capacity = parsedCapacity;
@@ -436,27 +541,26 @@ export const CreateEventModal = ({
       patchPayload.instructions = formData.instructions.trim();
     }
 
-    const originalAge = (
-      (eventToEdit as any).age_group ||
-      "All Ages"
-    ).trim();
+    const originalAge = ((eventToEdit as any).age_group || "All Ages").trim();
     if (formData.age_group !== originalAge) {
       patchPayload.age_group = formData.age_group;
     }
 
     const originalDuration = String(
-      (eventToEdit as any).duration_hours !== undefined && (eventToEdit as any).duration_hours !== null
+      (eventToEdit as any).duration_hours !== undefined &&
+        (eventToEdit as any).duration_hours !== null
         ? `${(eventToEdit as any).duration_hours} Hours`
-        : (eventToEdit as any).duration || ""
+        : (eventToEdit as any).duration || "",
     ).trim();
     if (formData.duration.trim() !== originalDuration) {
       patchPayload.duration_hours = formData.duration.trim();
       patchPayload.duration = formData.duration.trim();
     }
 
-    const currentLanguagesStr = typeof (eventToEdit as any).languages === "string"
-      ? (eventToEdit as any).languages
-      : JSON.stringify((eventToEdit as any).languages || []);
+    const currentLanguagesStr =
+      typeof (eventToEdit as any).languages === "string"
+        ? (eventToEdit as any).languages
+        : JSON.stringify((eventToEdit as any).languages || []);
     if (languagesPayload !== currentLanguagesStr) {
       patchPayload.languages = languagesPayload;
     }
@@ -467,12 +571,18 @@ export const CreateEventModal = ({
 
     try {
       setSubmitting(true);
-      const updatedEvent = await patchOrganiserEvent(eventToEdit.id, patchPayload);
+      const updatedEvent = await patchOrganiserEvent(
+        eventToEdit.id,
+        patchPayload,
+      );
       onEventSaved(updatedEvent);
       requestClose();
     } catch (patchError: unknown) {
       setError(
-        getOrganiserErrorMessage(patchError, "Could not submit event for review. Please try again.")
+        getOrganiserErrorMessage(
+          patchError,
+          "Could not submit event for review. Please try again.",
+        ),
       );
     } finally {
       setSubmitting(false);
@@ -491,7 +601,10 @@ export const CreateEventModal = ({
       organiserId: draftToEdit?.organiserId ?? organiserId,
       createdAt: draftToEdit?.createdAt ?? now,
       updatedAt: now,
-      formData: { ...formData },
+      formData: {
+        ...formData,
+        event_date: extractCleanDate(formData.event_date),
+      },
       selectedLanguages: [...selectedLanguages],
       tickets: tickets.map((ticket) => ({ ...ticket })),
       image,
@@ -556,6 +669,15 @@ export const CreateEventModal = ({
           </header>
 
           <form onSubmit={handleSubmit} className="org-modal-form" noValidate>
+            {cropImageSource && (
+              <ImageCropModal
+                imageSrc={cropImageSource}
+                title="Crop and rotate event image"
+                aspect={16 / 9}
+                onCancel={closeImageCrop}
+                onApply={applyImageCrop}
+              />
+            )}
             {error && (
               <div className="org-form-error" role="alert">
                 {error}
@@ -565,7 +687,10 @@ export const CreateEventModal = ({
             <div className="org-form-field org-form-wide">
               <span>Event image</span>
               {!imagePreview ? (
-                <label htmlFor="event-image" className="org-event-image-upload">
+                <label
+                  htmlFor="event-image"
+                  className="org-event-image-upload"
+                >
                   <ImagePlus size={28} />
                   <strong>Upload event image</strong>
                   <small>JPG, PNG or WebP · Max 5 MB</small>
@@ -588,7 +713,10 @@ export const CreateEventModal = ({
                   />
 
                   <div className="org-event-image-preview-actions">
-                    <label htmlFor="event-image-change" className="org-image-change-btn">
+                    <label
+                      htmlFor="event-image-change"
+                      className="org-image-change-btn"
+                    >
                       Change image
                     </label>
                     <button
@@ -614,7 +742,10 @@ export const CreateEventModal = ({
               )}
             </div>
 
-            <label className="org-form-field org-form-wide" htmlFor="event-name">
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-name"
+            >
               <span>Event name</span>
               <input
                 id="event-name"
@@ -626,7 +757,10 @@ export const CreateEventModal = ({
               />
             </label>
 
-            <label className="org-form-field org-form-wide" htmlFor="event-description">
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-description"
+            >
               <span>Description</span>
               <textarea
                 id="event-description"
@@ -638,7 +772,10 @@ export const CreateEventModal = ({
               />
             </label>
 
-            <label className="org-form-field org-form-wide" htmlFor="event-instructions">
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-instructions"
+            >
               <span>Instructions, Amenities & Guidelines</span>
               <textarea
                 id="event-instructions"
@@ -752,7 +889,10 @@ export const CreateEventModal = ({
               </select>
             </label>
 
-            <label className="org-form-field org-form-wide" htmlFor="event-location">
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-location"
+            >
               <span>Venue or location</span>
               <input
                 id="event-location"
@@ -763,16 +903,22 @@ export const CreateEventModal = ({
               />
             </label>
 
-            <label className="org-form-field" htmlFor="event-date">
-              <span>Date</span>
-              <input
+            {/* DatePicker field - past dates trigger error and cannot be chosen */}
+            <div className="org-form-field">
+              <label htmlFor="event-date">Date</label>
+              <DatePicker
                 id="event-date"
-                name="event_date"
-                type="date"
-                value={formData.event_date}
-                onChange={handleChange}
+                selected={parseDateStringToDate(formData.event_date)}
+                minDate={getTodayMidnight()}
+                onChange={handleDateChange}
+                dateFormat="dd-MM-yyyy"
+                placeholderText="DD-MM-YYYY"
+                showMonthDropdown
+                showYearDropdown
+                dropdownMode="select"
+                autoComplete="off"
               />
-            </label>
+            </div>
 
             <label className="org-form-field" htmlFor="event-time">
               <span>Start time</span>
@@ -785,7 +931,10 @@ export const CreateEventModal = ({
               />
             </label>
 
-            <label className="org-form-field org-form-wide" htmlFor="event-capacity">
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-capacity"
+            >
               <span>Total attendee capacity</span>
               <input
                 id="event-capacity"
@@ -799,13 +948,17 @@ export const CreateEventModal = ({
               />
             </label>
 
-            {/* Ticket Categories Configuration */}
             {!isEditMode && (
               <div className="org-form-field org-form-wide org-ticket-builder">
                 <div className="org-ticket-builder-header">
                   <div>
-                    <span className="org-ticket-builder-title">Ticket categories</span>
-                    <small>Create ticket tiers for this event (e.g. Early Bird, VIP, General)</small>
+                    <span className="org-ticket-builder-title">
+                      Ticket categories
+                    </span>
+                    <small>
+                      Create ticket tiers for this event (e.g. Early Bird, VIP,
+                      General)
+                    </small>
                   </div>
 
                   <button
@@ -839,7 +992,10 @@ export const CreateEventModal = ({
                             placeholder="Price"
                             value={ticket.price}
                             onChange={(e) => {
-                              const clean = e.target.value.replace(/[^0-9.]/g, "");
+                              const clean = e.target.value.replace(
+                                /[^0-9.]/g,
+                                "",
+                              );
                               handleTicketChange(index, "price", clean);
                             }}
                             className="org-ticket-price-input"
@@ -863,7 +1019,11 @@ export const CreateEventModal = ({
                         placeholder="Short description / perks (e.g. Front row seat + welcome drink)"
                         value={ticket.description}
                         onChange={(e) =>
-                          handleTicketChange(index, "description", e.target.value)
+                          handleTicketChange(
+                            index,
+                            "description",
+                            e.target.value,
+                          )
                         }
                         className="org-ticket-desc-input"
                       />
@@ -909,7 +1069,9 @@ export const CreateEventModal = ({
                   {submitting ? (
                     <>
                       <Loader2 size={16} className="org-spin" />
-                      {isEditMode ? "Submitting for review..." : "Submitting event & tickets..."}
+                      {isEditMode
+                        ? "Submitting for review..."
+                        : "Submitting event & tickets..."}
                     </>
                   ) : isEditMode ? (
                     "Submit for review"

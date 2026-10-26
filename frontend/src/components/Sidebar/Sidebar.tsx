@@ -82,14 +82,7 @@ export function Sidebar({
 
   const handleAccountClick = () => {
     onClose();
-
-    if (isAdmin) {
-      navigate("/admin");
-    } else if (isOrganiser) {
-      navigate("/organiser");
-    } else {
-      navigate("/settings/profile");
-    }
+    navigate("/settings/profile");
   };
 
   const handleProfileImageError = (

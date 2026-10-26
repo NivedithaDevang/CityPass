@@ -4,8 +4,6 @@ import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import { type Events, type User } from "../../types/auth";
 import { useUser } from "../../context/UserContext";
-import Navbar from "../../components/Navbar/Navbar";
-import { Footer } from "../../components/Footer/Footer";
 import {
   FaMapPin,
   FaCalendarAlt,
@@ -36,9 +34,6 @@ interface EventWithTickets extends Events {
   event_tickets?: EventTicket[];
   tickets?: EventTicket[];
   image?: string;
-  image_url?: string;
-  poster_url?: string;
-  banner_image?: string;
   instructions?: string;
   additional_instructions?: string;
   languages?: string | string[];
@@ -135,9 +130,8 @@ function EventDetails() {
       const parsed = JSON.parse(languages);
       if (Array.isArray(parsed)) return parsed.join(" / ");
     } catch {
-      // String format like "English, Hindi"
+      /* Ignored: string is plain text, not JSON */
     }
-
     return languages.replace(/,/g, " / ");
   };
 
@@ -173,12 +167,10 @@ function EventDetails() {
   if (loading) {
     return (
       <>
-        <Navbar />
         <div className="details-container details-state">
           <div className="details-loading-spinner" />
           <p className="status-text">Loading event details...</p>
         </div>
-        <Footer />
       </>
     );
   }
@@ -186,33 +178,19 @@ function EventDetails() {
   if (error || !event) {
     return (
       <>
-        <Navbar />
         <div className="details-container details-state">
           <p className="status-text">{error || "Event not found."}</p>
           <button className="back-button" onClick={() => navigate(-1)}>
             <FaArrowLeft /> Back to Events
           </button>
         </div>
-        <Footer />
       </>
     );
   }
 
-  const eventBackgrounds = [
-    "/eventBG/image1.png",
-    "/eventBG/image2.png",
-    "/eventBG/image3.png",
-  ];
-
-  const fallbackImage = eventBackgrounds[event.id % eventBackgrounds.length];
 
   const eventImage =
-    event.image ||
-    event.poster_url ||
-    event.image_url ||
-    event.banner_image;
-
-  const posterImage = eventImage || fallbackImage;
+    event.image;
 
   const formattedTime =
     formatTimeString(event.time) || "(Time yet to be confirmed)";
@@ -236,8 +214,6 @@ function EventDetails() {
 
   return (
     <>
-      <Navbar />
-
       <div className="details-outer-container">
         <div className="details-page-bg">
           <main className="details-wrapper">
@@ -249,14 +225,13 @@ function EventDetails() {
             {/* Event hero */}
             <header className="details-hero">
               <img
-                src={posterImage}
+                src={eventImage}
                 alt={event.name || "Event backdrop"}
                 className="hero-backdrop-img"
                 onError={(e) => {
                   const image = e.currentTarget;
                   if (image.dataset.fallbackApplied !== "true") {
                     image.dataset.fallbackApplied = "true";
-                    image.src = fallbackImage;
                   } else {
                     image.style.visibility = "hidden";
                   }
@@ -268,14 +243,13 @@ function EventDetails() {
               <div className="hero-grid-content">
                 <div className="hero-poster-wrapper">
                   <img
-                    src={posterImage}
+                    src={eventImage}
                     alt={event.name || "Event poster"}
                     className="hero-poster-img"
                     onError={(e) => {
                       const image = e.currentTarget;
                       if (image.dataset.fallbackApplied !== "true") {
                         image.dataset.fallbackApplied = "true";
-                        image.src = fallbackImage;
                       } else {
                         image.style.visibility = "hidden";
                       }
@@ -553,8 +527,6 @@ function EventDetails() {
         isOpen={showTerms}
         onClose={() => setShowTerms(false)}
       />
-
-      <Footer />
     </>
   );
 }

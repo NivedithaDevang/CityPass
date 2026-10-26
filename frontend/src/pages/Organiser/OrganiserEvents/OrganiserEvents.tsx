@@ -68,10 +68,41 @@ const statuses: EventStatusFilter[] = [
   "COMPLETED",
 ];
 
+// Checks if the event date has already passed
+const isEventPast = (dateValue?: string, timeValue?: string): boolean => {
+  if (!dateValue) return false;
+
+  const rawDate = dateValue.includes("T")
+    ? dateValue.split("T")[0]
+    : dateValue.split(" ")[0];
+
+  const [yearStr, monthStr, dayStr] = rawDate.split("-");
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return false;
+
+  let hours = 23;
+  let minutes = 59;
+
+  if (timeValue) {
+    const parts = timeValue.split(":");
+    if (parts.length >= 2) {
+      hours = parseInt(parts[0], 10);
+      minutes = parseInt(parts[1], 10);
+    }
+  }
+
+  const eventDateTime = new Date(year, month - 1, day, hours, minutes, 0);
+  return eventDateTime.getTime() < Date.now();
+};
+
+// Prevents UTC shift by parsing calendar components directly
 const isEventToday = (dateValue?: string): boolean => {
   if (!dateValue) return false;
 
-  const cleanPart = dateValue.includes("T")
+  const rawDate = dateValue.includes("T")
     ? dateValue.split("T")[0]
     : dateValue.split(" ")[0];
 
@@ -81,19 +112,28 @@ const isEventToday = (dateValue?: string): boolean => {
   const day = String(now.getDate()).padStart(2, "0");
   const todayStr = `${year}-${month}-${day}`;
 
-  return cleanPart === todayStr;
+  return rawDate === todayStr;
 };
 
+// Formats date using literal year/month/day components so UTC midnight does not shift to yesterday
 const formatEventDate = (value?: string) => {
   if (!value) return "Date to be announced";
 
-  const parsed = new Date(
-    value.includes("T") ? value : `${value}T00:00:00`,
-  );
+  const rawDate = value.includes("T")
+    ? value.split("T")[0]
+    : value.split(" ")[0];
 
-  if (isNaN(parsed.getTime())) return "Date to be announced";
+  const [yearStr, monthStr, dayStr] = rawDate.split("-");
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
 
-  return parsed.toLocaleDateString("en-IN", {
+  if (isNaN(year) || isNaN(month) || isNaN(day)) {
+    return "Date to be announced";
+  }
+
+  const localDate = new Date(year, month - 1, day);
+  return localDate.toLocaleDateString("en-IN", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -149,6 +189,13 @@ const getCategoryIcon = (categoryName?: string | null) => {
   return null;
 };
 
+// Returns resolved event status (past non-cancelled events become COMPLETED)
+const resolveEventStatus = (event: OrganiserEvent): OrganiserEvent["status"] => {
+  if (event.status === "CANCELLED") return "CANCELLED";
+  if (isEventPast(event.event_date, event.time)) return "COMPLETED";
+  return event.status;
+};
+
 function OrganiserEvents() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useUser();
@@ -198,14 +245,14 @@ function OrganiserEvents() {
 
       setEvents((prev) =>
         prev.map((ev) =>
-          Number(ev.id) === eventId ? { ...ev, status: "CANCELLED" } : ev
-        )
+          Number(ev.id) === eventId ? { ...ev, status: "CANCELLED" } : ev,
+        ),
       );
 
       setSelectedEvent((prev) =>
         prev && Number(prev.id) === eventId
           ? { ...prev, status: "CANCELLED" }
-          : prev
+          : prev,
       );
 
       setNotice(`"${cancel.eventName}" has been cancelled successfully.`);
@@ -214,8 +261,8 @@ function OrganiserEvents() {
       setError(
         getOrganiserErrorMessage(
           err,
-          "Failed to cancel the event. Please try again."
-        )
+          "Failed to cancel the event. Please try again.",
+        ),
       );
     } finally {
       setActionLoading(null);
@@ -232,8 +279,8 @@ function OrganiserEvents() {
       setEvents(data);
       setLiveEvents(
         Object.fromEntries(
-          data.map((event) => [String(event.id), Boolean(event.is_live)])
-        )
+          data.map((event) => [String(event.id), Boolean(event.is_live)]),
+        ),
       );
     } catch (loadError: unknown) {
       setError(
@@ -250,10 +297,11 @@ function OrganiserEvents() {
   const handleToggleLive = async (e: React.MouseEvent, eventId: number) => {
     e.stopPropagation();
 
-    const currentStatus = Boolean(liveEvents[String(eventId)]);
+    const idKey = String(eventId);
+    const currentStatus = Boolean(liveEvents[idKey]);
     const nextStatus = !currentStatus;
 
-    setLiveEvents((prev) => ({ ...prev, [eventId]: nextStatus }));
+    setLiveEvents((prev) => ({ ...prev, [idKey]: nextStatus }));
 
     try {
       await liveEvent(eventId, nextStatus);
@@ -261,15 +309,18 @@ function OrganiserEvents() {
         prev.map((event) =>
           Number(event.id) === eventId
             ? { ...event, is_live: nextStatus }
-            : event
-        )
+            : event,
+        ),
       );
       setNotice(nextStatus ? "Event is now live!" : "Event is no longer live.");
       window.setTimeout(() => setNotice(""), 3000);
     } catch (err: unknown) {
-      setLiveEvents((prev) => ({ ...prev, [eventId]: currentStatus }));
+      setLiveEvents((prev) => ({ ...prev, [idKey]: currentStatus }));
       setError(
-        getOrganiserErrorMessage(err, "Failed to update live status. Please try again.")
+        getOrganiserErrorMessage(
+          err,
+          "Failed to update live status. Please try again.",
+        ),
       );
     }
   };
@@ -312,8 +363,8 @@ function OrganiserEvents() {
     const query = search.trim().toLocaleLowerCase();
 
     return events.filter((event) => {
-      const matchesStatus =
-        filter === "ALL" || event.status === filter;
+      const effectiveStatus = resolveEventStatus(event);
+      const matchesStatus = filter === "ALL" || effectiveStatus === filter;
 
       const matchesSearch =
         !query ||
@@ -328,10 +379,7 @@ function OrganiserEvents() {
     });
   }, [events, filter, search]);
 
-  const pageCount = Math.max(
-    1,
-    Math.ceil(filteredEvents.length / PAGE_SIZE),
-  );
+  const pageCount = Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE));
 
   const pageEvents = filteredEvents.slice(
     (page - 1) * PAGE_SIZE,
@@ -424,13 +472,25 @@ function OrganiserEvents() {
   };
 
   const openEditModal = (event: OrganiserEvent) => {
-    if (event.status === "PENDING" || event.status === "CANCELLED") return;
+    const effectiveStatus = resolveEventStatus(event);
+    if (
+      effectiveStatus === "PENDING" ||
+      effectiveStatus === "CANCELLED" ||
+      effectiveStatus === "COMPLETED"
+    ) {
+      return;
+    }
 
     setSelectedEvent(null);
     setEditingEvent(event);
   };
 
   const openTicketManager = (event: OrganiserEvent) => {
+    const effectiveStatus = resolveEventStatus(event);
+    if (effectiveStatus === "CANCELLED" || effectiveStatus === "COMPLETED") {
+      return;
+    }
+
     setSelectedEvent(null);
     setTicketEventId(Number(event.id));
   };
@@ -469,7 +529,10 @@ function OrganiserEvents() {
       )}
 
       {(draftsLoading || draftsError || drafts.length > 0) && (
-        <section className="org-saved-drafts" aria-labelledby="org-saved-drafts-title">
+        <section
+          className="org-saved-drafts"
+          aria-labelledby="org-saved-drafts-title"
+        >
           <div className="org-saved-drafts-heading">
             <div>
               <span className="org-eyebrow">NOT SUBMITTED</span>
@@ -537,26 +600,29 @@ function OrganiserEvents() {
           role="tablist"
           aria-label="Filter events by status"
         >
-          {statuses.map((status) => (
-            <button
-              type="button"
-              key={status}
-              role="tab"
-              aria-selected={filter === status}
-              className={filter === status ? "active" : ""}
-              onClick={() => changeFilter(status)}
-            >
-              {status === "ALL"
-                ? "All"
-                : status.charAt(0) + status.slice(1).toLowerCase()}
+          {statuses.map((status) => {
+            const count =
+              status === "ALL"
+                ? events.length
+                : events.filter((ev) => resolveEventStatus(ev) === status).length;
 
-              <span>
+            return (
+              <button
+                type="button"
+                key={status}
+                role="tab"
+                aria-selected={filter === status}
+                className={filter === status ? "active" : ""}
+                onClick={() => changeFilter(status)}
+              >
                 {status === "ALL"
-                  ? events.length
-                  : events.filter((event) => event.status === status).length}
-              </span>
-            </button>
-          ))}
+                  ? "All"
+                  : status.charAt(0) + status.slice(1).toLowerCase()}
+
+                <span>{count}</span>
+              </button>
+            );
+          })}
         </div>
 
         <label className="org-event-search">
@@ -630,29 +696,32 @@ function OrganiserEvents() {
             {pageEvents.map((event) => {
               const CategoryIcon = getCategoryIcon(event.category_name);
 
-              const isPending = event.status === "PENDING";
-              const isCancelled = event.status === "CANCELLED";
-              const isRejected = event.status === "REJECTED";
-              const isApproved = event.status === "APPROVED";
+              const effectiveStatus = resolveEventStatus(event);
 
-              const isCardGrey = isPending || isCancelled || isRejected;
+              const isPending = effectiveStatus === "PENDING";
+              const isCancelled = effectiveStatus === "CANCELLED";
+              const isRejected = effectiveStatus === "REJECTED";
+              const isApproved = effectiveStatus === "APPROVED";
+              const isCompleted = effectiveStatus === "COMPLETED";
+
+              const isCardGrey = isPending || isCancelled || isRejected || isCompleted;
 
               const eventDateMatchesToday = isEventToday(event.event_date);
-              const isCurrentlyLive = Boolean(liveEvents[event.id]);
+              const isCurrentlyLive = Boolean(liveEvents[String(event.id)]);
 
-              // Can only toggle live if approved AND today's date matches (or already live and turning off)
               const canGoLive =
-                isApproved && (eventDateMatchesToday || isCurrentlyLive);
+                isApproved && !isCompleted && (eventDateMatchesToday || isCurrentlyLive);
 
-              const canCancel = isApproved;
-              const canEditOrResubmit = isApproved || isRejected;
+              const canCancel = isApproved && !isCompleted;
+              const canEditOrResubmit = (isApproved || isRejected) && !isCompleted;
+              const canManageTickets = !isCancelled && !isCompleted;
 
               const imageUrl =
                 (event as any).image_url || (event as any).image;
 
               return (
                 <article
-                  className={`org-grid-card ${isCardGrey ? "is-disabled" : ""}`}
+                  className={`org-grid-card ${isCardGrey ? "is-disabled" : ""} ${isCompleted ? "is-completed" : ""}`}
                   key={event.id}
                   onClick={() => setSelectedEvent(event)}
                 >
@@ -664,9 +733,7 @@ function OrganiserEvents() {
                         : undefined
                     }
                   >
-                    {imageUrl && (
-                      <div className="org-card-media-overlay" />
-                    )}
+                    {imageUrl && <div className="org-card-media-overlay" />}
 
                     <div className="org-card-top-badges">
                       <span className="org-card-category-badge">
@@ -680,9 +747,9 @@ function OrganiserEvents() {
                       </span>
 
                       <span
-                        className={`org-card-status-pill ${event.status.toLowerCase()}`}
+                        className={`org-card-status-pill ${effectiveStatus.toLowerCase()}`}
                       >
-                        {event.status}
+                        {effectiveStatus}
                       </span>
                     </div>
 
@@ -690,9 +757,8 @@ function OrganiserEvents() {
                       <MapPin size={13} className="org-card-pin" />
 
                       <span>
-                        {event.location ||
-                          event.city_name ||
-                          "Location TBD"}, {event.city_name || "City yet to be announced"}
+                        {event.location ? `${event.location}, ` : ""}
+                        {event.city_name || "City yet to be announced"}
                       </span>
                     </p>
                   </div>
@@ -709,8 +775,7 @@ function OrganiserEvents() {
                       <h3 title={event.name}>{event.name}</h3>
                     </div>
 
-                    {/* Controls row */}
-                    {event.status !== "CANCELLED" && (
+                    {effectiveStatus !== "CANCELLED" && (
                       <div
                         className="go-live-container"
                         onClick={(e) => e.stopPropagation()}
@@ -719,10 +784,10 @@ function OrganiserEvents() {
                           <button
                             type="button"
                             role="switch"
-                            aria-checked={Boolean(liveEvents[event.id])}
+                            aria-checked={Boolean(liveEvents[String(event.id)])}
                             disabled={!canGoLive}
                             className={`go-live-toggle ${
-                              liveEvents[event.id] ? "is-live" : ""
+                              liveEvents[String(event.id)] && !isCompleted ? "is-live" : ""
                             } ${!canGoLive ? "btn-disabled" : ""}`}
                             onClick={(e) => {
                               if (canGoLive) {
@@ -734,25 +799,32 @@ function OrganiserEvents() {
                               <span className="go-live-thumb" />
                             </span>
                             <span className="go-live-text">
-                              {liveEvents[event.id] ? "Live" : "Go Live"}
+                              {liveEvents[String(event.id)] && !isCompleted ? "Live" : "Go Live"}
                             </span>
                           </button>
 
-                          {/* Non-intrusive hint explaining why toggle is inactive */}
-                          {!canGoLive && isApproved && !eventDateMatchesToday && (
+                          {isCompleted ? (
+                            <span className="go-live-inline-hint">
+                              <Info size={11} /> Event has concluded
+                            </span>
+                          ) : !canGoLive && isApproved && !eventDateMatchesToday ? (
                             <span className="go-live-inline-hint">
                               <Info size={11} /> Unlocks on event day
                             </span>
-                          )}
+                          ) : null}
                         </div>
 
                         <button
                           type="button"
                           className="cancel-action-btn"
-                          disabled={!canCancel || actionLoading === Number(event.id)}
+                          disabled={
+                            !canCancel || actionLoading === Number(event.id)
+                          }
                           title={
-                            !canCancel
-                              ? `Cannot cancel an event with status ${event.status}`
+                            isCompleted
+                              ? "Event has already concluded"
+                              : !canCancel
+                              ? `Cannot cancel an event with status ${effectiveStatus}`
                               : "Cancel Event"
                           }
                           onClick={(e) => {
@@ -795,11 +867,13 @@ function OrganiserEvents() {
                           className={`org-card-edit-btn ${isRejected ? "btn-resubmit" : ""}`}
                           disabled={!canEditOrResubmit}
                           title={
-                            isRejected
+                            isCompleted
+                              ? "Event is completed and cannot be edited"
+                              : isRejected
                               ? "Edit details and re-submit for admin review"
                               : !canEditOrResubmit
-                              ? `Cannot edit an event that is ${event.status.toLowerCase()}`
-                              : "Edit event"
+                                ? `Cannot edit an event that is ${effectiveStatus.toLowerCase()}`
+                                : "Edit event"
                           }
                           onClick={(e) => {
                             e.stopPropagation();
@@ -815,10 +889,19 @@ function OrganiserEvents() {
                         <button
                           type="button"
                           className="org-card-action-btn"
-                          title="Manage Tickets"
+                          disabled={!canManageTickets}
+                          title={
+                            isCompleted
+                              ? "Event is completed"
+                              : isCancelled
+                              ? "Cannot manage tickets for a cancelled event"
+                              : "Manage Tickets"
+                          }
                           onClick={(e) => {
                             e.stopPropagation();
-                            openTicketManager(event);
+                            if (canManageTickets) {
+                              openTicketManager(event);
+                            }
                           }}
                         >
                           <Tag size={13} />
@@ -959,9 +1042,15 @@ function EventDetailsModal({
     (event as any).additional_instructions || (event as any).instructions;
   const ageGroup = (event as any).age_group || "All Ages";
 
-  const isRejected = event.status === "REJECTED";
-  const isApproved = event.status === "APPROVED";
-  const canEditOrResubmit = isApproved || isRejected;
+  const effectiveStatus = resolveEventStatus(event);
+
+  const isCancelled = effectiveStatus === "CANCELLED";
+  const isRejected = effectiveStatus === "REJECTED";
+  const isApproved = effectiveStatus === "APPROVED";
+  const isCompleted = effectiveStatus === "COMPLETED";
+
+  const canEditOrResubmit = (isApproved || isRejected) && !isCompleted;
+  const canManageTickets = !isCancelled && !isCompleted;
 
   useEffect(() => {
     const originalBodyOverflow = document.body.style.overflow;
@@ -1001,7 +1090,9 @@ function EventDetailsModal({
     const rawDur = (event as any).duration_hours ?? (event as any).duration;
     if (!rawDur) return "2 Hours";
     const num = Number(rawDur);
-    return !isNaN(num) ? `${num} ${num === 1 ? "Hour" : "Hours"}` : String(rawDur);
+    return !isNaN(num)
+      ? `${num} ${num === 1 ? "Hour" : "Hours"}`
+      : String(rawDur);
   };
 
   const potentialRevenue =
@@ -1051,9 +1142,9 @@ function EventDetailsModal({
               </span>
 
               <span
-                className={`org-status-badge ${event.status.toLowerCase()}`}
+                className={`org-status-badge ${effectiveStatus.toLowerCase()}`}
               >
-                {event.status}
+                {effectiveStatus}
               </span>
             </div>
           </div>
@@ -1066,9 +1157,9 @@ function EventDetailsModal({
                 </span>
 
                 <span
-                  className={`org-status-badge ${event.status.toLowerCase()}`}
+                  className={`org-status-badge ${effectiveStatus.toLowerCase()}`}
                 >
-                  {event.status}
+                  {effectiveStatus}
                 </span>
               </div>
             </div>
@@ -1105,7 +1196,7 @@ function EventDetailsModal({
             </div>
           </div>
 
-          {event.status === "REJECTED" && (
+          {effectiveStatus === "REJECTED" && (
             <div className="org-detail-reason">
               <strong>Admin Rejection Feedback</strong>
               <p>
@@ -1189,16 +1280,14 @@ function EventDetailsModal({
                 Instructions &amp; Venue Amenities
               </span>
 
-              <p className="org-detail-instructions-text">
-                {instructions}
-              </p>
+              <p className="org-detail-instructions-text">{instructions}</p>
             </div>
           )}
         </div>
 
         <footer className="org-detail-footer">
           <div className="org-detail-footer-actions">
-            {event.status === "APPROVED" && event.slug ? (
+            {isApproved && event.slug ? (
               <a
                 className="org-public-event-link"
                 href={`/events/${event.slug}`}
@@ -1209,11 +1298,13 @@ function EventDetailsModal({
               </a>
             ) : (
               <span className="org-detail-footer-note">
-                {event.status === "PENDING"
+                {isCompleted
+                  ? "Event has concluded. Ticket sales are closed."
+                  : event.status === "PENDING"
                   ? "Awaiting review by platform administrator."
                   : event.status === "REJECTED"
-                  ? "Please review feedback, edit details, and re-submit."
-                  : "Public ticket sales unavailable."}
+                    ? "Please review feedback, edit details, and re-submit."
+                    : "Public ticket sales unavailable."}
               </span>
             )}
           </div>
@@ -1222,8 +1313,19 @@ function EventDetailsModal({
             <button
               type="button"
               className="org-button-secondary org-detail-footer-btn"
-              title="Manage Tickets"
-              onClick={onManageTickets}
+              disabled={!canManageTickets}
+              title={
+                isCompleted
+                  ? "Event has completed"
+                  : isCancelled
+                  ? "Cannot manage tickets for a cancelled event"
+                  : "Manage Tickets"
+              }
+              onClick={() => {
+                if (canManageTickets) {
+                  onManageTickets();
+                }
+              }}
             >
               <Tag size={13} />
               Manage Tickets
@@ -1234,11 +1336,13 @@ function EventDetailsModal({
               className={`org-button-primary org-detail-footer-btn ${isRejected ? "btn-resubmit" : ""}`}
               disabled={!canEditOrResubmit}
               title={
-                isRejected
+                isCompleted
+                  ? "Event is completed and cannot be edited"
+                  : isRejected
                   ? "Edit details and re-submit for review"
                   : !canEditOrResubmit
-                  ? `Cannot edit an event that is ${event.status.toLowerCase()}`
-                  : "Edit Event"
+                    ? `Cannot edit an event that is ${effectiveStatus.toLowerCase()}`
+                    : "Edit Event"
               }
               onClick={onEdit}
             >

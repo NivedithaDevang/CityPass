@@ -64,7 +64,11 @@ function CategorySection() {
                 style={{ cursor: "pointer" }}
               >
                 <div className="category-icon" aria-label={category.name}>
-                  {CategoryIcon ? <CategoryIcon /> : null}
+                  {category.image ? (
+                    <img src={category.image} alt={category.name} />
+                  ) : CategoryIcon ? (
+                    <CategoryIcon />
+                  ) : null}
                 </div>
                 <h2>{category.name}</h2>
               </div>

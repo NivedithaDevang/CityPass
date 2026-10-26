@@ -4,27 +4,13 @@ import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import "./Events.css";
 import { type City, type Events } from "../../types/auth";
-import Navbar from "../../components/Navbar/Navbar";
-import { Footer } from "../../components/Footer/Footer";
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
 import { ChevronDown } from "lucide-react";
 
 import {
   FaMapPin,
-  FaMicrophone,
-  FaLaughSquint,
-  FaPaintBrush,
-  FaMountain,
   FaCompass,
 } from "react-icons/fa";
-
-import {
-  MdSportsFootball,
-  MdTheaterComedy,
-} from "react-icons/md";
-
-import { IoFastFoodSharp } from "react-icons/io5";
-import type { IconType } from "react-icons";
 
 // Parse the event date and time consistently.
 const parseEventTimestamp = (event: Events): number | null => {
@@ -67,21 +53,37 @@ const parseEventTimestamp = (event: Events): number | null => {
   return Number.isNaN(timestamp) ? null : timestamp;
 };
 
+const getEventDateKey = (event: Events): string | null => {
+  if (!event.event_date) return null;
+
+  const dateString = String(event.event_date);
+  const isoDate = dateString.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoDate) return isoDate[1];
+
+  const date = new Date(event.event_date);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+};
+
+const getTodayDateKey = (): string => {
+  const today = new Date();
+  return [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+};
+
 function Event() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const { selectedCity, setSelectedCity } = useCity();
-
-  const categoryIcons: Record<string, IconType> = {
-    Music: FaMicrophone,
-    Sports: MdSportsFootball,
-    Comedy: MdTheaterComedy,
-    Food: IoFastFoodSharp,
-    Art: FaPaintBrush,
-    Adventure: FaMountain,
-    Entertainment: FaLaughSquint,
-  };
 
   const sortOptions = [
     { value: "date_asc", label: "Date: Upcoming first" },
@@ -89,25 +91,6 @@ function Event() {
     { value: "price_asc", label: "Price: Low to High" },
     { value: "price_desc", label: "Price: High to Low" },
   ];
-
-  const getCategoryIcon = (
-    categoryName?: string | null
-  ): IconType | null => {
-    const normalized = categoryName?.toLowerCase() || "";
-
-    if (normalized.includes("music")) return categoryIcons.Music;
-    if (normalized.includes("sport")) return categoryIcons.Sports;
-    if (normalized.includes("comedy")) return categoryIcons.Comedy;
-    if (normalized.includes("food")) return categoryIcons.Food;
-    if (normalized.includes("art")) return categoryIcons.Art;
-    if (normalized.includes("adventure")) return categoryIcons.Adventure;
-    if (normalized.includes("entertainment")) {
-      return categoryIcons.Entertainment;
-    }
-
-    return null;
-  };
-
   const [search, setSearch] = useState("");
   const [events, setEvents] = useState<Events[]>([]);
   const [sortBy, setSortBy] = useState("date_asc");
@@ -296,14 +279,14 @@ function Event() {
   // Filter and sort events.
   const processedEvents = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
-    const currentTime = Date.now();
+    const todayDateKey = getTodayDateKey();
 
     const filtered = events.filter((event: any) => {
-      const eventTimestamp = parseEventTimestamp(event);
+      const eventDateKey = getEventDateKey(event);
 
       if (
-        eventTimestamp === null ||
-        eventTimestamp < currentTime
+        eventDateKey === null ||
+        eventDateKey < todayDateKey
       ) {
         return false;
       }
@@ -392,14 +375,14 @@ function Event() {
   // Show categories that have upcoming events.
   const activeCategories = useMemo(() => {
     const categories = new Set<string>();
-    const currentTime = Date.now();
+    const todayDateKey = getTodayDateKey();
 
     events.forEach((event: any) => {
-      const timestamp = parseEventTimestamp(event);
+      const eventDateKey = getEventDateKey(event);
 
       if (
-        timestamp !== null &&
-        timestamp >= currentTime &&
+        eventDateKey !== null &&
+        eventDateKey >= todayDateKey &&
         event.category_name?.trim()
       ) {
         categories.add(event.category_name.trim());
@@ -439,10 +422,6 @@ function Event() {
   };
 
   const renderEventCard = (event: Events) => {
-    const CategoryIcon = getCategoryIcon(
-      event.category_name
-    );
-
     const eventBackgrounds = [
       "/eventBG/image1.png",
       "/eventBG/image2.png",
@@ -500,9 +479,6 @@ function Event() {
 
           <div className="eventpage-media-badges">
             <span className="eventpage-badge">
-              {CategoryIcon && (
-                <CategoryIcon className="eventpage-category-icon" />
-              )}
               {event.category_name || "Event"}
             </span>
           </div>
@@ -583,8 +559,6 @@ function Event() {
 
   return (
     <>
-      <Navbar />
-
       <div className="events-hero-banner">
         <div className="events-hero-content">
           <span className="events-hero-badge">
@@ -875,8 +849,6 @@ function Event() {
           )}
         </div>
       </section>
-
-      <Footer />
     </>
   );
 }

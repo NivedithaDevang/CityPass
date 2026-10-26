@@ -1,4 +1,9 @@
+/* =========================================================
+   CONTAINER & HEADER
+   ========================================================= */
+
 .cities-container {
+  width: 100%;
   padding: 0;
   min-height: auto;
   background: transparent;
@@ -38,25 +43,30 @@
 
 .add-city-btn {
   border: none;
-  border-radius: 8px;
   padding: 11px 18px;
+  border-radius: 8px;
   background: #6c3cff;
   color: #fff;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
   cursor: pointer;
-  transition: 0.2s ease;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.2s ease, transform 0.2s ease;
 }
 
 .add-city-btn:hover {
-  background: #5930d8;
+  background: #5930d6;
+  transform: translateY(-1px);
 }
 
 .add-city-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* =========================================================
+   MESSAGES & TOASTS
+   ========================================================= */
 
 .cities-message {
   display: flex;
@@ -73,6 +83,7 @@
   border: none;
   background: transparent;
   cursor: pointer;
+  font-family: inherit;
   font-size: 13px;
   font-weight: 600;
 }
@@ -95,19 +106,24 @@
   color: #218838;
 }
 
+/* =========================================================
+   ADD CITY INLINE FORM
+   ========================================================= */
+
 .city-form {
   padding: 24px;
   margin-bottom: 24px;
   background: #fff;
-  border: 1px solid #eee;
+  border: 1px solid #eeeeee;
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 
 .city-form h2 {
   margin: 0 0 22px;
-  color: #222;
+  color: #1f1f1f;
   font-size: 20px;
+  font-weight: 700;
 }
 
 .city-form-group {
@@ -126,12 +142,11 @@
 .city-form-group textarea,
 .city-form-group select {
   width: 100%;
-  padding: 12px 14px;
+  padding: 11px 13px;
   border: 1px solid #ddd;
   border-radius: 8px;
-  box-sizing: border-box;
   outline: none;
-  background: #fff;
+  box-sizing: border-box;
   color: #333;
   font-family: inherit;
   font-size: 14px;
@@ -151,12 +166,16 @@
   cursor: not-allowed;
 }
 
+/* =========================================================
+   TOOLBAR, SEARCH & FILTERS
+   ========================================================= */
+
 .cities-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 18px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .cities-search {
@@ -168,8 +187,10 @@
   box-sizing: border-box;
   outline: none;
   background: #fff;
+  color: #333;
   font-family: inherit;
   font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .cities-search::placeholder {
@@ -210,50 +231,58 @@
   color: #fff;
 }
 
-/* --- Table Styling --- */
+/* =========================================================
+   TABLE VIEW
+   ========================================================= */
+
 .cities-table-container {
   width: 100%;
   overflow-x: auto;
   background: #ffffff;
+  border: 1px solid #eeeeee;
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  border: 1px solid #f0eef7;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 
 .cities-table {
   width: 100%;
-  min-width: 800px;
   border-collapse: collapse;
+  min-width: 700px;
 }
 
-.cities-table th,
-.cities-table td {
-  padding: 16px 20px;
-  text-align: left;
-  border-bottom: 1px solid #f2effa;
-  font-size: 14px;
+.cities-table thead {
+  background: #fafafa;
 }
 
 .cities-table th {
-  background: #faf9fd;
-  color: #55506b;
-  font-size: 12.5px;
+  padding: 15px 18px;
+  border-bottom: 1px solid #eeeeee;
+  color: #555;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.4px;
+  text-align: left;
   text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 .cities-table td {
+  padding: 16px 18px;
+  border-bottom: 1px solid #f0f0f0;
   color: #333;
+  font-size: 14px;
   vertical-align: middle;
+}
+
+.cities-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.cities-table tbody tr:hover {
+  background: #faf9ff;
 }
 
 .cities-table tbody tr:last-child td {
   border-bottom: none;
-}
-
-.cities-table tbody tr:hover {
-  background: #fcfbff;
 }
 
 .city-table-name {
@@ -274,26 +303,28 @@
 .city-table-thumb {
   width: 44px;
   height: 44px;
-  border-radius: 8px;
   object-fit: cover;
-  border: 1px solid #ece8f8;
+  border-radius: 8px;
 }
 
 .city-table-thumb-placeholder {
   width: 44px;
   height: 44px;
   border-radius: 8px;
-  background: #f4f0ff;
-  color: #9b81e8;
+  background: #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #94a3b8;
   font-size: 18px;
 }
 
 .city-status {
-  display: inline-block;
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 5px 10px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 700;
@@ -312,14 +343,15 @@
 
 .cities-table-actions {
   display: flex;
-  justify-content: flex-end;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .city-edit-btn {
-  padding: 7px 13px;
-  border: 1px solid #d8cdfc;
+  padding: 8px 13px;
+  border: 1px solid #cfc4ff;
   border-radius: 7px;
   background: #fff;
   color: #6c3cff;
@@ -327,23 +359,23 @@
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  transition: 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .city-edit-btn:hover {
-  background: #f5f1ff;
+  background: #f4f0ff;
   border-color: #6c3cff;
 }
 
 .city-deactivate-btn,
 .city-activate-btn {
-  padding: 7px 13px;
+  padding: 8px 13px;
   border-radius: 7px;
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  transition: 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .city-deactivate-btn {
@@ -374,155 +406,285 @@
   cursor: not-allowed;
 }
 
-/* Edit Modal */
-.city-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(2px);
-}
-
-.city-modal-content {
-  background: #fff;
-  border-radius: 14px;
-  width: 90%;
-  max-width: 520px;
-  padding: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-}
-
-.city-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.city-modal-header h2 {
-  margin: 0;
-  font-size: 18px;
-  color: #1f1f1f;
-}
-
-.city-modal-close {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: #777;
-  cursor: pointer;
-}
-
-.city-edit-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.city-cancel-btn,
-.city-save-btn {
-  padding: 9px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-.city-cancel-btn {
-  border: 1px solid #ddd;
-  background: #fff;
-  color: #555;
-}
-
-.city-cancel-btn:hover {
-  background: #f5f5f5;
-}
-
-.city-save-btn {
-  border: 1px solid #6c3cff;
-  background: #6c3cff;
-  color: #fff;
-}
-
-.city-save-btn:hover {
-  background: #5930d8;
-}
-
 .cities-placeholder {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 180px;
   background: #fff;
-  border: 1px solid #eee;
+  border: 1px solid #eeeeee;
   border-radius: 12px;
   color: #777;
   font-size: 14px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 
 .city-image-preview {
-  margin-top: 10px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 8px 12px;
   border-radius: 8px;
-  width: fit-content;
-  max-width: 100%;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
 }
 
 .city-image-preview img {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
+  width: 52px;
+  height: 52px;
   border-radius: 6px;
+  object-fit: cover;
   border: 1px solid #cbd5e1;
-  flex-shrink: 0;
 }
 
 .city-image-preview span {
-  font-size: 0.875rem;
+  font-size: 13px;
   color: #475569;
   font-weight: 500;
-  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
 }
 
 .city-image-preview button {
   background: transparent;
+  border: none;
   color: #ef4444;
-  border: 1px solid #fca5a5;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
 }
 
 .city-image-preview button:hover {
   background: #fee2e2;
-  border-color: #ef4444;
 }
+
+/* =========================================================
+   CITY EDIT MODAL POPUP
+   ========================================================= */
+
+.city-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+.city-modal-content {
+  position: relative;
+  background: #ffffff;
+  width: 100%;
+  max-width: 520px;
+  border-radius: 14px;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.city-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 0;
+}
+
+.city-modal-header h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.city-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 26px;
+  line-height: 1;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.city-modal-close:hover {
+  color: #0f172a;
+  background-color: #f1f5f9;
+}
+
+.city-modal-content form {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.city-modal-content .city-form-group {
+  margin: 0;
+}
+
+.city-modal-content .city-form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.city-modal-content .city-form-group input[type="text"],
+.city-modal-content .city-form-group textarea,
+.city-modal-content .city-form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1e293b;
+  background-color: #ffffff;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.city-modal-content .city-form-group input[type="text"]:focus,
+.city-modal-content .city-form-group textarea:focus,
+.city-modal-content .city-form-group select:focus {
+  border-color: #6c3cff;
+  box-shadow: 0 0 0 3px rgba(108, 60, 255, 0.15);
+}
+
+.city-modal-content input[type="file"] {
+  display: block;
+  width: 100%;
+  font-size: 13px;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.city-modal-content input[type="file"]::file-selector-button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 600;
+  font-size: 12px;
+  margin-right: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.city-modal-content input[type="file"]::file-selector-button:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.city-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.city-cancel-btn {
+  padding: 10px 18px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.city-cancel-btn:hover {
+  background: #f8fafc;
+}
+
+.city-save-btn {
+  padding: 10px 20px;
+  border: none;
+  background: #6c3cff;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.city-save-btn:hover {
+  background: #5930d6;
+}
+
+.city-save-btn:disabled,
+.city-cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+/* =========================================================
+   RESPONSIVE BREAKPOINTS
+   ========================================================= */
 
 @media (max-width: 768px) {
   .cities-header {
-    flex-direction: column;
     align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .cities-header h1 {
+    font-size: 26px;
+  }
+
+  .add-city-btn {
+    width: 100%;
   }
 
   .cities-toolbar {
-    flex-direction: column;
     align-items: stretch;
+    flex-direction: column;
   }
 
   .cities-search {
@@ -535,5 +697,53 @@
 
   .city-filter-btn {
     flex: 1;
+  }
+
+  .cities-table-container {
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cities-header {
+    margin-bottom: 20px;
+  }
+
+  .cities-header h1 {
+    font-size: 24px;
+  }
+
+  .cities-header p {
+    font-size: 13px;
+  }
+
+  .cities-message {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .city-edit-actions {
+    flex-direction: column;
+  }
+
+  .city-save-btn,
+  .city-cancel-btn {
+    width: 100%;
+  }
+
+  .cities-table th,
+  .cities-table td {
+    padding: 13px 14px;
+  }
+
+  .cities-table-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .city-edit-btn,
+  .city-deactivate-btn,
+  .city-activate-btn {
+    width: 100%;
   }
 }

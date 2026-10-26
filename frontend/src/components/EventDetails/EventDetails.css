@@ -1,16 +1,13 @@
-
 .details-outer-container {
-  margin-top: 92px auto 30px;
-  padding-top: 62px;
+  padding-top: 12px;
+  margin: 0;
 }
-
-
 
 .details-page-bg {
   min-height: 85vh;
   background-color: #f8fafc;
   padding-bottom: 5rem;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+  transition: margin-left 0.35s cubic-bezier(0.16, 1, 0.3, 1),
               margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -307,7 +304,7 @@
   display: grid;
   grid-template-columns: 1.75fr 1fr;
   gap: 2.25rem;
-  align-items: start;
+  align-items: start; /* Prevents columns from stretching together */
 }
 
 /* Content Cards */
@@ -392,15 +389,17 @@
   color: #5144ed;
 }
 
-/* Sticky Booking Card */
+/* Sticky Booking Card (Reserve Spot) */
 .booking-card {
   position: sticky;
-  top: 6rem;
+  top: 5.5rem;
+  align-self: flex-start; 
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 22px;
   padding: 2.25rem;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  z-index: 1000;
 }
 
 .booking-card-header {
@@ -409,11 +408,14 @@
   gap: 0.85rem;
   margin-bottom: 1.25rem;
 }
+
 .booking-card-title {
   display: block;
   font-weight: 800;
   font-size: 1.05rem;
   color: #0f172a;
+    position: sticky;
+  top: 5.5rem;
 }
 
 .booking-card-sub {
@@ -496,10 +498,10 @@
   margin: 1.1rem 0 0 0;
 }
 
-/* Shifts page left on desktop when drawer is active */
+/* Shifts page left on desktop when drawer is active without breaking sticky viewport context */
 @media (min-width: 1024px) {
   .details-outer-container.drawer-active .details-page-bg {
-    transform: translateX(-60px);
+    margin-left: -60px;
     margin-right: 440px;
   }
 }

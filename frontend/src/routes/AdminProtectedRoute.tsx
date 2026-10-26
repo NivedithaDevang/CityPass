@@ -41,9 +41,16 @@ const AdminProtectedRoute = ({
     return <Navigate to="/?login=true" replace />;
   }
 
-  const userRole = String(user.role || "").toUpperCase().trim();
+  const normalizedUserRole = String(user.role || "")
+    .toUpperCase()
+    .trim()
+    .replace(/[\s-]+/g, "_");
+  const userRole =
+    normalizedUserRole === "SUPERADMIN"
+      ? "SUPER_ADMIN"
+      : normalizedUserRole;
   const normalizedAllowedRoles = allowedRoles.map((role) =>
-    role.toUpperCase().trim()
+    role.toUpperCase().trim().replace(/[\s-]+/g, "_")
   );
 
   const isSuperAdmin = userRole === "SUPER_ADMIN";

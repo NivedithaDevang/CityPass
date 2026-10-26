@@ -140,13 +140,18 @@ export const fetchAdminCategories = async () => {
 };
 
 export const addCategory = async (
-  name: string
+  name: string,
+  image?: File | null
 ) => {
+  const formData = new FormData();
+  formData.append("name", name);
+  if (image) {
+    formData.append("image", image);
+  }
+
   const response = await adminApi.post(
     "/add-category",
-    {
-      name,
-    }
+    formData
   );
 
   return response.data;
@@ -157,11 +162,19 @@ export const updateCategory = async (
   data: {
     name?: string;
     is_active?: boolean;
+    image?: File | null;
   }
 ) => {
+  const formData = new FormData();
+  if (data.name !== undefined) formData.append("name", data.name);
+  if (data.is_active !== undefined) {
+    formData.append("is_active", String(data.is_active));
+  }
+  if (data.image) formData.append("image", data.image);
+
   const response = await adminApi.patch(
     `/categories/${categoryId}`,
-    data
+    formData
   );
 
   return response.data;

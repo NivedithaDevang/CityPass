@@ -13,9 +13,7 @@ import "./EventSection.css";
 
 type EventCardData = Events & {
   city?: string | { name?: string } | null;
-  poster_url?: string | null;
-  image_url?: string | null;
-  image?: string | null;
+  image?: string;
 };
 
 const isUpcomingEvent = (event: Events): boolean => {
@@ -32,6 +30,14 @@ const isUpcomingEvent = (event: Events): boolean => {
   const timeMatch = eventTime?.match(/^(\d{1,2}):(\d{2})/);
   if (timeMatch) {
     eventDate.setHours(Number(timeMatch[1]), Number(timeMatch[2]), 0, 0);
+    const today = new Date();
+    if (
+      eventDate.getFullYear() === today.getFullYear() &&
+      eventDate.getMonth() === today.getMonth() &&
+      eventDate.getDate() === today.getDate()
+    ) {
+      return true;
+    }
     return eventDate.getTime() >= Date.now();
   }
 
@@ -191,17 +197,7 @@ function EventSection() {
         {displayedEvents.map((event) => {
           const CategoryIcon = getCategoryIcon(event.category_name);
           const cityName = getResolvedCityName(event);
-          const eventBackgrounds = [
-            "/eventBG/image1.png",
-            "/eventBG/image2.png",
-            "/eventBG/image3.png",
-          ];
-          const fallbackImage = eventBackgrounds[event.id % eventBackgrounds.length];
-          const eventImage =
-            event.poster_url ||
-            event.image_url ||
-            event.image ||
-            fallbackImage;
+          const eventImage = event.image ?? undefined;
 
           return (
             <article
@@ -220,7 +216,6 @@ function EventSection() {
                     const image = error.currentTarget;
                     if (image.dataset.fallbackApplied !== "true") {
                       image.dataset.fallbackApplied = "true";
-                      image.src = fallbackImage;
                     } else {
                       image.style.visibility = "hidden";
                     }
