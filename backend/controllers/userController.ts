@@ -357,13 +357,6 @@ export const updateProfile = async (
       if (!validDate) {
         throw new AppError("Invalid date of birth", 400);
       }
-
-      if (dob > "2015-12-31") {
-        throw new AppError(
-          "Date of birth must be 31 December 2015 or earlier",
-          400
-        );
-      }
     }
 
     // Validate gender when provided.

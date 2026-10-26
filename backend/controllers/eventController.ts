@@ -4,6 +4,7 @@ import AppError from "../types/appError.js";
 import { getOrganiserByUserId } from "../models/organiserModel.js";
 import {
   getEventById,
+  getEventDateById,
   getAllEvents,
   getAllActivities,
   getAllConcerts,
@@ -36,7 +37,10 @@ const slugify = (text: string): string => {
     .replace(/-+/g, "-");
 };
 
-const generateUniqueSlug = async (name: string, excludeId?: number): Promise<string> => {
+const generateUniqueSlug = async (
+  name: string,
+  excludeId?: number
+): Promise<string> => {
   const baseSlug = slugify(name);
   let candidateSlug = baseSlug;
   let counter = 1;
@@ -47,6 +51,12 @@ const generateUniqueSlug = async (name: string, excludeId?: number): Promise<str
   }
 
   return candidateSlug;
+};
+
+// Strips out any ISO time information, returning pure YYYY-MM-DD
+const solveDateString = (dateVal?: string): string => {
+  if (!dateVal) return "";
+  return dateVal.split("T")[0].split(" ")[0].trim();
 };
 
 // GET /events/:slug
@@ -205,36 +215,39 @@ export const addEvent = async (
       );
     }
 
+    const cleanDate = solveDateString(String(event_date));
     const slug = await generateUniqueSlug(name);
     const cityId = validateId(city_id);
-const categoryId = validateId(category_id);
+    const categoryId = validateId(category_id);
 
-    const uploadResult = await new Promise<{ secure_url: string; public_id: string }>(
-      (resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            folder: "citypass/events",
-            resource_type: "image",
-          },
-          (error, result) => {
-            if (error || !result) {
-              return reject(new AppError("Cloudinary upload failed", 502));
-            }
-            resolve({
-              secure_url: result.secure_url,
-              public_id: result.public_id,
-            });
+    const uploadResult = await new Promise<{
+      secure_url: string;
+      public_id: string;
+    }>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: "citypass/events",
+          resource_type: "image",
+        },
+        (error, result) => {
+          if (error || !result) {
+            return reject(new AppError("Cloudinary upload failed", 502));
           }
-        );
-        uploadStream.end(imageFile.buffer);
-      }
-    );
+          resolve({
+            secure_url: result.secure_url,
+            public_id: result.public_id,
+          });
+        }
+      );
+      uploadStream.end(imageFile.buffer);
+    });
 
     uploadedPublicId = uploadResult.public_id;
 
     const parsedDuration = parseDurationHours(duration_hours);
-    const resolvedInstructions = (additional_instructions ?? instructions)?.trim() || null;
-    const resolvedAgeGroup = (age_group)?.trim() || null;
+    const resolvedInstructions =
+      (additional_instructions ?? instructions)?.trim() || null;
+    const resolvedAgeGroup = age_group?.trim() || null;
 
     const result = await createEvent({
       organizer_id: organiser.id,
@@ -245,7 +258,7 @@ const categoryId = validateId(category_id);
       slug,
       description: description?.trim() || null,
       location: location?.trim() || null,
-      event_date,
+      event_date: cleanDate,
       time,
       price: Number(price),
       capacity: Number(capacity),
@@ -269,7 +282,7 @@ const categoryId = validateId(category_id);
         slug,
         description: description?.trim() || null,
         location: location?.trim() || null,
-        event_date,
+        event_date: cleanDate,
         time,
         price: Number(price),
         capacity: Number(capacity),
@@ -283,14 +296,18 @@ const categoryId = validateId(category_id);
   } catch (err: any) {
     if (uploadedPublicId) {
       try {
-        await cloudinary.uploader.destroy(uploadedPublicId, { resource_type: "image" });
+        await cloudinary.uploader.destroy(uploadedPublicId, {
+          resource_type: "image",
+        });
       } catch (cleanupErr) {
         console.error("Cloudinary cleanup failed:", cleanupErr);
       }
     }
 
     if (err.code === "ER_DUP_ENTRY") {
-      return next(new AppError("An event with this slug or name already exists", 409));
+      return next(
+        new AppError("An event with this slug or name already exists", 409)
+      );
     }
 
     next(err);
@@ -342,26 +359,27 @@ export const updateEvent = async (
     let newPublicId: string | undefined;
 
     if (imageFile) {
-      const uploadResult = await new Promise<{ secure_url: string; public_id: string }>(
-        (resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            {
-              folder: "citypass/events",
-              resource_type: "image",
-            },
-            (error, result) => {
-              if (error || !result) {
-                return reject(new AppError("Cloudinary upload failed", 502));
-              }
-              resolve({
-                secure_url: result.secure_url,
-                public_id: result.public_id,
-              });
+      const uploadResult = await new Promise<{
+        secure_url: string;
+        public_id: string;
+      }>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: "citypass/events",
+            resource_type: "image",
+          },
+          (error, result) => {
+            if (error || !result) {
+              return reject(new AppError("Cloudinary upload failed", 502));
             }
-          );
-          uploadStream.end(imageFile.buffer);
-        }
-      );
+            resolve({
+              secure_url: result.secure_url,
+              public_id: result.public_id,
+            });
+          }
+        );
+        uploadStream.end(imageFile.buffer);
+      });
 
       newImageUrl = uploadResult.secure_url;
       newPublicId = uploadResult.public_id;
@@ -372,11 +390,15 @@ export const updateEvent = async (
 
     if (name !== undefined) updatePayload.name = name.trim();
     if (slug !== undefined) updatePayload.slug = slug;
-    if (description !== undefined) updatePayload.description = description?.trim() || null;
-    if (location !== undefined) updatePayload.location = location?.trim() || null;
+    if (description !== undefined)
+      updatePayload.description = description?.trim() || null;
+    if (location !== undefined)
+      updatePayload.location = location?.trim() || null;
     if (city_id !== undefined) updatePayload.city_id = validateId(city_id);
-    if (category_id !== undefined) updatePayload.category_id = validateId(category_id);
-    if (event_date !== undefined) updatePayload.event_date = event_date;
+    if (category_id !== undefined)
+      updatePayload.category_id = validateId(category_id);
+    if (event_date !== undefined)
+      updatePayload.event_date = solveDateString(String(event_date));
     if (time !== undefined) updatePayload.time = time;
     if (price !== undefined) updatePayload.price = Number(price);
     if (capacity !== undefined) updatePayload.capacity = Number(capacity);
@@ -387,7 +409,7 @@ export const updateEvent = async (
       updatePayload.languages = languages;
     }
     if (age_group !== undefined) {
-      updatePayload.age_group = (age_group)?.trim() || null;
+      updatePayload.age_group = age_group?.trim() || null;
     }
     if (duration_hours !== undefined) {
       updatePayload.duration_hours = parseDurationHours(duration_hours);
@@ -408,7 +430,9 @@ export const updateEvent = async (
             let publicId = oldImageUrl.substring(uploadIndex + 8);
             publicId = publicId.replace(/^v\d+\//, "");
             publicId = publicId.replace(/\.[^/.]+$/, "");
-            await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
+            await cloudinary.uploader.destroy(publicId, {
+              resource_type: "image",
+            });
           }
         } catch {
           // ignore cleanup errors
@@ -426,14 +450,18 @@ export const updateEvent = async (
   } catch (err: any) {
     if (uploadedPublicId) {
       try {
-        await cloudinary.uploader.destroy(uploadedPublicId, { resource_type: "image" });
+        await cloudinary.uploader.destroy(uploadedPublicId, {
+          resource_type: "image",
+        });
       } catch {
         // ignore cleanup errors
       }
     }
 
     if (err.code === "ER_DUP_ENTRY") {
-      return next(new AppError("An event with this slug or name already exists", 409));
+      return next(
+        new AppError("An event with this slug or name already exists", 409)
+      );
     }
 
     next(err);
@@ -482,14 +510,14 @@ export const cancelOrganiserEvent = async (
 ) => {
   try {
     const eventId = validateId(req.params.id);
-const { status } = req.body;
-const authenticatedUserId = req.user?.id;
+    const { status } = req.body;
+    const authenticatedUserId = req.user?.id;
 
-if (!authenticatedUserId) {
-  throw new AppError("Unauthorized: Authentication required", 401);
-}
+    if (!authenticatedUserId) {
+      throw new AppError("Unauthorized: Authentication required", 401);
+    }
 
-const userId = validateId(authenticatedUserId);
+    const userId = validateId(authenticatedUserId);
 
     if (status !== "CANCELLED") {
       throw new AppError("Status must be CANCELLED", 400);
@@ -560,24 +588,14 @@ export const goEventLive = async (
       throw new AppError("Forbidden: You cannot update this event", 403);
     }
 
-    // Only allow going live if today's date matches the event date
     if (isLive) {
-      const getLocalDateString = (d: Date) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, "0");
-        const day = String(d.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
-      };
+      const now = new Date();
+      const localYear = now.getFullYear();
+      const localMonth = String(now.getMonth() + 1).padStart(2, "0");
+      const localDay = String(now.getDate()).padStart(2, "0");
+      const todayStr = `${localYear}-${localMonth}-${localDay}`;
 
-      const todayStr = getLocalDateString(new Date());
-
-      // Extract YYYY-MM-DD from event.event_date
-      let eventDateStr = "";
-      if (typeof event.event_date === "string") {
-        eventDateStr = event.event_date.split("T")[0].split(" ")[0];
-      } else if (event.event_date instanceof Date) {
-        eventDateStr = getLocalDateString(event.event_date);
-      }
+      const eventDateStr = await getEventDateById(eventId);
 
       if (todayStr !== eventDateStr) {
         throw new AppError(

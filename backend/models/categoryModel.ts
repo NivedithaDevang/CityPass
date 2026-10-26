@@ -5,12 +5,26 @@ export type Category = RowDataPacket & {
   id: number;
   name: string;
   is_active: boolean;
+  image?: string;
+};
+
+export const getCategoryById = async (
+  id: number
+): Promise<Category | undefined> => {
+  const sql = `
+    SELECT id, name, image, is_active
+    FROM categories
+    WHERE id = ?
+  `;
+
+  const [results] = await db.query<Category[]>(sql, [id]);
+  return results[0];
 };
 
 // Public: Only active categories
 export const getActiveCategories = async (): Promise<Category[]> => {
   const sql = `
-    SELECT id, name, is_active
+    SELECT id, name, is_active, image
     FROM categories
     WHERE is_active = TRUE
     ORDER BY name ASC
@@ -23,7 +37,7 @@ export const getActiveCategories = async (): Promise<Category[]> => {
 // Admin: All categories (both ACTIVE and INACTIVE)
 export const getAllCategory = async (): Promise<Category[]> => {
   const sql = `
-    SELECT id, name, is_active
+    SELECT id, name, is_active, image
     FROM categories
     ORDER BY id ASC
   `;
@@ -33,13 +47,16 @@ export const getAllCategory = async (): Promise<Category[]> => {
 };
 
 // Create category (defaults to TRUE)
-export const createCategory = async (name: string): Promise<number> => {
+export const createCategory = async (name: string, imageUrl: string | null): Promise<number> => {
   const sql = `
-    INSERT INTO categories (name, is_active)
-    VALUES (?, TRUE)
+    INSERT INTO categories (name, image, is_active)
+    VALUES (?, ?, TRUE)
   `;
 
-  const [result] = await db.execute<ResultSetHeader>(sql, [name.trim()]);
+  const [result] = await db.execute<ResultSetHeader>(sql, [
+    name.trim(),
+    imageUrl,
+  ]);
   return result.insertId;
 };
 
@@ -47,6 +64,7 @@ export const createCategory = async (name: string): Promise<number> => {
 export const updateCategory = async (
   id: number,
   name?: string,
+  image?: string,
   is_active?: boolean
 ) => {
   const fields: string[] = [];
@@ -55,6 +73,10 @@ export const updateCategory = async (
   if (name !== undefined) {
     fields.push("name = ?");
     values.push(name.trim());
+  }
+  if (image !== undefined) {
+    fields.push("image = ?");
+    values.push(image.trim());
   }
 
   if (is_active !== undefined) {

@@ -4,7 +4,7 @@ import {
   getAdminUserDetails,
   getUsers,
 } from "../../controllers/userController.js";
-import { getCategories, addCategory, editCategory } from "../../controllers/categoryController.js";
+import { getAdminCategories, addCategory, editCategory } from "../../controllers/categoryController.js";
 import { getCities, addCity, editCity } from "../../controllers/cityController.js";
 import { getAdminEventRequests, getEvents, updateEventStatus } from "../../controllers/eventController.js";
 import { getOrganisers } from "../../controllers/organiserController.js";
@@ -23,7 +23,7 @@ adminRouter.use( authenticate, checkAdminRole );
 
 adminRouter.get( "/users", getUsers );
 adminRouter.get( "/users/:id/details", getAdminUserDetails );
-adminRouter.get( "/categories", getCategories );
+adminRouter.get( "/categories", getAdminCategories );
 adminRouter.get( "/cities", getCities );
 adminRouter.get( "/events", getEvents);
 adminRouter.get( "/event-requests", getAdminEventRequests);
@@ -32,9 +32,9 @@ adminRouter.get( "/organiser-requests", getRequests );
 
 
 adminRouter.post( "/add-city", validateCity, upload.single("image"), addCity );
-adminRouter.post( "/add-category", validateCategory, addCategory );
+adminRouter.post( "/add-category", upload.single("image"), validateCategory, addCategory );
 
-adminRouter.patch( "/categories/:id", editCategory );
+adminRouter.patch( "/categories/:id", upload.single("image"), editCategory );
 adminRouter.patch( "/events/:id/status", updateEventStatus );
 adminRouter.patch( "/cities/:id", upload.single("image"), editCity );
 adminRouter.patch( "/cities/:id", editCity );

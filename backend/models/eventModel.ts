@@ -1,15 +1,13 @@
-
 import { db } from "../config/database.js";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
-export type EventStatus = 
+export type EventStatus =
   | "PENDING"
   | "APPROVED"
   | "REJECTED"
   | "COMPLETED"
   | "CANCELLED";
 
-// Updated type with new columns
 export type Event = {
   organizer_id: number;
   city_id: number;
@@ -69,20 +67,42 @@ export type AdminEventRequest = EventWithCategoryAndCity & {
 
 export const getEventById = async (id: number): Promise<EventRow[]> => {
   const sql = `
-    SELECT *
+    SELECT 
+      events.*,
+      DATE_FORMAT(events.event_date, '%Y-%m-%d') AS event_date
     FROM events
-    WHERE id = ?
+    WHERE events.id = ?
   `;
   const [results] = await db.query<EventRow[]>(sql, [id]);
   return results;
 };
 
+export const getEventDateById = async (id: number): Promise<string | null> => {
+  const sql = `
+    SELECT DATE_FORMAT(event_date, '%Y-%m-%d') AS event_date
+    FROM events
+    WHERE id = ?
+  `;
+  const [results] = await db.query<(RowDataPacket & { event_date: string })[]>(
+    sql,
+    [id]
+  );
+  return results[0]?.event_date ?? null;
+};
+
 export const getAllEvents = async (): Promise<EventWithCategory[]> => {
   const sql = `
-    SELECT events.*, categories.name AS category_name
+    SELECT 
+      events.*, 
+      DATE_FORMAT(events.event_date, '%Y-%m-%d') AS event_date,
+      categories.name AS category_name
     FROM events
     LEFT JOIN categories ON categories.id = events.category_id
     WHERE events.status = 'APPROVED'
+      AND (
+        events.event_date >= CURDATE()
+        OR events.is_live = 1
+      )
     ORDER BY events.event_date ASC
   `;
   const [results] = await db.query<EventWithCategory[]>(sql);
@@ -91,11 +111,18 @@ export const getAllEvents = async (): Promise<EventWithCategory[]> => {
 
 export const getAllActivities = async (): Promise<EventWithCategory[]> => {
   const sql = `
-    SELECT events.*, categories.name AS category_name 
+    SELECT 
+      events.*, 
+      DATE_FORMAT(events.event_date, '%Y-%m-%d') AS event_date,
+      categories.name AS category_name 
     FROM events 
     INNER JOIN categories ON categories.id = events.category_id 
     WHERE events.status = 'APPROVED' 
       AND categories.id IN (2, 5, 6)
+      AND (
+        events.event_date >= CURDATE()
+        OR events.is_live = 1
+      )
     ORDER BY events.event_date ASC
   `;
   const [results] = await db.query<EventWithCategory[]>(sql);
@@ -104,11 +131,18 @@ export const getAllActivities = async (): Promise<EventWithCategory[]> => {
 
 export const getAllConcerts = async (): Promise<EventWithCategory[]> => {
   const sql = `
-    SELECT events.*, categories.name AS category_name 
+    SELECT 
+      events.*, 
+      DATE_FORMAT(events.event_date, '%Y-%m-%d') AS event_date,
+      categories.name AS category_name 
     FROM events 
     INNER JOIN categories ON categories.id = events.category_id 
     WHERE events.status = 'APPROVED' 
       AND categories.id IN (1)
+      AND (
+        events.event_date >= CURDATE()
+        OR events.is_live = 1
+      )
     ORDER BY events.event_date ASC
   `;
   const [results] = await db.query<EventWithCategory[]>(sql);
@@ -119,6 +153,7 @@ export const getEventBySlug = async (slug: string) => {
   const sql = `
     SELECT
       events.*,
+      DATE_FORMAT(events.event_date, '%Y-%m-%d') AS event_date,
       categories.name AS category_name,
       cities.name AS city_name,
       organizers.stage_name AS organiser_stage_name,
@@ -170,6 +205,12 @@ export const createEvent = async (event: Event): Promise<ResultSetHeader> => {
       : JSON.stringify(event.languages)
     : null;
 
+  // Clean date string to ensure only 'YYYY-MM-DD' gets saved into the DATE column
+  const cleanDate =
+    typeof event.event_date === "string"
+      ? event.event_date.split("T")[0].split(" ")[0]
+      : event.event_date;
+
   const [result] = await db.query<ResultSetHeader>(sql, [
     event.organizer_id,
     event.city_id,
@@ -179,7 +220,7 @@ export const createEvent = async (event: Event): Promise<ResultSetHeader> => {
     event.slug,
     event.description ?? null,
     event.location ?? null,
-    event.event_date,
+    cleanDate,
     event.time,
     event.price,
     event.capacity,
@@ -231,7 +272,11 @@ export const updateEvent = async (
   }
   if (event.event_date !== undefined) {
     fields.push("event_date = ?");
-    values.push(event.event_date);
+    const cleanDate =
+      typeof event.event_date === "string"
+        ? event.event_date.split("T")[0].split(" ")[0]
+        : event.event_date;
+    values.push(cleanDate);
   }
   if (event.time !== undefined) {
     fields.push("time = ?");
@@ -309,7 +354,10 @@ export const updateEventStatus = async (
   return result;
 };
 
-export const checkSlugExists = async (slug: string, excludeId?: number): Promise<boolean> => {
+export const checkSlugExists = async (
+  slug: string,
+  excludeId?: number
+): Promise<boolean> => {
   let sql = `SELECT id FROM events WHERE slug = ?`;
   const params: (string | number)[] = [slug];
 
@@ -322,10 +370,13 @@ export const checkSlugExists = async (slug: string, excludeId?: number): Promise
   return rows.length > 0;
 };
 
-export const getEventsByOrganiser = async (organiserId: number): Promise<EventWithCategoryAndCity[]> => {
+export const getEventsByOrganiser = async (
+  organiserId: number
+): Promise<EventWithCategoryAndCity[]> => {
   const sql = `
     SELECT
       events.*,
+      DATE_FORMAT(events.event_date, '%Y-%m-%d') AS event_date,
       categories.name AS category_name,
       cities.name AS city_name
     FROM events
@@ -334,7 +385,9 @@ export const getEventsByOrganiser = async (organiserId: number): Promise<EventWi
     WHERE events.organizer_id = ?
     ORDER BY events.event_date ASC
   `;
-  const [results] = await db.query<EventWithCategoryAndCity[]>(sql, [organiserId]);
+  const [results] = await db.query<EventWithCategoryAndCity[]>(sql, [
+    organiserId,
+  ]);
   return results;
 };
 
@@ -360,6 +413,7 @@ export const getAdminEventRequests = async (): Promise<AdminEventRequest[]> => {
   const sql = `
     SELECT
       events.*,
+      DATE_FORMAT(events.event_date, '%Y-%m-%d') AS event_date,
       categories.name AS category_name,
       cities.name AS city_name,
       organizers.stage_name AS organiser_name
@@ -390,6 +444,9 @@ export const goLive = async (
   isLive: boolean
 ): Promise<ResultSetHeader> => {
   const sql = "UPDATE events SET is_live = ? WHERE id = ?";
-  const [result] = await db.execute<ResultSetHeader>(sql, [isLive ? 1 : 0, eventId]);
+  const [result] = await db.execute<ResultSetHeader>(sql, [
+    isLive ? 1 : 0,
+    eventId,
+  ]);
   return result;
 };
