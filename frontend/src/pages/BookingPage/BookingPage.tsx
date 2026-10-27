@@ -1,6 +1,4 @@
 
-import Navbar from "../../components/Navbar/Navbar";
-import { Footer } from "../../components/Footer/Footer";
 import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
@@ -622,8 +620,6 @@ export function BookingPage() {
 
   return (
     <>
-      <Navbar />
-
       <section className="hero-banner">
         <div className="booking-heading">
           <div className="booking-hero">
@@ -1090,7 +1086,6 @@ export function BookingPage() {
         </div>
       )}
 
-      <Footer />
     </>
   );
 }

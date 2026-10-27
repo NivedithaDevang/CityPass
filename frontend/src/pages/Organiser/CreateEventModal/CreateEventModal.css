@@ -2,16 +2,20 @@
 .org-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 100000;
   display: grid;
   place-items: center;
   padding: 20px;
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .org-create-modal {
+    overflow: hidden;
+
   width: min(680px, 100%);
   max-height: min(90vh, 840px);
   overflow-y: auto;

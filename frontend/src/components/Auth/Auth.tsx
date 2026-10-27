@@ -7,7 +7,7 @@ import { API_BASE_URL } from "../../config/config";
 import type { User } from "../../types/auth";
 import { useUser } from "../../context/UserContext";
 import { PASSWORD_RULES } from "../../config/passwordRules";
-import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
+import { FaCheckCircle, FaTimesCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 
 interface ApiResponse {
   message: string;
@@ -49,6 +49,10 @@ function Auth({
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [dob, setDob] = useState("");
+
+  // Visibility toggle states (default: hidden)
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [confirmFocused, setConfirmFocused] = useState(false);
@@ -101,6 +105,8 @@ function Auth({
     setDob("");
     setPassword("");
     setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setPasswordFocused(false);
     setConfirmFocused(false);
     setError(null);
@@ -117,7 +123,6 @@ function Auth({
       return;
     }
 
-    // Check if user entered numbers or invalid characters
     if (!NAME_REGEX.test(val)) {
       setNameError("Name can only contain letters and spaces (no numbers or special characters).");
     } else {
@@ -155,7 +160,6 @@ function Auth({
     e.preventDefault();
     setError(null);
 
-    // Manual email validation
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setError("Please enter your email address.");
@@ -167,7 +171,6 @@ function Auth({
       return;
     }
 
-    // Registration validations
     if (!isLogin) {
       const trimmedName = name.trim();
 
@@ -449,11 +452,13 @@ function Auth({
                 required
               />
 
-              <div className="input-group">
+              {/* Password field with visibility toggle */}
+              <div className="input-group" style={{ position: "relative" }}>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Password"
                   value={password}
+                  style={{ paddingRight: "42px" }}
                   onFocus={() => setPasswordFocused(true)}
                   onChange={(e) => {
                     setPassword(e.target.value);
@@ -461,6 +466,27 @@ function Auth({
                   }}
                   required
                 />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  style={{
+                    position: "absolute",
+                    right: "12px",
+                    top: "22px",
+                    transform: "translateY(-50%)",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#9ca3af",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 0,
+                  }}
+                >
+                  {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                </button>
 
                 {!isLogin && (passwordFocused || password.length > 0) && (
                   <div className="live-rule-tray">
@@ -486,12 +512,14 @@ function Auth({
                 )}
               </div>
 
+              {/* Confirm Password field with visibility toggle */}
               {!isLogin && (
-                <div className="input-group">
+                <div className="input-group" style={{ position: "relative" }}>
                   <input
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirm Password"
                     value={confirmPassword}
+                    style={{ paddingRight: "42px" }}
                     onFocus={() => setConfirmFocused(true)}
                     onChange={(e) => {
                       setConfirmPassword(e.target.value);
@@ -506,6 +534,27 @@ function Auth({
                     }
                     required
                   />
+                  <button
+                    type="button"
+                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "22px",
+                      transform: "translateY(-50%)",
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "#9ca3af",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 0,
+                    }}
+                  >
+                    {showConfirmPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                  </button>
 
                   {(confirmFocused || confirmPassword.length > 0) &&
                     confirmPassword.length > 0 && (

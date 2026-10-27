@@ -1,10 +1,8 @@
 import "./LegalPage.css";
-import Navbar from "../../components/Navbar/Navbar";
 
 function PrivacyPolicy() {
   return (
     <>
-<Navbar />
       <div className="legal-page">
         <div className="legal-header">
           <h1>Privacy Policy</h1>

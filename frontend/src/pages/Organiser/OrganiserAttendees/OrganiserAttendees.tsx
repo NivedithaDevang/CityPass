@@ -364,10 +364,6 @@ function OrganiserAttendees() {
                               <strong>
                                 {booking.event_name}
                               </strong>
-
-                              <small>
-                                Booking #{booking.booking_id}
-                              </small>
                             </div>
                           </td>
 

@@ -11,7 +11,6 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { API_BASE_URL } from "../../config/config";
 import { useUser } from "../../context/UserContext";
-import Navbar from "../Navbar/Navbar";
 import ConfirmationPopup from "../Terms/ConfirmationPopup";
 import { DeactivateTerms as DeactivationTermsModal } from "../Terms/DeactivationTerms";
 import { OrgTerms as OrganiserTermsModal } from "../Terms/OrganiserTerms";
@@ -1147,7 +1146,6 @@ function SettingsView() {
           onApply={applyImageCrop}
         />
       )}
-      <Navbar />
 
       <div className="settings-page">
         <div className="settings-header">

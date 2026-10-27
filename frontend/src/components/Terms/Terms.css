@@ -16,7 +16,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 1.25rem;
-  z-index: 3000; /* Stacks above the deactivate confirmation overlay */
+  z-index: 3000; 
   box-sizing: border-box;
   
 }
@@ -24,8 +24,7 @@ body {
 .bms-modal-card {
   position: relative;
   background: #ffffff;
-  width: 100%;
-  max-width: 680px;
+  width: 50%;
   max-height: 85vh;
   border-radius: 16px;
   padding: 2.25rem 2rem 1.75rem 2rem;
@@ -97,10 +96,11 @@ body {
 
 .bms-modal-list {
   margin: 0;
-  padding-left: 1.25rem;
+  padding-left: 0.5rem;
   color: #475569;
   line-height: 1.65;
   font-size: 0.95rem;
+  list-style-position: inside;
 }
 
 .bms-modal-list li {

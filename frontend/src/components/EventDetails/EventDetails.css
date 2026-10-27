@@ -392,14 +392,14 @@
 /* Sticky Booking Card (Reserve Spot) */
 .booking-card {
   position: sticky;
-  top: 5.5rem;
-  align-self: flex-start; 
+  top: 96px;
+  align-self: flex-start;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 22px;
   padding: 2.25rem;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
-  z-index: 1000;
+  z-index: 10;
 }
 
 .booking-card-header {
@@ -414,8 +414,6 @@
   font-weight: 800;
   font-size: 1.05rem;
   color: #0f172a;
-    position: sticky;
-  top: 5.5rem;
 }
 
 .booking-card-sub {
@@ -423,6 +421,24 @@
   font-size: 0.8rem;
   font-weight: 600;
   color: #16a34a;
+}
+
+.booking-capacity-notice {
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.booking-capacity-notice.sold-out {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
 }
 
 /* Urgency Banner */
@@ -526,7 +542,9 @@
   }
 
   .booking-card {
-    position: static;
+    position: sticky;
+    top: 88px;
+    z-index: 2;
     margin-top: 1rem;
   }
 

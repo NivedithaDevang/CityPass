@@ -292,6 +292,9 @@
   justify-content: center;
   z-index: 1000;
   backdrop-filter: blur(2px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  
 }
 
 .user-modal-card {

@@ -335,10 +335,12 @@
 }
 
 .org-cards-grid {
+align-items: center;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-  gap: 24px;
-  width: 100%;
+  grid-template-columns: repeat(3, minmax(310px, 1fr));
+  gap: 30px;
+  width: 95%;
+  height: 100%;
   box-sizing: border-box;
 }
 
@@ -365,8 +367,7 @@
 
 .org-card-media {
   position: relative;
-  height: 190px;
-  min-height: 190px;
+  min-height: 350px;
   background-color: #fef9c3;
   background-size: cover;
   background-position: center;

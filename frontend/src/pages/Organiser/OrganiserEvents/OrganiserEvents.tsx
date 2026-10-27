@@ -18,24 +18,18 @@ import {
   Trash2,
   TrendingUp,
   UserCheck,
+  Users,
   X,
 } from "lucide-react";
-import {
-  FaLaughSquint,
-  FaMicrophone,
-  FaMountain,
-} from "react-icons/fa";
-import { FaPaintbrush } from "react-icons/fa6";
-import { IoFastFoodSharp } from "react-icons/io5";
-import { MdSportsFootball, MdTheaterComedy } from "react-icons/md";
-import type { IconType } from "react-icons";
 
 import {
   fetchMyEvents,
+  fetchOrganiserBookings,
   getOrganiserErrorMessage,
   cancelEvent,
   liveEvent,
   type OrganiserEvent,
+  type OrganiserBooking,
 } from "../../../services/organiserService";
 
 import { CreateEventModal } from "../CreateEventModal/CreateEventModal";
@@ -68,7 +62,6 @@ const statuses: EventStatusFilter[] = [
   "COMPLETED",
 ];
 
-// Checks if the event date has already passed
 const isEventPast = (dateValue?: string, timeValue?: string): boolean => {
   if (!dateValue) return false;
 
@@ -98,7 +91,6 @@ const isEventPast = (dateValue?: string, timeValue?: string): boolean => {
   return eventDateTime.getTime() < Date.now();
 };
 
-// Prevents UTC shift by parsing calendar components directly
 const isEventToday = (dateValue?: string): boolean => {
   if (!dateValue) return false;
 
@@ -115,7 +107,6 @@ const isEventToday = (dateValue?: string): boolean => {
   return rawDate === todayStr;
 };
 
-// Formats date using literal year/month/day components so UTC midnight does not shift to yesterday
 const formatEventDate = (value?: string) => {
   if (!value) return "Date to be announced";
 
@@ -154,42 +145,6 @@ const formatEventTime = (timeStr?: string) => {
   return `${formattedHours}:${minutes} ${ampm}`;
 };
 
-const categoryIcons: Record<string, IconType> = {
-  Music: FaMicrophone,
-  Sports: MdSportsFootball,
-  Comedy: MdTheaterComedy,
-  Food: IoFastFoodSharp,
-  Art: FaPaintbrush,
-  Adventure: FaMountain,
-  Entertainment: FaLaughSquint,
-};
-
-const getCategoryIcon = (categoryName?: string | null) => {
-  const normalizedCategory = categoryName?.toLowerCase() || "";
-
-  if (normalizedCategory.includes("music")) return categoryIcons.Music;
-  if (normalizedCategory.includes("sport")) return categoryIcons.Sports;
-  if (normalizedCategory.includes("comedy")) return categoryIcons.Comedy;
-
-  if (
-    normalizedCategory.includes("theatre") ||
-    normalizedCategory.includes("theater")
-  ) {
-    return categoryIcons.Comedy;
-  }
-
-  if (normalizedCategory.includes("food")) return categoryIcons.Food;
-  if (normalizedCategory.includes("art")) return categoryIcons.Art;
-  if (normalizedCategory.includes("adventure")) return categoryIcons.Adventure;
-
-  if (normalizedCategory.includes("entertainment")) {
-    return categoryIcons.Entertainment;
-  }
-
-  return null;
-};
-
-// Returns resolved event status (past non-cancelled events become COMPLETED)
 const resolveEventStatus = (event: OrganiserEvent): OrganiserEvent["status"] => {
   if (event.status === "CANCELLED") return "CANCELLED";
   if (isEventPast(event.event_date, event.time)) return "COMPLETED";
@@ -201,6 +156,7 @@ function OrganiserEvents() {
   const { user } = useUser();
 
   const [events, setEvents] = useState<OrganiserEvent[]>([]);
+  const [bookings, setBookings] = useState<OrganiserBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -208,14 +164,10 @@ function OrganiserEvents() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const [selectedEvent, setSelectedEvent] =
-    useState<OrganiserEvent | null>(null);
-
-  const [editingEvent, setEditingEvent] =
-    useState<OrganiserEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<OrganiserEvent | null>(null);
+  const [editingEvent, setEditingEvent] = useState<OrganiserEvent | null>(null);
   const [drafts, setDrafts] = useState<OrganiserEventDraft[]>([]);
-  const [editingDraft, setEditingDraft] =
-    useState<OrganiserEventDraft | null>(null);
+  const [editingDraft, setEditingDraft] = useState<OrganiserEventDraft | null>(null);
   const [draftsLoading, setDraftsLoading] = useState(true);
   const [draftsError, setDraftsError] = useState("");
 
@@ -232,6 +184,26 @@ function OrganiserEvents() {
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [liveEvents, setLiveEvents] = useState<Record<string, boolean>>({});
 
+  // Map of eventId -> total booked tickets count
+  const bookedCountsMap = useMemo(() => {
+    const map: Record<number, number> = {};
+
+    bookings.forEach((booking: any) => {
+      // Exclude cancelled / failed bookings from attendance count
+      const status = (booking.status || "").toUpperCase();
+      if (status === "CANCELLED" || status === "FAILED") return;
+
+      const evId = Number(booking.event_id || booking.pass_id);
+      const count = Number(booking.number_of_tickets || booking.tickets_count || 1);
+
+      if (evId) {
+        map[evId] = (map[evId] || 0) + count;
+      }
+    });
+
+    return map;
+  }, [bookings]);
+
   const confirmCancelEvent = async () => {
     if (!cancel) return;
 
@@ -245,14 +217,14 @@ function OrganiserEvents() {
 
       setEvents((prev) =>
         prev.map((ev) =>
-          Number(ev.id) === eventId ? { ...ev, status: "CANCELLED" } : ev,
-        ),
+          Number(ev.id) === eventId ? { ...ev, status: "CANCELLED" } : ev
+        )
       );
 
       setSelectedEvent((prev) =>
         prev && Number(prev.id) === eventId
           ? { ...prev, status: "CANCELLED" }
-          : prev,
+          : prev
       );
 
       setNotice(`"${cancel.eventName}" has been cancelled successfully.`);
@@ -261,8 +233,8 @@ function OrganiserEvents() {
       setError(
         getOrganiserErrorMessage(
           err,
-          "Failed to cancel the event. Please try again.",
-        ),
+          "Failed to cancel the event. Please try again."
+        )
       );
     } finally {
       setActionLoading(null);
@@ -275,19 +247,24 @@ function OrganiserEvents() {
       setLoading(true);
       setError(null);
 
-      const data = await fetchMyEvents();
+      const [data, bookingsData] = await Promise.all([
+        fetchMyEvents(),
+        fetchOrganiserBookings().catch(() => []),
+      ]);
+
       setEvents(data);
+      setBookings(bookingsData);
       setLiveEvents(
         Object.fromEntries(
-          data.map((event) => [String(event.id), Boolean(event.is_live)]),
-        ),
+          data.map((event) => [String(event.id), Boolean(event.is_live)])
+        )
       );
     } catch (loadError: unknown) {
       setError(
         getOrganiserErrorMessage(
           loadError,
-          "Could not load your events. Please try again.",
-        ),
+          "Could not load your events. Please try again."
+        )
       );
     } finally {
       setLoading(false);
@@ -309,8 +286,8 @@ function OrganiserEvents() {
         prev.map((event) =>
           Number(event.id) === eventId
             ? { ...event, is_live: nextStatus }
-            : event,
-        ),
+            : event
+        )
       );
       setNotice(nextStatus ? "Event is now live!" : "Event is no longer live.");
       window.setTimeout(() => setNotice(""), 3000);
@@ -319,8 +296,8 @@ function OrganiserEvents() {
       setError(
         getOrganiserErrorMessage(
           err,
-          "Failed to update live status. Please try again.",
-        ),
+          "Failed to update live status. Please try again."
+        )
       );
     }
   };
@@ -346,7 +323,7 @@ function OrganiserEvents() {
           setDraftsError(
             draftError instanceof Error
               ? draftError.message
-              : "Could not load saved drafts.",
+              : "Could not load saved drafts."
           );
         }
       })
@@ -383,7 +360,7 @@ function OrganiserEvents() {
 
   const pageEvents = filteredEvents.slice(
     (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE,
+    page * PAGE_SIZE
   );
 
   const closeFormModal = () => {
@@ -404,7 +381,7 @@ function OrganiserEvents() {
     setNotice(
       wasEditing
         ? "Event updated and resubmitted for admin review."
-        : "Event submitted for admin approval.",
+        : "Event submitted for admin approval."
     );
 
     window.setTimeout(() => setNotice(""), 5000);
@@ -447,7 +424,7 @@ function OrganiserEvents() {
       setDraftsError(
         draftError instanceof Error
           ? draftError.message
-          : "Could not delete this draft.",
+          : "Could not delete this draft."
       );
     }
   };
@@ -458,7 +435,7 @@ function OrganiserEvents() {
       setDrafts((current) => current.filter((draft) => draft.id !== draftId));
     } catch {
       setDraftsError(
-        "The event was submitted, but its saved draft could not be removed. You can delete it from saved drafts.",
+        "The event was submitted, but its saved draft could not be removed. You can delete it from saved drafts."
       );
     }
   };
@@ -694,8 +671,6 @@ function OrganiserEvents() {
         <>
           <div className="org-cards-grid">
             {pageEvents.map((event) => {
-              const CategoryIcon = getCategoryIcon(event.category_name);
-
               const effectiveStatus = resolveEventStatus(event);
 
               const isPending = effectiveStatus === "PENDING";
@@ -715,6 +690,12 @@ function OrganiserEvents() {
               const canCancel = isApproved && !isCompleted;
               const canEditOrResubmit = (isApproved || isRejected) && !isCompleted;
               const canManageTickets = !isCancelled && !isCompleted;
+
+              const totalCapacity = Number(event.capacity || (event as any).total_capacity || 0);
+              const bookedTickets = bookedCountsMap[Number(event.id)] || 0;
+              const percentageBooked = totalCapacity > 0
+                ? Math.min(100, Math.round((bookedTickets / totalCapacity) * 100))
+                : 0;
 
               const imageUrl =
                 (event as any).image_url || (event as any).image;
@@ -737,12 +718,6 @@ function OrganiserEvents() {
 
                     <div className="org-card-top-badges">
                       <span className="org-card-category-badge">
-                        {CategoryIcon ? (
-                          <CategoryIcon size={12} />
-                        ) : (
-                          <Tag size={12} />
-                        )}
-
                         {event.category_name || "Event"}
                       </span>
 
@@ -773,6 +748,49 @@ function OrganiserEvents() {
                       </span>
 
                       <h3 title={event.name}>{event.name}</h3>
+                    </div>
+
+                    {/* Booked / Capacity Indicator */}
+                    <div className="org-card-capacity-track-container" style={{ margin: "4px 0 2px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          color: "#334155",
+                          marginBottom: "5px",
+                        }}
+                      >
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", color: "#64748b", fontWeight: 600 }}>
+                          <Users size={13} color="#5144ed" /> Booked:
+                        </span>
+                        <span>
+                          <strong style={{ color: "#0f172a", fontWeight: 800 }}>{bookedTickets}</strong>
+                          <span style={{ color: "#94a3b8", fontWeight: 600 }}> / {totalCapacity || "—"}</span>
+                          <small style={{ color: "#5144ed", marginLeft: "6px", fontSize: "11px" }}>({percentageBooked}%)</small>
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          width: "100%",
+                          height: "6px",
+                          borderRadius: "999px",
+                          background: "#f1f5f9",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${percentageBooked}%`,
+                            height: "100%",
+                            borderRadius: "999px",
+                            background: percentageBooked >= 90 ? "#ef4444" : "linear-gradient(90deg, #6366f1, #4f46e5)",
+                            transition: "width 0.3s ease",
+                          }}
+                        />
+                      </div>
                     </div>
 
                     {effectiveStatus !== "CANCELLED" && (
@@ -965,6 +983,7 @@ function OrganiserEvents() {
       {selectedEvent && (
         <EventDetailsModal
           event={selectedEvent}
+          bookedCount={bookedCountsMap[Number(selectedEvent.id)] || 0}
           onClose={() => setSelectedEvent(null)}
           onEdit={() => openEditModal(selectedEvent)}
           onManageTickets={() => openTicketManager(selectedEvent)}
@@ -1028,11 +1047,13 @@ function OrganiserEvents() {
 
 function EventDetailsModal({
   event,
+  bookedCount = 0,
   onClose,
   onEdit,
   onManageTickets,
 }: {
   event: OrganiserEvent;
+  bookedCount?: number;
   onClose: () => void;
   onEdit: () => void;
   onManageTickets: () => void;
@@ -1051,6 +1072,9 @@ function EventDetailsModal({
 
   const canEditOrResubmit = (isApproved || isRejected) && !isCompleted;
   const canManageTickets = !isCancelled && !isCompleted;
+
+  const totalCapacity = Number(event.capacity || (event as any).total_capacity || 0);
+  const remainingSpots = Math.max(0, totalCapacity - bookedCount);
 
   useEffect(() => {
     const originalBodyOverflow = document.body.style.overflow;
@@ -1229,9 +1253,13 @@ function EventDetailsModal({
             </div>
 
             <div className="org-detail-metric-card">
-              <span className="metric-label">Total Spots</span>
-              <span className="metric-value">{event.capacity || "—"}</span>
-              <span className="metric-sub">Max attendees</span>
+              <span className="metric-label">Tickets Booked</span>
+              <span className="metric-value">
+                {bookedCount} / {totalCapacity || "—"}
+              </span>
+              <span className="metric-sub">
+                {remainingSpots} {remainingSpots === 1 ? "spot" : "spots"} remaining
+              </span>
             </div>
 
             <div className="org-detail-metric-card">

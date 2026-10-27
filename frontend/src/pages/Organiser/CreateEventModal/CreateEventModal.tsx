@@ -57,7 +57,7 @@ const initialFormState: FormState = {
   price: "",
   capacity: "",
   age_group: "All Ages",
-  duration: "2 Hours",
+  duration: "",
 };
 
 const defaultInitialTickets: TicketDraft[] = [
@@ -70,6 +70,8 @@ const AVAILABLE_LANGUAGES = [
   "Kannada",
   "Tamil",
   "Telugu",
+  "Urdu",
+  "Konkani",
   "Malayalam",
   "Marathi",
   "Bengali",
@@ -80,6 +82,49 @@ const AVAILABLE_LANGUAGES = [
 const AGE_GROUPS = ["All Ages", "3+", "7+", "12+", "16+", "18+", "21+"];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
+
+const HOUR_OPTIONS = Array.from({ length: 13 }, (_, i) => i);
+const MINUTE_OPTIONS = [0, 15, 30, 45];
+
+const parseDurationString = (durStr?: string): { hours: number; minutes: number } => {
+  if (!durStr) return { hours: 2, minutes: 0 };
+
+  const lower = durStr.toLowerCase();
+  let hours = 0;
+  let minutes = 0;
+
+  const hourMatch = lower.match(/(\d+)\s*(?:hour|hr|h)/);
+  if (hourMatch) {
+    hours = parseInt(hourMatch[1], 10);
+  }
+
+  const minMatch = lower.match(/(\d+)\s*(?:minute|min|m)/);
+  if (minMatch) {
+    minutes = parseInt(minMatch[1], 10);
+  }
+
+  // If only a single raw number was passed (e.g. "2" or "2.5")
+  if (!hourMatch && !minMatch) {
+    const rawNum = parseFloat(durStr);
+    if (!isNaN(rawNum)) {
+      hours = Math.floor(rawNum);
+      minutes = Math.round((rawNum - hours) * 60);
+    }
+  }
+
+  return { hours, minutes };
+};
+
+const formatDurationString = (hours: number, minutes: number): string => {
+  const parts: string[] = [];
+  if (hours > 0) {
+    parts.push(`${hours} ${hours === 1 ? "Hour" : "Hours"}`);
+  }
+  if (minutes > 0) {
+    parts.push(`${minutes} Mins`);
+  }
+  return parts.length > 0 ? parts.join(" ") : "30 Mins";
+};
 
 const getTodayMidnight = (): Date => {
   const d = new Date();
@@ -123,6 +168,9 @@ export const CreateEventModal = ({
   onDraftSubmitted,
 }: CreateEventModalProps) => {
   const [formData, setFormData] = useState<FormState>(initialFormState);
+  const [durationHours, setDurationHours] = useState<number>(2);
+  const [durationMinutes, setDurationMinutes] = useState<number>(0);
+
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([
     "English",
   ]);
@@ -145,6 +193,16 @@ export const CreateEventModal = ({
     if (!isOpen) return;
 
     if (eventToEdit) {
+      const rawDuration =
+        (eventToEdit as any).duration_hours !== undefined &&
+        (eventToEdit as any).duration_hours !== null
+          ? `${(eventToEdit as any).duration_hours} Hours`
+          : (eventToEdit as any).duration || "2 Hours";
+
+      const parsedDur = parseDurationString(rawDuration);
+      setDurationHours(parsedDur.hours);
+      setDurationMinutes(parsedDur.minutes);
+
       setFormData({
         name: eventToEdit.name || "",
         description: eventToEdit.description || "",
@@ -166,11 +224,7 @@ export const CreateEventModal = ({
             ? String(eventToEdit.capacity)
             : "",
         age_group: (eventToEdit as any).age_group || "All Ages",
-        duration:
-          (eventToEdit as any).duration_hours !== undefined &&
-          (eventToEdit as any).duration_hours !== null
-            ? `${(eventToEdit as any).duration_hours} Hours`
-            : (eventToEdit as any).duration || "2 Hours",
+        duration: rawDuration,
       });
 
       const langs = (eventToEdit as any).languages;
@@ -189,6 +243,10 @@ export const CreateEventModal = ({
         (eventToEdit as any).image_url || (eventToEdit as any).image;
       if (existingImg) setImagePreview(existingImg);
     } else if (draftToEdit) {
+      const parsedDur = parseDurationString(draftToEdit.formData.duration);
+      setDurationHours(parsedDur.hours);
+      setDurationMinutes(parsedDur.minutes);
+
       setFormData({
         ...draftToEdit.formData,
         event_date: extractCleanDate(draftToEdit.formData.event_date),
@@ -202,6 +260,8 @@ export const CreateEventModal = ({
       );
     } else {
       setFormData(initialFormState);
+      setDurationHours(2);
+      setDurationMinutes(0);
       setSelectedLanguages(["English"]);
       setImage(null);
       setImagePreview("");
@@ -254,6 +314,8 @@ export const CreateEventModal = ({
   const requestClose = () => {
     if (!submitting) {
       setFormData(initialFormState);
+      setDurationHours(2);
+      setDurationMinutes(0);
       setSelectedLanguages(["English"]);
       setImage(null);
       setImagePreview("");
@@ -277,6 +339,26 @@ export const CreateEventModal = ({
     }));
   };
 
+  const handleDurationHoursChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const h = parseInt(e.target.value, 10);
+    setDurationHours(h);
+    setError(null);
+    setFormData((current) => ({
+      ...current,
+      duration: formatDurationString(h, durationMinutes),
+    }));
+  };
+
+  const handleDurationMinutesChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const m = parseInt(e.target.value, 10);
+    setDurationMinutes(m);
+    setError(null);
+    setFormData((current) => ({
+      ...current,
+      duration: formatDurationString(durationHours, m),
+    }));
+  };
+
   const handleCapacityChange = (event: ChangeEvent<HTMLInputElement>) => {
     const cleanNumeric = event.target.value.replace(/\D/g, "");
     setError(null);
@@ -286,7 +368,6 @@ export const CreateEventModal = ({
     }));
   };
 
-  // Immediate past date check when the user picks a date
   const handleDateChange = (date: Date | null) => {
     setError(null);
 
@@ -389,6 +470,10 @@ export const CreateEventModal = ({
       return setError("Capacity must be at least 1 attendee.");
     }
 
+    if (durationHours === 0 && durationMinutes === 0) {
+      return setError("Please select a valid duration for your event.");
+    }
+
     if (selectedLanguages.length === 0) {
       return setError("Please select at least one language for the event.");
     }
@@ -400,7 +485,6 @@ export const CreateEventModal = ({
       return setError("Date and start time are required.");
     }
 
-    // Secondary validation block on submit
     const todayMidnight = getTodayMidnight();
     const chosenDate = parseDateStringToDate(cleanDate);
     if (!chosenDate || chosenDate.getTime() < todayMidnight.getTime()) {
@@ -427,6 +511,7 @@ export const CreateEventModal = ({
     }
 
     const languagesPayload = JSON.stringify(selectedLanguages);
+    const finalDuration = formatDurationString(durationHours, durationMinutes);
 
     if (!isEditMode) {
       if (!formData.name.trim()) return setError("Event name is required.");
@@ -449,8 +534,8 @@ export const CreateEventModal = ({
           additional_instructions: formData.instructions.trim() || undefined,
           languages: languagesPayload,
           age_group: formData.age_group,
-          duration: formData.duration.trim() || "2 Hours",
-          duration_hours: formData.duration.trim() || "2 Hours",
+          duration: finalDuration,
+          duration_hours: finalDuration,
           location: formData.location.trim() || undefined,
           city_id: Number(formData.city_id),
           category_id: Number(formData.category_id),
@@ -546,16 +631,8 @@ export const CreateEventModal = ({
       patchPayload.age_group = formData.age_group;
     }
 
-    const originalDuration = String(
-      (eventToEdit as any).duration_hours !== undefined &&
-        (eventToEdit as any).duration_hours !== null
-        ? `${(eventToEdit as any).duration_hours} Hours`
-        : (eventToEdit as any).duration || "",
-    ).trim();
-    if (formData.duration.trim() !== originalDuration) {
-      patchPayload.duration_hours = formData.duration.trim();
-      patchPayload.duration = formData.duration.trim();
-    }
+    patchPayload.duration_hours = finalDuration;
+    patchPayload.duration = finalDuration;
 
     const currentLanguagesStr =
       typeof (eventToEdit as any).languages === "string"
@@ -596,6 +673,8 @@ export const CreateEventModal = ({
     setSubmitting(true);
 
     const now = new Date().toISOString();
+    const finalDuration = formatDurationString(durationHours, durationMinutes);
+
     const draft: OrganiserEventDraft = {
       id: draftToEdit?.id ?? crypto.randomUUID(),
       organiserId: draftToEdit?.organiserId ?? organiserId,
@@ -603,6 +682,7 @@ export const CreateEventModal = ({
       updatedAt: now,
       formData: {
         ...formData,
+        duration: finalDuration,
         event_date: extractCleanDate(formData.event_date),
       },
       selectedLanguages: [...selectedLanguages],
@@ -838,16 +918,37 @@ export const CreateEventModal = ({
               </select>
             </label>
 
-            <label className="org-form-field" htmlFor="event-duration">
+            {/* Structured Duration Selector: Hours & Minutes Dropdowns */}
+            <div className="org-form-field">
               <span>Duration</span>
-              <input
-                id="event-duration"
-                name="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                placeholder="e.g. 2 Hours, 90 Mins, Full Day"
-              />
-            </label>
+              <div style={{ display: "flex", gap: "8px", width: "100%" }}>
+                <select
+                  aria-label="Duration Hours"
+                  value={durationHours}
+                  onChange={handleDurationHoursChange}
+                  style={{ flex: 1 }}
+                >
+                  {HOUR_OPTIONS.map((h) => (
+                    <option key={h} value={h}>
+                      {h} {h === 1 ? "Hour" : "Hours"}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  aria-label="Duration Minutes"
+                  value={durationMinutes}
+                  onChange={handleDurationMinutesChange}
+                  style={{ flex: 1 }}
+                >
+                  {MINUTE_OPTIONS.map((m) => (
+                    <option key={m} value={m}>
+                      {m} Mins
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             <label className="org-form-field" htmlFor="event-city">
               <span>City</span>
@@ -903,9 +1004,9 @@ export const CreateEventModal = ({
               />
             </label>
 
-            {/* DatePicker field - past dates trigger error and cannot be chosen */}
             <div className="org-form-field">
-              <label htmlFor="event-date">Date</label>
+              <label htmlFor="event-date">Date
+              </label>
               <DatePicker
                 id="event-date"
                 selected={parseDateStringToDate(formData.event_date)}

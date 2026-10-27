@@ -1,48 +1,67 @@
+/* ==========================================================================
+   Bookings & Attendees - Theme Matching Palette
+   ========================================================================== */
+
 .organiser-attendees {
-  display: grid;
-  gap: 16px;
-  color: #282332;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: #1e293b;
+  font-family: inherit;
 }
 
 .org-attendees-heading {
   margin-bottom: 0;
 }
 
+/* --- Top Count Badge --- */
 .org-attendee-count {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px 12px;
-  border: 1px solid #e9e3ef;
-  border-radius: 6px;
-  background: #fff;
-  color: #68448c;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid #e0e7ff;
+  border-radius: 9999px;
+  background: #ffffff;
+  color: #4f46e5;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.06);
 }
 
 .org-attendee-count span {
-  color: #30283a;
+  color: #1e1b4b;
   font-size: 15px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .org-attendee-count small {
-  color: #88808f;
-  font-size: 10px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
 }
 
+/* --- Summary Stats Strip --- */
 .org-attendee-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  border: 1px solid #e9e5ed;
-  border-radius: 7px;
-  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
 }
 
 .org-attendee-summary > div {
-  display: grid;
-  gap: 6px;
-  padding: 13px 16px;
-  border-right: 1px solid #efedf1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 24px;
+  border-right: 1px solid #f1f5f9;
+  background: #ffffff;
+  transition: background-color 0.15s ease;
+}
+
+.org-attendee-summary > div:hover {
+  background: #f8fafc;
 }
 
 .org-attendee-summary > div:last-child {
@@ -50,49 +69,60 @@
 }
 
 .org-attendee-summary small {
-  color: #898190;
-  font-size: 10px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: capitalize;
 }
 
 .org-attendee-summary strong {
-  color: #332b3c;
-  font-size: 16px;
-  font-weight: 720;
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
+/* --- Main Table Panel --- */
 .org-attendee-panel {
   min-width: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 20px -3px rgba(15, 23, 42, 0.06);
   overflow: hidden;
-  border: 1px solid #e9e5ed;
-  border-radius: 7px;
-  background: #fff;
 }
 
+/* --- Controls & Toolbar --- */
 .org-attendee-toolbar {
   display: flex;
-  min-height: 62px;
+  min-height: 68px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 11px 14px;
-  border-bottom: 1px solid #efedf1;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
 }
 
 .org-attendee-search {
   display: flex;
-  width: min(330px, 100%);
-  min-height: 37px;
+  width: min(340px, 100%);
+  height: 40px;
   align-items: center;
-  gap: 8px;
-  padding: 0 10px;
-  border: 1px solid #e5e0e9;
-  border-radius: 5px;
-  color: #8c8492;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #94a3b8;
+  transition: all 0.15s ease;
 }
 
 .org-attendee-search:focus-within {
-  border-color: #7950a2;
-  box-shadow: 0 0 0 3px rgb(121 80 162 / 10%);
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+  color: #4f46e5;
 }
 
 .org-attendee-search input {
@@ -100,39 +130,55 @@
   min-width: 0;
   border: 0;
   outline: 0;
-  color: #30283a;
-  font-size: 10px;
+  color: #0f172a;
+  font-size: 13.5px;
+  background: transparent;
+}
+
+.org-attendee-search input::placeholder {
+  color: #94a3b8;
 }
 
 .org-attendee-filters {
   display: flex;
-  gap: 9px;
+  align-items: center;
+  gap: 14px;
 }
 
 .org-attendee-filters label {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: #898190;
-  font-size: 9px;
+  gap: 8px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .org-attendee-filters select {
-  max-width: 180px;
-  min-height: 34px;
-  padding: 0 25px 0 9px;
-  border: 1px solid #e5e0e9;
-  border-radius: 5px;
-  background: #fff;
-  color: #554b60;
-  font-size: 10px;
+  height: 38px;
+  max-width: 200px;
+  padding: 0 32px 0 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 500;
   outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.org-attendee-filters select:hover {
+  border-color: #cbd5e1;
 }
 
 .org-attendee-filters select:focus {
-  border-color: #7950a2;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
 }
 
+/* --- Table Styles --- */
 .org-attendee-table-wrap {
   width: 100%;
   overflow-x: auto;
@@ -145,165 +191,185 @@
 }
 
 .org-attendee-table th {
-  padding: 11px 14px;
-  border-bottom: 1px solid #eeeaf1;
-  background: #fcfbfd;
-  color: #8b8391;
-  font-size: 9px;
-  font-weight: 750;
+  padding: 13px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .org-attendee-table td {
-  padding: 12px 14px;
-  border-bottom: 1px solid #f1eef3;
-  color: #4e4657;
-  font-size: 10px;
+  padding: 15px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  font-size: 13.5px;
   white-space: nowrap;
+  vertical-align: middle;
+}
+
+.org-attendee-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.org-attendee-table tbody tr:hover {
+  background: #f8faff;
 }
 
 .org-attendee-table tbody tr:last-child td {
   border-bottom: 0;
 }
 
-.org-attendee-table tbody tr:hover {
-  background: #fdfcfe;
-}
-
+/* --- Attendee & Event Row Content --- */
 .org-attendee-person {
   display: flex;
-  min-width: 160px;
+  min-width: 180px;
   align-items: center;
-  gap: 9px;
+  gap: 12px;
 }
 
 .org-attendee-person > span {
   display: grid;
-  width: 31px;
-  height: 31px;
-  flex: 0 0 31px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
   place-items: center;
   border-radius: 50%;
-  background: #f0eaf6;
-  color: #68448c;
-  font-size: 11px;
-  font-weight: 750;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .org-attendee-person > div,
 .org-attendee-event {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
-  gap: 4px;
+  gap: 3px;
 }
 
 .org-attendee-person strong,
 .org-attendee-event strong {
-  max-width: 200px;
+  max-width: 240px;
   overflow: hidden;
-  color: #39313f;
-  font-size: 10px;
-  font-weight: 700;
+  color: #0f172a;
+  font-size: 13.5px;
+  font-weight: 600;
   text-overflow: ellipsis;
 }
 
 .org-attendee-person small,
 .org-attendee-event small {
-  max-width: 200px;
+  max-width: 240px;
   overflow: hidden;
-  color: #928a98;
-  font-size: 9px;
+  color: #64748b;
+  font-size: 12px;
   text-overflow: ellipsis;
 }
 
 .org-booking-date {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  color: #766e7d;
+  gap: 7px;
+  color: #475569;
+  font-size: 13px;
 }
 
 .org-booking-date svg {
-  color: #8f7aa5;
+  color: #6366f1;
 }
 
 .org-booking-amount {
-  color: #39313f !important;
+  color: #0f172a !important;
+  font-size: 14px;
   font-weight: 700;
 }
 
+/* --- Status Badges --- */
 .org-booking-status {
   display: inline-flex;
-  padding: 4px 7px;
-  border-radius: 4px;
-  background: #f0edf3;
-  color: #696173;
-  font-size: 9px;
-  font-weight: 750;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .org-booking-status.confirmed,
 .org-booking-status.complete,
 .org-booking-status.completed {
-  background: #e8f5ed;
-  color: #34764e;
+  background: #dcfce7;
+  color: #15803d;
 }
 
 .org-booking-status.pending {
-  background: #fff4df;
-  color: #946517;
+  background: #fef3c7;
+  color: #b45309;
 }
 
 .org-booking-status.cancelled,
 .org-booking-status.failed {
-  background: #fbe9e9;
-  color: #9b444a;
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
+/* --- Empty / Error / Loading States --- */
 .org-attendees-state {
   display: flex;
-  min-height: 220px;
+  min-height: 260px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  color: #8d8593;
-  font-size: 11px;
+  gap: 12px;
+  color: #64748b;
+  font-size: 13.5px;
   text-align: center;
 }
 
 .org-attendees-empty > svg {
-  color: #927ba5;
+  color: #818cf8;
+  font-size: 32px;
 }
 
 .org-attendees-empty strong {
-  color: #39313f;
-  font-size: 13px;
+  color: #0f172a;
+  font-size: 15px;
 }
 
 .org-attendees-empty button {
-  margin-top: 4px;
-  padding: 7px 10px;
-  border: 1px solid #e4dee9;
-  border-radius: 5px;
-  background: #fff;
-  color: #68448c;
-  font-size: 10px;
-  font-weight: 700;
+  margin-top: 6px;
+  padding: 8px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #4338ca;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.org-attendees-empty button:hover {
+  background: #f8faff;
+  border-color: #818cf8;
 }
 
 .org-attendees-error {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border: 1px solid #f0cecc;
-  border-radius: 5px;
-  background: #fff6f5;
-  color: #994b4d;
-  font-size: 11px;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 13px;
 }
 
 .org-attendees-error span {
@@ -311,25 +377,27 @@
 }
 
 .org-attendees-error button {
-  padding: 5px 8px;
-  border: 1px solid #e7d8e9;
-  border-radius: 4px;
-  background: white;
-  color: #68448c;
-  font-size: 10px;
-  font-weight: 700;
+  padding: 6px 12px;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #991b1b;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
 }
 
+/* --- Pagination Controls --- */
 .org-attendee-pagination {
   display: flex;
-  min-height: 46px;
+  min-height: 52px;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
-  border-top: 1px solid #efedf1;
-  color: #898190;
-  font-size: 10px;
+  padding: 0 20px;
+  border-top: 1px solid #f1f5f9;
+  color: #64748b;
+  font-size: 13px;
+  background: #ffffff;
 }
 
 .org-attendee-pagination > div {
@@ -340,18 +408,25 @@
 
 .org-attendee-pagination button {
   display: grid;
-  width: 27px;
-  height: 27px;
+  width: 32px;
+  height: 32px;
   place-items: center;
-  border: 1px solid #e5e0e9;
-  border-radius: 4px;
-  background: #fff;
-  color: #665678;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #334155;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.org-attendee-pagination button:hover:not(:disabled) {
+  border-color: #6366f1;
+  color: #4f46e5;
+  background: #eef2ff;
 }
 
 .org-attendee-pagination button:disabled {
-  opacity: .4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
@@ -365,7 +440,8 @@
   }
 }
 
-@media (max-width: 760px) {
+/* --- Responsive Breakpoints --- */
+@media (max-width: 768px) {
   .org-attendee-toolbar {
     align-items: stretch;
     flex-direction: column;
@@ -376,12 +452,12 @@
   }
 
   .org-attendee-filters {
-    justify-content: stretch;
+    width: 100%;
+    justify-content: space-between;
   }
 
   .org-attendee-filters label {
     flex: 1;
-    justify-content: space-between;
   }
 
   .org-attendee-filters select {
@@ -390,24 +466,26 @@
   }
 }
 
-@media (max-width: 540px) {
+@media (max-width: 560px) {
+  .org-attendee-summary {
+    grid-template-columns: 1fr;
+  }
+
   .org-attendee-summary > div {
-    padding: 11px 9px;
+    border-right: 0;
+    border-bottom: 1px solid #f1f5f9;
   }
 
-  .org-attendee-summary small {
-    font-size: 9px;
-  }
-
-  .org-attendee-summary strong {
-    font-size: 13px;
+  .org-attendee-summary > div:last-child {
+    border-bottom: 0;
   }
 
   .org-attendee-table {
-    min-width: 750px;
+    min-width: 700px;
   }
 
   .org-attendee-filters {
     flex-direction: column;
+    align-items: stretch;
   }
 }

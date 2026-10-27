@@ -457,6 +457,8 @@
   z-index: 1000;
   padding: 16px;
   animation: modalFadeIn 0.2s ease-out;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .category-modal-content {

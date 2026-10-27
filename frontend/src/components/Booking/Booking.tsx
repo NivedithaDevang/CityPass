@@ -32,6 +32,8 @@ interface BookingProps {
   isOpen: boolean;
   onClose: () => void;
   event: ExtendedEvent;
+  capacityLeft: number;
+  onCapacityChanged: (capacityLeft: number) => void;
   onRequireAuth?: () => void;
 }
 
@@ -39,6 +41,8 @@ export function Booking({
   isOpen,
   onClose,
   event,
+  capacityLeft,
+  onCapacityChanged,
   onRequireAuth,
 }: BookingProps) {
   const navigate = useNavigate();
@@ -136,6 +140,7 @@ export function Booking({
   // Calculate the amount for the selected ticket and quantity
   const unitPrice = Number(activeTier?.price ?? 0);
   const totalAmount = unitPrice * ticketQuantity;
+  const maxTicketQuantity = Math.min(10, Math.max(0, capacityLeft));
 
   // Prevent background scrolling while confirmation modal is open
   useEffect(() => {
@@ -172,6 +177,19 @@ export function Booking({
       return;
     }
 
+    if (capacityLeft <= 0) {
+      setBookingError("Tickets are sold out for this event.");
+      return;
+    }
+
+    if (ticketQuantity > capacityLeft) {
+      setTicketQuantity(capacityLeft);
+      setBookingError(
+        `Only ${capacityLeft} seat${capacityLeft === 1 ? "" : "s"} left.`,
+      );
+      return;
+    }
+
     setBookingError(null);
     setShowReviewModal(true);
   };
@@ -179,6 +197,16 @@ export function Booking({
   const handleFinalBookingSubmit = async () => {
     if (!activeTier) {
       setBookingError("Please select an available ticket.");
+      return;
+    }
+
+    if (capacityLeft <= 0 || ticketQuantity > capacityLeft) {
+      setShowReviewModal(false);
+      setBookingError(
+        capacityLeft <= 0
+          ? "Tickets are sold out for this event."
+          : `Only ${capacityLeft} seat${capacityLeft === 1 ? "" : "s"} left.`,
+      );
       return;
     }
 
@@ -205,6 +233,8 @@ export function Booking({
         payload,
         { withCredentials: true },
       );
+
+      onCapacityChanged(Math.max(0, capacityLeft - ticketQuantity));
 
       setConfirmedBookingId(response.data?.bookingId ?? null);
       setShowReviewModal(false);
@@ -246,6 +276,12 @@ export function Booking({
   return (
     <>
       <div className="booking-inline-panel">
+        {capacityLeft <= 0 && (
+          <div className="inline-error-banner" role="status">
+            Tickets sold out for this event.
+          </div>
+        )}
+
         {bookingError && (
           <div className="inline-error-banner" role="alert">
             {bookingError}
@@ -268,7 +304,7 @@ export function Booking({
                   setIsDropdownOpen((prev) => !prev);
                 }
               }}
-              disabled={loadingTiers || parsedTiers.length === 0}
+              disabled={loadingTiers || parsedTiers.length === 0 || capacityLeft <= 0}
               aria-haspopup="listbox"
               aria-expanded={isDropdownOpen}
             >
@@ -349,7 +385,7 @@ export function Booking({
                   Math.max(1, quantity - 1),
                 )
               }
-              disabled={ticketQuantity <= 1}
+              disabled={ticketQuantity <= 1 || capacityLeft <= 0}
               aria-label="Decrease quantity"
             >
               <FaMinus />
@@ -362,10 +398,10 @@ export function Booking({
               className="counter-action-btn"
               onClick={() =>
                 setTicketQuantity((quantity) =>
-                  Math.min(10, quantity + 1),
+                  Math.min(maxTicketQuantity, quantity + 1),
                 )
               }
-              disabled={ticketQuantity >= 10}
+              disabled={ticketQuantity >= maxTicketQuantity || capacityLeft <= 0}
               aria-label="Increase quantity"
             >
               <FaPlus />
@@ -407,11 +443,13 @@ export function Booking({
             type="button"
             className="inline-pay-btn"
             onClick={handleOpenReview}
-            disabled={loadingTiers || !activeTier || isSubmitting}
+            disabled={loadingTiers || !activeTier || isSubmitting || capacityLeft <= 0}
           >
             {loadingTiers
               ? "Loading tickets..."
-              : !activeTier
+              : capacityLeft <= 0
+                ? "Tickets Sold Out"
+                : !activeTier
                 ? "Tickets unavailable"
                 : `Pay ₹ ${totalAmount.toLocaleString("en-IN")}`}
           </button>

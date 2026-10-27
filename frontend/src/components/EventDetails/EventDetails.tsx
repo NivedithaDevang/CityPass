@@ -49,6 +49,7 @@ function EventDetails() {
   const [event, setEvent] = useState<EventWithTickets | null>(null);
   const [tickets, setTickets] = useState<EventTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<EventTicket | null>(null);
+  const [remainingCapacity, setRemainingCapacity] = useState<number | null>(null);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +66,22 @@ function EventDetails() {
         const response = await axios.get(`${API_BASE_URL}/v1/events/${slug}`);
         const loadedEvent: EventWithTickets = response.data.event || response.data;
         setEvent(loadedEvent);
+
+        const totalCapacity = Number(loadedEvent.capacity ?? 0);
+        const locallyBooked = Number(
+          window.localStorage.getItem(`citypass:event-booked:${loadedEvent.id}`) ?? 0
+        );
+        setRemainingCapacity(
+          Number.isSafeInteger(totalCapacity) && totalCapacity >= 0
+            ? Math.max(
+                0,
+                totalCapacity -
+                  (Number.isSafeInteger(locallyBooked) && locallyBooked > 0
+                    ? Math.min(totalCapacity, locallyBooked)
+                    : 0)
+              )
+            : 0
+        );
 
         const eventTicketList: EventTicket[] = (
           loadedEvent.event_tickets ||
@@ -150,6 +167,8 @@ function EventDetails() {
   };
 
   const handleBookTicketsClick = () => {
+    if (remainingCapacity === 0) return;
+
     if (!user) {
       setShowAuthModal(true);
       return;
@@ -191,6 +210,9 @@ function EventDetails() {
 
   const eventImage =
     event.image;
+
+  const seatsLeft = remainingCapacity ?? Number(event.capacity ?? 0);
+  const isSoldOut = !Number.isFinite(seatsLeft) || seatsLeft <= 0;
 
   const formattedTime =
     formatTimeString(event.time) || "(Time yet to be confirmed)";
@@ -455,18 +477,31 @@ function EventDetails() {
                     <div>
                       <span className="booking-card-title">
                         Reserve Spot</span>
-                      <span className="booking-card-sub">Instant confirmation</span>
+                      <span className="booking-card-sub">
+                        {isSoldOut ? "Tickets sold out" : "Instant confirmation"}
+                      </span>
                     </div>
                   </div>
+
+                  {isSoldOut ? (
+                    <p className="booking-capacity-notice sold-out">
+                      Tickets sold out
+                    </p>
+                  ) : seatsLeft <= 15 ? (
+                    <p className="booking-capacity-notice" role="status">
+                      Only {seatsLeft}{" "}
+                      {seatsLeft === 1 ? "seat" : "seats"} left
+                    </p>
+                  ) : null}
 
                   {!isDrawerOpen ? (
                     <button
                       type="button"
                       className="book-now-button"
                       onClick={handleBookTicketsClick}
-                      disabled={tickets.length > 0 && !selectedTicket}
+                      disabled={isSoldOut || (tickets.length > 0 && !selectedTicket)}
                     >
-                      Book Tickets
+                      {isSoldOut ? "Tickets Sold Out" : "Book Tickets"}
                     </button>
                   ) : (
                     <div className="inline-booking-wrapper">
@@ -474,6 +509,14 @@ function EventDetails() {
                         isOpen={isDrawerOpen}
                         onClose={() => setIsDrawerOpen(false)}
                         event={eventForBooking}
+                        capacityLeft={isSoldOut ? 0 : seatsLeft}
+                        onCapacityChanged={(capacityLeft) => {
+                          setRemainingCapacity(capacityLeft);
+                          window.localStorage.setItem(
+                            `citypass:event-booked:${event.id}`,
+                            String(Math.max(0, Number(event.capacity ?? 0) - capacityLeft))
+                          );
+                        }}
                         onRequireAuth={() => setShowAuthModal(true)}
                       />
                     </div>
@@ -507,9 +550,9 @@ function EventDetails() {
             type="button"
             className="mobile-book-now-btn"
             onClick={handleBookTicketsClick}
-            disabled={tickets.length > 0 && !selectedTicket}
+            disabled={isSoldOut || (tickets.length > 0 && !selectedTicket)}
           >
-            Book Now
+            {isSoldOut ? "Sold Out" : "Book Now"}
           </button>
         </div>
       </div>

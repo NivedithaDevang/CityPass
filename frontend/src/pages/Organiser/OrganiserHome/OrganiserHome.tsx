@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  ArrowRight,
-  CalendarDays,
-  Clock3,
-  Plus,
-  TicketCheck,
-  Users,
-} from "lucide-react";
+  MdEventAvailable,
+  MdPendingActions,
+  MdCheckCircle,
+  MdCancel,
+  MdConfirmationNumber,
+} from "react-icons/md";
 import {
   fetchMyEvents,
   fetchOrganiserBookings,
@@ -25,71 +24,66 @@ const statusOrder = [
   "COMPLETED",
 ] as const;
 
+// Checks whether an event date/time has already passed
+const isEventPast = (dateValue?: string, timeValue?: string): boolean => {
+  if (!dateValue) return false;
+
+  const rawDate = dateValue.includes("T")
+    ? dateValue.split("T")[0]
+    : dateValue.split(" ")[0];
+
+  const [yearStr, monthStr, dayStr] = rawDate.split("-");
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return false;
+
+  let hours = 23;
+  let minutes = 59;
+
+  if (timeValue) {
+    const parts = timeValue.split(":");
+    if (parts.length >= 2) {
+      hours = parseInt(parts[0], 10);
+      minutes = parseInt(parts[1], 10);
+    }
+  }
+
+  const eventDateTime = new Date(year, month - 1, day, hours, minutes, 0);
+  return eventDateTime.getTime() < Date.now();
+};
+
+// Returns resolved event status (past non-cancelled events resolve to COMPLETED)
+const resolveEventStatus = (event: OrganiserEvent): OrganiserEvent["status"] => {
+  if (event.status === "CANCELLED") return "CANCELLED";
+  if (isEventPast(event.event_date, event.time)) return "COMPLETED";
+  return event.status;
+};
+
 function OrganiserHome() {
   const navigate = useNavigate();
 
   const [events, setEvents] = useState<OrganiserEvent[]>([]);
-  const [recentBookings, setRecentBookings] = useState<
-    OrganiserBooking[]
-  >([]);
-  const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [recentBookings, setRecentBookings] = useState<OrganiserBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-
-    fetchMyEvents()
-      .then((data) => {
-        if (active) setEvents(data);
-      })
-      .catch((loadError: unknown) => {
-        if (active)
-          setError(
-            getOrganiserErrorMessage(
-              loadError,
-              "We couldn't load your event overview."
-            )
-          );
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-
-    fetchOrganiserBookings()
-      .then((data) => {
-        if (active) setRecentBookings(data.slice(0, 4));
-      })
-      .catch(() => {
-        if (active) setRecentBookings([]);
-      })
-      .finally(() => {
-        if (active) setBookingsLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const loadEvents = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-      setEvents(await fetchMyEvents());
+      const [eventsData, bookingsData] = await Promise.all([
+        fetchMyEvents(),
+        fetchOrganiserBookings().catch(() => []),
+      ]);
+      setEvents(eventsData);
+      setRecentBookings(bookingsData.slice(0, 5));
     } catch (loadError: unknown) {
       setError(
         getOrganiserErrorMessage(
           loadError,
-          "We couldn't load your event overview."
+          "We couldn't load your organiser dashboard."
         )
       );
     } finally {
@@ -97,327 +91,259 @@ function OrganiserHome() {
     }
   };
 
+  useEffect(() => {
+    void loadData();
+  }, []);
+
+  // Tally counts using resolved status so past approved events become COMPLETED
   const counts = useMemo(() => {
     const result: Record<string, number> = {};
-
     statusOrder.forEach((status) => {
       result[status] = events.filter(
-        (event) => event.status === status
+        (e) => resolveEventStatus(e) === status
       ).length;
     });
-
     return result;
   }, [events]);
 
-  const upcoming = useMemo(
+  // Only upcoming events that remain truly APPROVED
+  const upcomingEvents = useMemo(
     () =>
       events
         .filter(
           (event) =>
-            new Date(
-              `${event.event_date}T${event.time || "00:00"}`
-            ) >= new Date()
+            resolveEventStatus(event) === "APPROVED" &&
+            new Date(`${event.event_date}T${event.time || "00:00"}`) >=
+              new Date()
         )
         .sort(
           (a, b) =>
-            new Date(a.event_date).getTime() -
-            new Date(b.event_date).getTime()
+            new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
         )
-        .slice(0, 4),
+        .slice(0, 5),
     [events]
   );
 
   return (
-    <div className="organiser-home">
-      <header className="org-page-heading org-dashboard-heading">
-        <div>
-          <span className="org-eyebrow">
-            YOUR ORGANISER SPACE
-          </span>
-
-          <h1>Dashboard</h1>
-
-          <p>
-            A clear view of your events and what needs attention.
-          </p>
-        </div>
-
-        <button
-          className="org-primary-action"
-          onClick={() =>
-            navigate("/organiser/events?create=1")
-          }
-        >
-          <Plus size={17} /> Create event
-        </button>
-      </header>
-
+    <>
       {error && (
-        <div className="org-inline-error" role="alert">
+        <div className="org-cmd-error-banner" role="alert">
           <span>{error}</span>
-
-          <button onClick={() => void loadEvents()}>
+          <button type="button" onClick={() => void loadData()}>
             Retry
           </button>
         </div>
       )}
 
-      <section
-        className="org-stat-grid"
-        aria-label="Event totals"
-      >
-        <article className="org-stat-card">
-          <span className="org-stat-icon lilac">
-            <CalendarDays size={19} />
-          </span>
+      {/* Header Banner */}
+      <div className="org-header-card">
+        <div>
+          <span className="org-badge">WORKSPACE OVERVIEW</span>
+          <h2 className="org-title">Organiser Command Center</h2>
+          <p className="org-subtitle">
+            Manage your live event registrations, attendee bookings, ticket sales,
+            and review listings across CityPass.
+          </p>
+        </div>
 
-          <div>
-            <p>Total events</p>
+        <button
+          type="button"
+          className="org-btn-create-event"
+          onClick={() => navigate("/organiser/events?create=1")}
+        >
+          + Create Event
+        </button>
+      </div>
 
-            <strong>
-              {loading ? "—" : events.length}
-            </strong>
+      {/* Stats Grid */}
+      <div className="org-stats-grid">
+        <div className="org-stat-card">
+          <div className="org-stat-header">
+            <span>TOTAL EVENTS</span>
+            <span><MdEventAvailable className="org-stat-icon" /></span>
           </div>
-        </article>
+          <div className="org-stat-value">{loading ? "—" : events.length}</div>
+          <div className="org-stat-subtext">All created listings</div>
+        </div>
 
-        <article className="org-stat-card">
-          <span className="org-stat-icon amber">
-            <Clock3 size={19} />
-          </span>
-
-          <div>
-            <p>Pending review</p>
-
-            <strong>
-              {loading ? "—" : counts.PENDING}
-            </strong>
+        <div className="org-stat-card">
+          <div className="org-stat-header">
+            <span>PENDING REVIEW</span>
+            <span><MdPendingActions className="org-stat-icon" /></span>
           </div>
-        </article>
+          <div className="org-stat-value">{loading ? "—" : counts.PENDING || 0}</div>
+          <div className="org-stat-subtext">Awaiting admin review</div>
+        </div>
 
-        <article className="org-stat-card">
-          <span className="org-stat-icon green">
-            <TicketCheck size={19} />
-          </span>
-
-          <div>
-            <p>Approved</p>
-
-            <strong>
-              {loading ? "—" : counts.APPROVED}
-            </strong>
+        <div className="org-stat-card">
+          <div className="org-stat-header">
+            <span>APPROVED</span>
+            <span><MdCheckCircle className="org-stat-icon" /></span>
           </div>
-        </article>
+          <div className="org-stat-value">{loading ? "—" : counts.APPROVED || 0}</div>
+          <div className="org-stat-subtext">Live on CityPass</div>
+        </div>
 
-        <article className="org-stat-card">
-          <span className="org-stat-icon rose">
-            <CalendarDays size={19} />
-          </span>
-
-          <div>
-            <p>Rejected</p>
-
-            <strong>
-              {loading ? "—" : counts.REJECTED}
-            </strong>
+        <div className="org-stat-card">
+          <div className="org-stat-header">
+            <span>REJECTED</span>
+            <span><MdCancel className="org-stat-icon" /></span>
           </div>
-        </article>
-      </section>
+          <div className="org-stat-value">{loading ? "—" : counts.REJECTED || 0}</div>
+          <div className="org-stat-subtext">Declined submissions</div>
+        </div>
+      </div>
 
-      <section className="org-performance-grid">
-        <article className="org-panel org-status-panel">
-          <div className="org-panel-heading">
+      {/* 2-Column Split: Dual Operational Cards */}
+      <div className="org-queues-grid-dual">
+        {/* Status Distribution Panel */}
+        <div className="org-queue-card">
+          <div className="org-card-head">
             <div>
-              <h2>Event status</h2>
-
-              <p>
-                Review progress across your listings
-              </p>
+              <h3 className="org-queue-title">Event Status Overview</h3>
+              <p className="org-queue-desc">Review progress across your listings</p>
             </div>
-
-            <Link to="/organiser/events">
-              All events <ArrowRight size={15} />
+            <Link to="/organiser/events" className="org-queue-link">
+              All Events &rarr;
             </Link>
           </div>
 
           {loading ? (
-            <div className="org-panel-loading">
-              Loading event summary...
+            <div className="org-queue-empty-state">
+              <p>Loading event progress...</p>
             </div>
           ) : events.length === 0 ? (
-            <div className="org-panel-empty">
-              Your event status summary will appear here.
+            <div className="org-queue-empty-state">
+              <span className="org-empty-icon">
+                <MdEventAvailable className="org-stat-icon" />
+              </span>
+              <p>No events submitted yet.</p>
             </div>
           ) : (
-            <div className="org-status-bars">
+            <div className="org-status-bars-list">
               {statusOrder.map((status) => {
-                const total = events.length
-                  ? (counts[status] / events.length) * 100
+                const count = counts[status] || 0;
+                const percentage = events.length
+                  ? (count / events.length) * 100
                   : 0;
 
                 return (
-                  <div
-                    className="org-status-row"
-                    key={status}
-                  >
-                    <span>
-                      {status.charAt(0) +
-                        status.slice(1).toLowerCase()}
+                  <div className="org-status-progress-row" key={status}>
+                    <span className="org-status-label">
+                      {status.charAt(0) + status.slice(1).toLowerCase()}
                     </span>
-
-                    <div className="org-status-track">
-                      <i
-                        className={`fill-${status.toLowerCase()}`}
-                        style={{ width: `${total}%` }}
+                    <div className="org-progress-track">
+                      <div
+                        className={`org-progress-fill fill-${status.toLowerCase()}`}
+                        style={{ width: `${percentage}%` }}
                       />
                     </div>
-
-                    <strong>{counts[status]}</strong>
+                    <strong className="org-status-count">{count}</strong>
                   </div>
                 );
               })}
             </div>
           )}
-        </article>
+        </div>
 
-          <article className="org-panel org-recent-bookings">
-          <div className="org-panel-heading">
+        {/* Recent Bookings Panel */}
+        <div className="org-queue-card">
+          <div className="org-card-head">
             <div>
-              <h2>Recent bookings</h2>
-
-              <p>Latest attendee activity</p>
+              <h3 className="org-queue-title">Recent Bookings</h3>
+              <p className="org-queue-desc">Latest attendee ticket registrations</p>
             </div>
-
-            <Link to="/organiser/attendees">
-              Bookings <ArrowRight size={15} />
-            </Link>
-          </div>
-
-          {bookingsLoading ? (
-            <div className="org-panel-loading">
-              Loading recent bookings...
-            </div>
-          ) : recentBookings.length === 0 ? (
-            <div className="org-bookings-preview">
-              <span>
-                <Users size={19} />
-              </span>
-
-              <strong>No bookings yet</strong>
-
-              <p>
-                New attendee bookings will appear here.
-              </p>
-            </div>
-          ) : (
-            <div className="org-recent-booking-list">
-              {recentBookings.map((booking) => (
-                <Link
-                  to="/organiser/attendees"
-                  className="org-recent-booking-row"
-                  key={booking.booking_id}
-                >
-                  <span className="org-recent-booking-avatar">
-                    {(booking.user_name || "G")
-                      .trim()
-                      .charAt(0)
-                      .toUpperCase()}
-                  </span>
-
-                  <span className="org-recent-booking-person">
-                    <b>{booking.user_name || "Guest"}</b>
-
-                    <small>{booking.event_name}</small>
-                  </span>
-
-                  <span className="org-recent-booking-tickets">
-                    {booking.number_of_tickets} tk
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </article>
-
-      </section>
-
-      <section className="org-bottom-grid">
-        <article className="org-panel org-upcoming-panel">
-          <div className="org-panel-heading">
-            <div>
-              <h2>Upcoming events</h2>
-
-              <p>Your next scheduled listings</p>
-            </div>
-
-            <Link to="/organiser/events">
-              View all <ArrowRight size={15} />
+            <Link to="/organiser/attendees" className="org-queue-link">
+              View All &rarr;
             </Link>
           </div>
 
           {loading ? (
-            <div className="org-panel-loading">
-              Loading upcoming events...
+            <div className="org-queue-empty-state">
+              <p>Loading recent bookings...</p>
             </div>
-          ) : upcoming.length === 0 ? (
-            <div className="org-panel-empty">
-              <CalendarDays size={22} />
-
-              <span>No upcoming events yet.</span>
+          ) : recentBookings.length === 0 ? (
+            <div className="org-queue-empty-state">
+              <span className="org-empty-icon">
+                <MdConfirmationNumber className="org-stat-icon" />
+              </span>
+              <p>No recent attendee bookings yet.</p>
             </div>
           ) : (
-            <div className="org-upcoming-list">
-              {upcoming.map((event) => (
-                <Link
-                  className="org-upcoming-item"
-                  to="/organiser/events"
-                  key={event.id}
-                >
-                  <span className="org-upcoming-date">
-                    <b>
-                      {new Date(
-                        `${event.event_date}T00:00:00`
-                      ).toLocaleDateString("en", {
-                        day: "2-digit",
-                      })}
-                    </b>
-
-                    <small>
-                      {new Date(
-                        `${event.event_date}T00:00:00`
-                      ).toLocaleDateString("en", {
-                        month: "short",
-                      })}
-                    </small>
+            <div className="org-queue-items-list">
+              {recentBookings.map((booking) => (
+                <div key={booking.booking_id} className="org-item-row">
+                  <div className="org-item-avatar">
+                    {(booking.user_name || "G").trim().charAt(0).toUpperCase()}
+                  </div>
+                  <div className="org-item-content">
+                    <div className="org-item-title">{booking.user_name || "Guest"}</div>
+                    <div className="org-item-sub">{booking.event_name}</div>
+                  </div>
+                  <span className="org-ticket-badge">
+                    {booking.number_of_tickets} tickets
                   </span>
-
-                  <span className="org-upcoming-info">
-                    <span className="org-upcoming-title-row">
-                      <b>{event.name}</b>
-                      {(event.is_live === true || event.is_live === 1) && (
-                        <span className="org-upcoming-live-badge">LIVE</span>
-                      )}
-                    </span>
-
-                    <small>
-                      {event.city_name || "City not set"} ·{" "}
-                      {event.time || "Time not set"}
-                    </small>
-                  </span>
-
-                  <span
-                    className={`org-status-badge ${event.status.toLowerCase()}`}
-                  >
-                    {event.status}
-                  </span>
-                </Link>
+                </div>
               ))}
             </div>
           )}
-        </article>
+        </div>
+      </div>
 
-        
-      </section>
-    </div>
+      {/* Upcoming Events Full Panel */}
+      <div className="org-queue-card">
+        <div className="org-card-head">
+          <div>
+            <h3 className="org-queue-title">Upcoming Scheduled Events</h3>
+            <p className="org-queue-desc">Your active and approved listings</p>
+          </div>
+          <Link to="/organiser/events" className="org-queue-link">
+            All Listings &rarr;
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="org-queue-empty-state">
+            <p>Loading upcoming events...</p>
+          </div>
+        ) : upcomingEvents.length === 0 ? (
+          <div className="org-queue-empty-state">
+            <span className="org-empty-icon">
+              <MdEventAvailable className="org-stat-icon" />
+            </span>
+            <p>No upcoming approved events scheduled.</p>
+          </div>
+        ) : (
+          <div className="org-queue-items-list">
+            {upcomingEvents.map((event) => (
+              <div key={event.id} className="org-item-row">
+                <div className="org-event-date-box">
+                  <b>
+                    {new Date(`${event.event_date}T00:00:00`).toLocaleDateString("en", {
+                      day: "2-digit",
+                    })}
+                  </b>
+                  <small>
+                    {new Date(`${event.event_date}T00:00:00`).toLocaleDateString("en", {
+                      month: "short",
+                    })}
+                  </small>
+                </div>
+                <div className="org-item-content">
+                  <div className="org-item-title">{event.name}</div>
+                  <div className="org-item-sub">
+                    {event.city_name || "City not set"} · {event.time || "Time not set"}
+                  </div>
+                </div>
+                <span className={`org-badge-status ${event.status.toLowerCase()}`}>
+                  {event.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 

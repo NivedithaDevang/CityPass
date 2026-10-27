@@ -1,17 +1,25 @@
 import axios from "axios";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../../config/config";
-import { CalendarDays, LayoutDashboard, LogOut, Plus, Settings, Users } from "lucide-react";
+import { useUser } from "../../../context/UserContext";
+import {
+  MdSpaceDashboard,
+  MdEvent,
+  MdAddCircleOutline,
+  MdPeople,
+  MdLogout,
+} from "react-icons/md";
 import { FaUserSlash } from "react-icons/fa";
 import "./OrganiserLayout.css";
 
-const authApi = axios.create({ 
-  baseURL: `${API_BASE_URL}/v1/auth`, 
-  withCredentials: true 
+const authApi = axios.create({
+  baseURL: `${API_BASE_URL}/v1/auth`,
+  withCredentials: true,
 });
 
 export const OrganiserLayout = () => {
   const navigate = useNavigate();
+  const { setUser } = useUser();
 
   const handleLogout = async () => {
     try {
@@ -19,68 +27,105 @@ export const OrganiserLayout = () => {
     } catch (err) {
       console.error("Logout failed:", err);
     } finally {
+      setUser(null);
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
       navigate("/", { replace: true });
     }
   };
 
   return (
-    <div className="org-container">
+    <div className="org-layout-wrapper">
       <aside className="org-sidebar">
-        <NavLink to="/organiser" end className="org-brand">
-          <span>
-            <small>ORGANISER PANEL</small>
-            <h3>CityPass</h3>
-          </span>
-        </NavLink>
-        <div className="org-nav-label">WORKSPACE</div>
-        <nav className="org-nav">
-          <NavLink to="/organiser" end>
-            <LayoutDashboard size={17} />
-            <span>Dashboard</span>
-          </NavLink>
+        <div className="org-sidebar-brand-block">
+          <span className="org-sidebar-pill-badge">ORGANISER PORTAL</span>
+          <h3 className="org-sidebar-brand-title">CityPass</h3>
+        </div>
 
-          <NavLink to="/organiser/events">
-            <CalendarDays size={17} />
-            <span>My events</span>
-          </NavLink>
-
-          <NavLink 
-            to="/organiser/events?create=1" 
-            className={({ isActive }) => `org-create-nav ${isActive ? "active" : ""}`}
+        <nav className="org-sidebar-menu-list">
+          <NavLink
+            to="/organiser"
+            end
+            className={({ isActive }) =>
+              isActive ? "org-sidebar-nav-item active" : "org-sidebar-nav-item"
+            }
           >
-            <Plus size={17} />
-            <span>Create event</span>
+            <div className="org-nav-icon-wrapper">
+              <MdSpaceDashboard className="org-sidebar-icon" />
+            </div>
+            <span className="org-sidebar-label">Dashboard</span>
           </NavLink>
 
-          <NavLink to="/organiser/attendees">
-            <Users size={17} />
-            <span>Bookings & attendees</span>
+          <NavLink
+            to="/organiser/events"
+            className={({ isActive }) =>
+              isActive ? "org-sidebar-nav-item active" : "org-sidebar-nav-item"
+            }
+          >
+            <div className="org-nav-icon-wrapper">
+              <MdEvent className="org-sidebar-icon" />
+            </div>
+            <span className="org-sidebar-label">My Events</span>
           </NavLink>
 
-          <NavLink to="/organiser/deactivate">
-            <FaUserSlash size={17} />
-            <span>Deactivate Organiser Account</span>
+          <NavLink
+            to="/organiser/events?create=1"
+            className={({ isActive }) =>
+              isActive
+                ? "org-sidebar-nav-item org-create-item active"
+                : "org-sidebar-nav-item org-create-item"
+            }
+          >
+            <div className="org-nav-icon-wrapper">
+              <MdAddCircleOutline className="org-sidebar-icon" />
+            </div>
+            <span className="org-sidebar-label">Create Event</span>
           </NavLink>
+
+          <NavLink
+            to="/organiser/attendees"
+            className={({ isActive }) =>
+              isActive ? "org-sidebar-nav-item active" : "org-sidebar-nav-item"
+            }
+          >
+            <div className="org-nav-icon-wrapper">
+              <MdPeople className="org-sidebar-icon" />
+            </div>
+            <span className="org-sidebar-label">Bookings & Attendees</span>
+          </NavLink>
+
+          <NavLink
+            to="/organiser/deactivate"
+            className={({ isActive }) =>
+              isActive ? "org-sidebar-nav-item active" : "org-sidebar-nav-item"
+            }
+          >
+            <div className="org-nav-icon-wrapper">
+              <FaUserSlash className="org-sidebar-icon" />
+            </div>
+            <span className="org-sidebar-label">Deactivate Account</span>
+          </NavLink>
+
+          <button
+            type="button"
+            className="org-sidebar-nav-item org-logout-item"
+            onClick={() => void handleLogout()}
+          >
+            <div className="org-nav-icon-wrapper">
+              <MdLogout className="org-sidebar-icon" />
+            </div>
+            <span className="org-sidebar-label">Log Out</span>
+          </button>
         </nav>
 
-        <div className="org-sidebar-bottom">
-          <NavLink to="/settings/profile">
-            <Settings size={17} />
-            <span>Profile & settings</span>
-          </NavLink>
-
-          <button className="org-logout-btn" onClick={() => void handleLogout()}>
-            <LogOut size={17} />
-            <span>Log out</span>
-          </button>
-
-          <span className="org-sidebar-caption">CITYPASS ORGANISER</span>
+        <div className="org-sidebar-footer-card">
+          <div className="org-sidebar-system-dot" />
+          <span>Organiser Console Active</span>
         </div>
       </aside>
-      <main className="org-main-content">
-        <div className="org-content-body">
-          <Outlet />
-        </div>
+
+      <main className="org-main-viewport">
+        <Outlet />
       </main>
     </div>
   );
