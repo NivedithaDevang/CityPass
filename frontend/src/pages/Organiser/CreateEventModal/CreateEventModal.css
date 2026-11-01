@@ -330,12 +330,21 @@
   background: #0f172a;
 }
 
+.org-image-preview-button {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+}
+
 .org-clickable-preview {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  cursor: zoom-in;
   transition:
     filter 0.2s ease,
     transform 0.2s ease;
@@ -397,7 +406,7 @@
 .org-image-lightbox-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 2100;
+  z-index: 200000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -413,6 +422,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  width: fit-content;
   max-width: 90vw;
   max-height: 85vh;
 }

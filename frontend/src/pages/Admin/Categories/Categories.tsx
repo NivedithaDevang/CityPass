@@ -7,7 +7,6 @@ import {
   updateCategory,
 } from "../../../services/adminService";
 import { FaImage } from "react-icons/fa6";
-import ImageCropModal from "../../../components/ImageCropModal/ImageCropModal";
 
 interface AdminCategory {
   id: number;
@@ -63,12 +62,17 @@ function Categories() {
   const [editCategoryImage, setEditCategoryImage] = useState<File | null>(null);
   const [editCategoryImagePreview, setEditCategoryImagePreview] = useState("");
   const [savingCategory, setSavingCategory] = useState(false);
-  const [cropImageSource, setCropImageSource] = useState<string | null>(null);
-  const [cropTarget, setCropTarget] = useState<"ADD" | "EDIT" | null>(null);
 
-  // Lock body scroll when edit modal is active
+  // Confirmation Modal State for Status Toggle
+  const [statusConfirmCategory, setStatusConfirmCategory] = useState<{
+    category: AdminCategory;
+    targetStatus: "ACTIVE" | "INACTIVE";
+  } | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  // Lock body scroll when modals are open
   useEffect(() => {
-    if (editingCategory) {
+    if (editingCategory || statusConfirmCategory) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "unset";
@@ -76,19 +80,25 @@ function Categories() {
     return () => {
       document.body.style.overflow = "unset";
     };
-  }, [editingCategory]);
+  }, [editingCategory, statusConfirmCategory]);
 
   // Revoke object URLs to prevent memory leaks
   useEffect(() => {
     if (!categoryImagePreview) return;
-    return () => URL.revokeObjectURL(categoryImagePreview);
+    return () => {
+      if (categoryImagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(categoryImagePreview);
+      }
+    };
   }, [categoryImagePreview]);
 
   useEffect(() => {
     if (!editCategoryImagePreview) return;
-    if (editCategoryImagePreview.startsWith("blob:")) {
-      return () => URL.revokeObjectURL(editCategoryImagePreview);
-    }
+    return () => {
+      if (editCategoryImagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(editCategoryImagePreview);
+      }
+    };
   }, [editCategoryImagePreview]);
 
   const loadCategories = async () => {
@@ -110,10 +120,10 @@ function Categories() {
       }
 
       const formattedCategories: AdminCategory[] = list.map(
-        (city: CategoryApiResponse) => ({
-          ...city,
-          is_active: city.is_active ?? getCategoryStatus(city) === "ACTIVE",
-          status: getCategoryStatus(city),
+        (category: CategoryApiResponse) => ({
+          ...category,
+          is_active: category.is_active ?? getCategoryStatus(category) === "ACTIVE",
+          status: getCategoryStatus(category),
         })
       );
 
@@ -165,9 +175,8 @@ function Categories() {
     }
 
     setError(null);
-    setCropImageSource(URL.createObjectURL(file));
-    setCropTarget("ADD");
-    event.target.value = "";
+    setCategoryImage(file);
+    setCategoryImagePreview(URL.createObjectURL(file));
   };
 
   const handleEditCategoryImageChange = (
@@ -189,29 +198,8 @@ function Categories() {
     }
 
     setError(null);
-    setCropImageSource(URL.createObjectURL(file));
-    setCropTarget("EDIT");
-    event.target.value = "";
-  };
-
-  const closeCropModal = () => {
-    if (cropImageSource?.startsWith("blob:")) {
-      URL.revokeObjectURL(cropImageSource);
-    }
-    setCropImageSource(null);
-    setCropTarget(null);
-  };
-
-  const applyImageCrop = (file: File) => {
-    const preview = URL.createObjectURL(file);
-    if (cropTarget === "ADD") {
-      setCategoryImage(file);
-      setCategoryImagePreview(preview);
-    } else if (cropTarget === "EDIT") {
-      setEditCategoryImage(file);
-      setEditCategoryImagePreview(preview);
-    }
-    closeCropModal();
+    setEditCategoryImage(file);
+    setEditCategoryImagePreview(URL.createObjectURL(file));
   };
 
   const handleAddCategory = async (e: FormEvent<HTMLFormElement>) => {
@@ -307,16 +295,26 @@ function Categories() {
     }
   };
 
-  const handleStatusUpdate = async (category: AdminCategory) => {
+  // Open the Confirmation Popup for Status Update
+  const promptStatusUpdate = (category: AdminCategory) => {
+    const currentStatus = getStatus(category);
+    const targetStatus = currentStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    setStatusConfirmCategory({ category, targetStatus });
+  };
+
+  // Execute Status Update after confirmation
+  const executeStatusUpdate = async () => {
+    if (!statusConfirmCategory) return;
+
+    const { category, targetStatus } = statusConfirmCategory;
+
     try {
+      setUpdatingStatus(true);
       setError(null);
       setSuccess(null);
 
-      const currentStatus = getStatus(category);
-      const newStatus = currentStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
-
       await updateCategory(category.id, {
-        is_active: newStatus === "ACTIVE",
+        is_active: targetStatus === "ACTIVE",
       });
 
       setCategories((previous) =>
@@ -324,32 +322,27 @@ function Categories() {
           item.id === category.id
             ? {
                 ...item,
-                is_active: newStatus === "ACTIVE" ? 1 : 0,
+                is_active: targetStatus === "ACTIVE" ? 1 : 0,
               }
             : item
         )
       );
 
-      setSuccess(`Category marked as ${newStatus}.`);
+      setSuccess(`Category marked as ${targetStatus}.`);
+      setStatusConfirmCategory(null);
     } catch (err: any) {
       console.error("Failed to update category status:", err);
       setError(
         err?.response?.data?.message ||
           "Failed to update category status. Please try again."
       );
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
   return (
     <div className="categories-container">
-      {cropImageSource && (
-        <ImageCropModal
-          imageSrc={cropImageSource}
-          title="Crop and rotate category image"
-          onCancel={closeCropModal}
-          onApply={applyImageCrop}
-        />
-      )}
       <div className="categories-header">
         <div>
           <span className="categories-subtitle">CATEGORY MANAGEMENT</span>
@@ -537,7 +530,7 @@ function Categories() {
                               ? "categories-deactivate-btn"
                               : "categories-activate-btn"
                           }
-                          onClick={() => void handleStatusUpdate(category)}
+                          onClick={() => promptStatusUpdate(category)}
                         >
                           {status === "ACTIVE"
                             ? "Make Inactive"
@@ -664,6 +657,80 @@ function Categories() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal for Make Active / Make Inactive */}
+      {statusConfirmCategory && (
+        <div
+          className="category-modal-overlay"
+          onClick={() => {
+            if (!updatingStatus) setStatusConfirmCategory(null);
+          }}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="category-modal-content"
+            style={{ padding: "10px 20px 20px 20px", maxWidth: "420px", textAlign: "center" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="category-modal-header" style={{ justifyContent: "center" }}>
+              <h2>
+                {statusConfirmCategory.targetStatus === "INACTIVE"
+                  ? "Deactivate Category"
+                  : "Activate Category"}
+              </h2>
+            </div>
+
+            <p style={{ margin: "1rem 0", color: "#475569", lineHeight: "1.5" }}>
+              Are you sure you want to mark{" "}
+              <strong>"{statusConfirmCategory.category.name}"</strong> as{" "}
+              <strong
+                style={{
+                  color:
+                    statusConfirmCategory.targetStatus === "ACTIVE"
+                      ? "#15803d"
+                      : "#b91c1c",
+                }}
+              >
+                {statusConfirmCategory.targetStatus}
+              </strong>
+              ?
+              {statusConfirmCategory.targetStatus === "INACTIVE"
+                ? " Organisers will not be able to assign events to this category while it is inactive."
+                : " This category will immediately become available for organisers and event listings."}
+            </p>
+
+            <div className="category-modal-actions" style={{ justifyContent: "center" }}>
+              <button
+                type="button"
+                className="category-cancel-btn"
+                onClick={() => setStatusConfirmCategory(null)}
+                disabled={updatingStatus}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="category-save-btn"
+                style={{
+                  backgroundColor:
+                    statusConfirmCategory.targetStatus === "INACTIVE"
+                      ? "#dc2626"
+                      : "#16a34a",
+                }}
+                onClick={executeStatusUpdate}
+                disabled={updatingStatus}
+              >
+                {updatingStatus
+                  ? "Updating..."
+                  : statusConfirmCategory.targetStatus === "INACTIVE"
+                  ? "Yes, Make Inactive"
+                  : "Yes, Make Active"}
+              </button>
+            </div>
           </div>
         </div>
       )}

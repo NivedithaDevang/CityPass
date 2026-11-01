@@ -6,7 +6,6 @@ import AppError from "../types/appError.js";
 import cloudinary from "../config/cloudinary.js";
 import {
   getAllRequests,
-  getOrganizerRequestById,
   getActiveRequestByUserId,
   getLatestRequestByUserId,
   createRequest,

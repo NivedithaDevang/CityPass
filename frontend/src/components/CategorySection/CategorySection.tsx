@@ -4,25 +4,10 @@ import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import { type Category } from "../../types/auth";
 import { useNavigate } from "react-router-dom";
-import { FaMicrophone, FaLaughSquint } from "react-icons/fa";
-import { MdSportsFootball, MdTheaterComedy } from "react-icons/md";
-import { IoFastFoodSharp } from "react-icons/io5";
-import { FaPaintbrush, FaMountain } from "react-icons/fa6";
-import type { IconType } from "react-icons";
 
 function CategorySection() {
   const [categories, setCategories] = useState<Category[]>([]);
   const navigate = useNavigate();
-
-  const categoryIcons: Record<string, IconType> = {
-    Music: FaMicrophone,
-    Sports: MdSportsFootball,
-    Comedy: MdTheaterComedy,
-    Food: IoFastFoodSharp,
-    Art: FaPaintbrush,
-    Adventure: FaMountain,
-    Entertainment: FaLaughSquint,
-  };
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -54,7 +39,7 @@ function CategorySection() {
         {categories
           .filter((category) => category.is_active)
           .map((category) => {
-            const CategoryIcon = categoryIcons[category.name];
+            const CategoryIcon = category.name;
 
             return (
               <div

@@ -4,13 +4,14 @@ import OrganiserAttendees from "../pages/Organiser/OrganiserAttendees/OrganiserA
 import OrganiserEvents from "../pages/Organiser/OrganiserEvents/OrganiserEvents";
 import OrganiserHome from "../pages/Organiser/OrganiserHome/OrganiserHome";
 import DeactivateOrganiser from "../pages/Organiser/DeactivateOrganiser/DeactivateOrganiser";
-
+import OrganiserProfile from "../pages/Organiser/OrganiserProfile/OrganiserProfile";
 import { OrganiserLayout } from "../components/Organiser/OrganiserLayout/OrganiserLayout";
 const ORGANISER_SUB_ROUTES = [
   { index: true, element: <OrganiserHome /> },
   { path: "attendees", element: <OrganiserAttendees /> },
   { path: "events", element: <OrganiserEvents /> },
   { path: "deactivate", element: <DeactivateOrganiser /> },
+  { path: "profile", element: <OrganiserProfile /> }
 
 ]
 

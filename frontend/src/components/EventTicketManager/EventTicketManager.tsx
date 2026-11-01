@@ -212,7 +212,7 @@ const EventTicketManager = ({
           {onClose && (
             <button
               type="button"
-              className="ticket-close-btn"
+              className="event-ticket-close-btn"
               onClick={onClose}
               aria-label="Close ticket manager"
             >

@@ -66,6 +66,22 @@ export const getOrganiserByUserId = async (
         : null;
 };
 
+export const updateOrganiserProfile = async(
+    id: number,
+    profile: {
+        stage_name: string,
+        description: string,
+    }
+) => {
+    const sql = `
+    UPDATE organizers SET stage_name = ?, description = ? where id = ?`;
+    const [results] = await db.query<ResultSetHeader>(sql, [
+        profile.stage_name, profile.description, id
+    ]);
+    return results;
+}
+
+
 export const deactivateOrganiser = async(
     id: number
 ) : Promise<ResultSetHeader> => {

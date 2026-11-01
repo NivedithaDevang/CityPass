@@ -136,7 +136,7 @@ function OrganiserRequests() {
     handleStatusUpdate(approvingRequest.id, "APPROVED");
   };
 
-  // Helper to resolve the attached document URL (Cloudinary https URL or server path)
+  // Helper to resolve the attached document URL
   const getDocumentUrl = (req?: OrganiserRequest | null): string => {
     if (!req) return "";
     const rawUrl = req.id_proof_url || req.id_proof_file;
@@ -172,16 +172,16 @@ function OrganiserRequests() {
   }, [requests, search, filter]);
 
   return (
-    <div className="req-container">
-      <div className="req-header-row">
+    <div className="or-req-container">
+      <div className="or-req-header-row">
         <div>          
-          <span className="req-subhead">REVIEW APPLICATIONS</span>
+          <span className="or-req-subhead">REVIEW APPLICATIONS</span>
           <h1>Organiser Requests</h1>
-          <p className="req-header-desc">Review and manage organizer verification applications.</p>
+          <p className="or-req-header-desc">Review and manage organizer verification applications.</p>
         </div>
 
-        <div className="req-toolbar">
-          <div className="req-search">
+        <div className="or-req-toolbar">
+          <div className="or-req-search">
             <MdOutlineSearch />
             <input
               type="text"
@@ -191,12 +191,12 @@ function OrganiserRequests() {
             />
           </div>
 
-          <div className="req-tabs">
+          <div className="or-req-tabs">
             {["ALL", "PENDING", "APPROVED", "REJECTED"].map((tab) => (
               <button
                 key={tab}
                 type="button"
-                className={`tab-btn ${filter === tab ? "active" : ""}`}
+                className={`or-tab-btn ${filter === tab ? "active" : ""}`}
                 onClick={() => setFilter(tab)}
               >
                 {tab}
@@ -204,17 +204,17 @@ function OrganiserRequests() {
             ))}
           </div>
 
-          <div className="req-count">
+          <div className="or-req-count">
             {filtered.length} {filtered.length === 1 ? "Request" : "Requests"}
           </div>
         </div>
       </div>
 
       {notice && (
-        <div className="req-notice-banner">
+        <div className="or-req-notice-banner">
           <span>{notice}</span>
           <button 
-            className="req-close-button"
+            className="or-req-close-button"
             onClick={() => setNotice("")}
           >
             <FaXmark />
@@ -223,19 +223,19 @@ function OrganiserRequests() {
       )}
 
       {error && (
-        <div className="req-error-banner">
+        <div className="or-req-error-banner">
           <span>{error}</span>
           <button onClick={() => setError(null)}>Dismiss</button>
         </div>
       )}
 
       {loading ? (
-        <div className="req-placeholder">Loading requests...</div>
+        <div className="or-req-placeholder">Loading requests...</div>
       ) : filtered.length === 0 ? (
-        <div className="req-placeholder">No matching requests found.</div>
+        <div className="or-req-placeholder">No matching requests found.</div>
       ) : (
-        <div className="req-table-container">
-          <table className="req-table">
+        <div className="or-req-table-container">
+          <table className="or-req-table">
             <thead>
               <tr>
                 <th>ID</th>
@@ -252,20 +252,20 @@ function OrganiserRequests() {
                 return (
                   <tr key={req.id}>
                     <td>{req.id}</td>
-                    <td className="req-col-org">
-                      <span className="req-org-title">{req.organization_name || "—"}</span>
+                    <td className="or-req-col-org">
+                      <span className="or-req-org-title">{req.organization_name || "—"}</span>
                     </td>
                     <td>{req.city || "—"}</td>
                     <td>
-                      <span className={`status-pill status-${statusUpper.toLowerCase()}`}>
+                      <span className={`or-status-pill or-status-${statusUpper.toLowerCase()}`}>
                         {statusUpper}
                       </span>
                     </td>
                     <td>
-                      <div className="req-table-actions">
+                      <div className="or-req-table-actions">
                         <button 
                           type="button"
-                          className="btn-view"
+                          className="or-btn-view"
                           onClick={() => setViewingRequest(req)}
                         >
                           <FaEye /> View
@@ -275,7 +275,7 @@ function OrganiserRequests() {
                           <>
                             <button
                               type="button"
-                              className="btn-approve"
+                              className="or-btn-approve"
                               disabled={actionLoading === req.id}
                               onClick={() => setApprovingRequest(req)}
                             >
@@ -283,7 +283,7 @@ function OrganiserRequests() {
                             </button>
                             <button
                               type="button"
-                              className="btn-reject"
+                              className="or-btn-reject"
                               disabled={actionLoading === req.id}
                               onClick={() => openRejectModal(req.id)}
                             >
@@ -303,20 +303,19 @@ function OrganiserRequests() {
 
       {/* Details Modal */}
       {viewingRequest && (
-        <div className="modal-backdrop" onClick={() => setViewingRequest(null)}>
-          <div className="modal-card admin-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-header-info">
-                <div className="modal-title-row">
+        <div className="or-modal-backdrop" onClick={() => setViewingRequest(null)}>
+          <div className="or-modal-card or-admin-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="or-modal-header">
+              <div className="or-modal-header-info">
+                <div className="or-modal-title-row">
                   <h3>{viewingRequest.organization_name}</h3>
-                  <span className={`status-pill status-${viewingRequest.status.toLowerCase()}`}>
+                  <span className={`or-status-pill or-status-${viewingRequest.status.toLowerCase()}`}>
                     {viewingRequest.status}
                   </span>
                 </div>
-                <span className="modal-subtext">Application ID: #{viewingRequest.id}</span>
               </div>
               <button 
-                className="modal-close-btn" 
+                className="or-modal-close-btn" 
                 onClick={() => setViewingRequest(null)}
                 aria-label="Close modal"
               >
@@ -324,37 +323,33 @@ function OrganiserRequests() {
               </button>
             </div>
 
-            <div className="admin-details-body">
-              <div className="admin-meta-grid">
-                <div className="meta-tile">
-                  <span className="meta-tile-label">Full Name</span>
-                  <span className="meta-tile-value">{viewingRequest.name || viewingRequest.email}</span>
+            <div className="or-admin-details-body">
+              <div className="or-admin-meta-grid">
+                <div className="or-meta-tile">
+                  <span className="or-meta-tile-label">City</span>
+                  <span className="or-meta-tile-value">{viewingRequest.city || "All Cities"}</span>
                 </div>
-                <div className="meta-tile">
-                  <span className="meta-tile-label">City</span>
-                  <span className="meta-tile-value">{viewingRequest.city || "All Cities"}</span>
+                <div className="or-meta-tile">
+                  <span className="or-meta-tile-label">Organisation Name</span>
+                  <span className="or-meta-tile-value">{viewingRequest.organization_name || "Organisation name not provided"}</span>
                 </div>
-                <div className="meta-tile">
-                  <span className="meta-tile-label">Organisation Name</span>
-                  <span className="meta-tile-value">{viewingRequest.organization_name || "Organisation name not provided"}</span>
+                <div className="or-meta-tile">
+                  <span className="or-meta-tile-label">Phone Number</span>
+                  <span className="or-meta-tile-value">{viewingRequest.phone || "—"}</span>
                 </div>
-                <div className="meta-tile">
-                  <span className="meta-tile-label">Phone Number</span>
-                  <span className="meta-tile-value">{viewingRequest.phone || "—"}</span>
-                </div>
-                <div className="meta-tile full-width">
-                  <span className="meta-tile-label">Primary Email</span>
-                  <span className="meta-tile-value email-val">{viewingRequest.email || "—"}</span>
+                <div className="or-meta-tile or-full-width">
+                  <span className="or-meta-tile-label">Primary Email</span>
+                  <span className="or-meta-tile-value or-email-val">{viewingRequest.email || "—"}</span>
                 </div>
 
                 {/* ID Details & Document View */}
-                <div className="meta-tile full-width">
-                  <span className="meta-tile-label">
+                <div className="or-meta-tile or-full-width">
+                  <span className="or-meta-tile-label">
                     {viewingRequest.id_proof_type ? `${viewingRequest.id_proof_type.toUpperCase()} Proof & Document` : "ID Proof"}
                   </span>
                   
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", marginTop: "6px" }}>
-                    <span className="meta-tile-value mono-val">
+                    <span className="or-meta-tile-value or-mono-val">
                       {viewingRequest.id_proof || "N/A"}
                     </span>
 
@@ -390,24 +385,24 @@ function OrganiserRequests() {
                 </div>
               </div>
 
-              <div className="admin-desc-section">
-                <span className="meta-tile-label">Organization Description</span>
-                <div className="admin-desc-box">
+              <div className="or-admin-desc-section">
+                <span className="or-meta-tile-label">Organization Description</span>
+                <div className="or-admin-desc-box">
                   {viewingRequest.description ? (
                     <p>{viewingRequest.description}</p>
                   ) : (
-                    <p className="desc-empty">No organization overview provided.</p>
+                    <p className="or-desc-empty">No organization overview provided.</p>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="modal-footer">
+            <div className="or-modal-footer">
               {viewingRequest.status.toUpperCase() === "PENDING" && (
-                <div className="modal-pending-actions">
+                <div className="or-modal-pending-actions">
                   <button
                     type="button"
-                    className="btn-reject"
+                    className="or-btn-reject"
                     disabled={actionLoading === viewingRequest.id}
                     onClick={() => {
                       const id = viewingRequest.id;
@@ -419,7 +414,7 @@ function OrganiserRequests() {
                   </button>
                   <button
                     type="button"
-                    className="btn-approve"
+                    className="or-btn-approve"
                     disabled={actionLoading === viewingRequest.id}
                     onClick={() => {
                       const req = viewingRequest;
@@ -433,7 +428,7 @@ function OrganiserRequests() {
               )}
               <button 
                 type="button" 
-                className="btn-cancel" 
+                className="or-btn-cancel" 
                 onClick={() => setViewingRequest(null)}
               >
                 Close
@@ -446,14 +441,14 @@ function OrganiserRequests() {
       {/* Approve Confirmation Modal */}
       {approvingRequest && (
         <div 
-          className="modal-backdrop" 
+          className="or-modal-backdrop" 
           onClick={() => { if (!actionLoading) setApprovingRequest(null); }}
         >
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+          <div className="or-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="or-modal-header">
               <h3>Approve Application</h3>
               <button 
-                className="modal-close-btn" 
+                className="or-modal-close-btn" 
                 onClick={() => setApprovingRequest(null)}
                 disabled={actionLoading !== null}
               >
@@ -461,16 +456,16 @@ function OrganiserRequests() {
               </button>
             </div>
 
-            <p className="modal-subtitle">
+            <p className="or-modal-subtitle">
               Are you sure you want to approve <strong>{approvingRequest.organization_name}</strong>?
               <br /><br />
               This will verify their organizer status and allow them to publish events and host bookings on CityPass.
             </p>
 
-            <div className="modal-footer">
+            <div className="or-modal-footer">
               <button 
                 type="button" 
-                className="btn-cancel" 
+                className="or-btn-cancel" 
                 disabled={actionLoading !== null}
                 onClick={() => setApprovingRequest(null)}
               >
@@ -478,7 +473,7 @@ function OrganiserRequests() {
               </button>
               <button
                 type="button"
-                className="btn-approve"
+                className="or-btn-approve"
                 disabled={actionLoading === approvingRequest.id}
                 onClick={confirmApproval}
               >
@@ -491,22 +486,22 @@ function OrganiserRequests() {
 
       {/* Rejection Reason Modal */}
       {rejectingId !== null && (
-        <div className="modal-backdrop" onClick={closeRejectModal}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className="or-modal-backdrop" onClick={closeRejectModal}>
+          <div className="or-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="or-modal-header">
               <h3>Reject Application</h3>
-              <button className="modal-close-btn" onClick={closeRejectModal}>
+              <button className="or-modal-close-btn" onClick={closeRejectModal}>
                 <FaXmark />
               </button>
             </div>
 
-            <p className="modal-subtitle">
+            <p className="or-modal-subtitle">
               Select or provide a reason for rejecting this organizer request:
             </p>
 
-            <div className="reason-options">
+            <div className="or-reason-options">
               {REJECTION_REASONS.map((reason) => (
-                <label key={reason} className="radio-label">
+                <label key={reason} className="or-radio-label">
                   <input
                     type="radio"
                     name="rejectionReason"
@@ -521,7 +516,7 @@ function OrganiserRequests() {
 
             {selectedReason === "Other" && (
               <textarea
-                className="custom-reason-input"
+                className="or-custom-reason-input"
                 placeholder="Type specific reason here..."
                 rows={3}
                 value={customReason}
@@ -529,13 +524,13 @@ function OrganiserRequests() {
               />
             )}
 
-            <div className="modal-footer">
-              <button type="button" className="btn-cancel" onClick={closeRejectModal}>
+            <div className="or-modal-footer">
+              <button type="button" className="or-btn-cancel" onClick={closeRejectModal}>
                 Cancel
               </button>
               <button
                 type="button"
-                className="btn-confirm-reject"
+                className="or-btn-confirm-reject"
                 disabled={actionLoading === rejectingId}
                 onClick={confirmRejection}
               >

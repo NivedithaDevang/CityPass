@@ -1,4 +1,3 @@
-
 import axios from "axios";
 import { API_BASE_URL } from "../config/config";
 
@@ -40,7 +39,6 @@ export interface CreateOrganiserEventData {
   price: number;
   capacity: number;
   image?: File;
-  // Add the new fields:
   instructions?: string;
   additional_instructions?: string;
   languages?: string | string[];
@@ -68,7 +66,21 @@ export interface OrganiserBooking {
 
 export interface CancelEvent {
   id: number;
-  status: "CANCELLED"
+  status: "CANCELLED";
+}
+
+export interface OrganiserProfile {
+  id: number;
+  stage_name: string;
+  description: string;
+  user_id?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface UpdateOrganiserProfileData {
+  stage_name: string;
+  description: string;
 }
 
 const organiserApi = axios.create({
@@ -117,7 +129,6 @@ export const createOrganiserEvent = async (
   formData.append("price", String(data.price));
   formData.append("capacity", String(data.capacity));
 
-  // --- Append the missing instruction & badge fields ---
   const instructions = data.additional_instructions || data.instructions;
   if (instructions) {
     formData.append("additional_instructions", instructions);
@@ -134,7 +145,9 @@ export const createOrganiserEvent = async (
   }
 
   if (data.languages) {
-    const langs = Array.isArray(data.languages) ? JSON.stringify(data.languages) : data.languages;
+    const langs = Array.isArray(data.languages)
+      ? JSON.stringify(data.languages)
+      : data.languages;
     formData.append("languages", langs);
   }
 
@@ -145,7 +158,6 @@ export const createOrganiserEvent = async (
   const response = await organiserApi.post("/add-event", formData);
   return response.data.event;
 };
-
 
 export const patchOrganiserEvent = async (
   eventId: number | string,
@@ -175,7 +187,6 @@ export const patchOrganiserEvent = async (
   return response.data.event;
 };
 
-
 export const fetchOrganiserCities = async (): Promise<OrganiserLookupOption[]> => {
   const response = await lookupApi.get("/cities");
   return response.data.cities || [];
@@ -186,40 +197,41 @@ export const fetchOrganiserCategories = async (): Promise<OrganiserLookupOption[
   return response.data.categories || [];
 };
 
-
 export const cancelEvent = async (
   eventId: number,
-  status: string = 'CANCELLED'
+  status: string = "CANCELLED"
 ) => {
-  const response = await organiserApi.patch(
-    `/cancel-event/${eventId}`,
-    {
-      id: eventId,
-      status,
-    }
-  );
+  const response = await organiserApi.patch(`/cancel-event/${eventId}`, {
+    id: eventId,
+    status,
+  });
 
   return response.data;
 };
 
-
-export const liveEvent = async (
-  eventId: number,
-  isLive: boolean
-) => {
-  const response = await organiserApi.patch(
-    `/live-event/${eventId}`,
-    {
-      id: eventId,
-      isLive,
-    }
-  );
+export const liveEvent = async (eventId: number, isLive: boolean) => {
+  const response = await organiserApi.patch(`/live-event/${eventId}`, {
+    id: eventId,
+    isLive,
+  });
 
   return response.data;
 };
 
 export const deactivateOrganiser = async (): Promise<void> => {
   await organiserApi.patch("/deactivate");
+};
+
+export const fetchOrganiserProfile = async (): Promise<OrganiserProfile> => {
+  const response = await organiserApi.get("/profile");
+  return response.data.profile;
+};
+
+export const updateOrganiserProfileDetails = async (
+  data: UpdateOrganiserProfileData
+): Promise<OrganiserProfile> => {
+  const response = await organiserApi.patch("/profile", data);
+  return response.data.profile;
 };
 
 export default organiserApi;

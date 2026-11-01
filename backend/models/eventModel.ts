@@ -63,6 +63,13 @@ export type EventWithCategoryAndCity = EventRow & {
 
 export type AdminEventRequest = EventWithCategoryAndCity & {
   organiser_name: string | null;
+  image_url?: string | null;
+  ticket_categories?: Array<{
+    id: number;
+    name: string;
+    description: string | null;
+    price: number;
+  }>;
 };
 
 export const getEventById = async (id: number): Promise<EventRow[]> => {
@@ -157,7 +164,14 @@ export const getEventBySlug = async (slug: string) => {
       categories.name AS category_name,
       cities.name AS city_name,
       organizers.stage_name AS organiser_stage_name,
-      users.name AS organiser_user_name
+      organizers.description AS organiser_description,
+      users.name AS organiser_user_name,
+      ( 
+        SELECT COUNT(*)
+        FROM events ev
+        WHERE ev.organizer_id = events.organizer_id
+          AND ev.status IN ('APPROVED', 'COMPLETED')
+      ) AS organiser_events_count
     FROM events
     LEFT JOIN categories ON categories.id = events.category_id
     LEFT JOIN cities ON cities.id = events.city_id
@@ -413,6 +427,7 @@ export const getAdminEventRequests = async (): Promise<AdminEventRequest[]> => {
   const sql = `
     SELECT
       events.*,
+      events.image AS image_url,
       DATE_FORMAT(events.event_date, '%Y-%m-%d') AS event_date,
       categories.name AS category_name,
       cities.name AS city_name,

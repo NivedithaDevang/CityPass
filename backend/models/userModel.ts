@@ -10,6 +10,7 @@ export type User = RowDataPacket &
     status?: string;
     role: "USER" | "ORGANIZER" | "ADMIN" | "SUPER_ADMIN";
     token_version: number;
+    created_at?: Date | string | null;
   };
 
 export type UserRow = RowDataPacket & {
@@ -24,6 +25,7 @@ export type UserRow = RowDataPacket & {
   profile_image: string | null;
   status: "ACTIVE" | "INACTIVE";
   token_version: number;
+  created_at?: string | null;
 };
 
 export type UserAuthRow = RowDataPacket & {
@@ -33,6 +35,7 @@ export type UserAuthRow = RowDataPacket & {
   role: "USER" | "ORGANIZER" | "ADMIN" | "SUPER_ADMIN";
   status: "ACTIVE" | "INACTIVE";
   token_version: number;
+  created_at?: string | null;
 };
 
 export const getUserById = async (id: number): Promise<UserRow | undefined> => {
@@ -48,6 +51,7 @@ export const getUserById = async (id: number): Promise<UserRow | undefined> => {
         DATE_FORMAT(dob, '%Y-%m-%d') AS dob,
         gender,
         profile_image,
+        created_at,
         status
       FROM users
       WHERE id = ?
@@ -108,8 +112,8 @@ export const deactivateUser = async (
 
 export const createUser = async (user: User) => {
   const sql = `
-    INSERT INTO users (name, email, password, role)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO users (name, email, password, role, created_at)
+    VALUES (?, ?, ?, ?, NOW())
   `;
 
   const [results] = await db.query<ResultSetHeader>(sql, [
@@ -190,6 +194,7 @@ export const getAllUsers = async () => {
       u.role,
       u.status,
       u.city_id,
+      u.created_at,
       c.name AS city_name
     FROM users u
     LEFT JOIN cities c

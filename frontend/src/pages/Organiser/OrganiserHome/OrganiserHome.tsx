@@ -10,6 +10,7 @@ import {
 import {
   fetchMyEvents,
   fetchOrganiserBookings,
+  fetchOrganiserProfile,
   getOrganiserErrorMessage,
   type OrganiserBooking,
   type OrganiserEvent,
@@ -24,7 +25,6 @@ const statusOrder = [
   "COMPLETED",
 ] as const;
 
-// Checks whether an event date/time has already passed
 const isEventPast = (dateValue?: string, timeValue?: string): boolean => {
   if (!dateValue) return false;
 
@@ -54,7 +54,6 @@ const isEventPast = (dateValue?: string, timeValue?: string): boolean => {
   return eventDateTime.getTime() < Date.now();
 };
 
-// Returns resolved event status (past non-cancelled events resolve to COMPLETED)
 const resolveEventStatus = (event: OrganiserEvent): OrganiserEvent["status"] => {
   if (event.status === "CANCELLED") return "CANCELLED";
   if (isEventPast(event.event_date, event.time)) return "COMPLETED";
@@ -66,6 +65,7 @@ function OrganiserHome() {
 
   const [events, setEvents] = useState<OrganiserEvent[]>([]);
   const [recentBookings, setRecentBookings] = useState<OrganiserBooking[]>([]);
+  const [orgName, setOrgName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,12 +73,19 @@ function OrganiserHome() {
     try {
       setLoading(true);
       setError(null);
-      const [eventsData, bookingsData] = await Promise.all([
+      
+      const [eventsData, bookingsData, profileData] = await Promise.all([
         fetchMyEvents(),
         fetchOrganiserBookings().catch(() => []),
+        fetchOrganiserProfile().catch(() => null),
       ]);
+
       setEvents(eventsData);
       setRecentBookings(bookingsData.slice(0, 5));
+
+      if (profileData?.stage_name) {
+        setOrgName(profileData.stage_name);
+      }
     } catch (loadError: unknown) {
       setError(
         getOrganiserErrorMessage(
@@ -95,7 +102,6 @@ function OrganiserHome() {
     void loadData();
   }, []);
 
-  // Tally counts using resolved status so past approved events become COMPLETED
   const counts = useMemo(() => {
     const result: Record<string, number> = {};
     statusOrder.forEach((status) => {
@@ -106,7 +112,6 @@ function OrganiserHome() {
     return result;
   }, [events]);
 
-  // Only upcoming events that remain truly APPROVED
   const upcomingEvents = useMemo(
     () =>
       events
@@ -138,8 +143,21 @@ function OrganiserHome() {
       {/* Header Banner */}
       <div className="org-header-card">
         <div>
-          <span className="org-badge">WORKSPACE OVERVIEW</span>
-          <h2 className="org-title">Organiser Command Center</h2>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              flexWrap: "wrap",
+              marginBottom: "8px",
+            }}
+          >
+            <span className="org-badge">WORKSPACE OVERVIEW</span>
+          </div>
+
+          <h2 className="org-title">
+            {orgName ? `${orgName} Event Deck` : "Organiser Event Deck"}
+          </h2>
           <p className="org-subtitle">
             Manage your live event registrations, attendee bookings, ticket sales,
             and review listings across CityPass.

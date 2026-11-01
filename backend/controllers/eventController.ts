@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import cloudinary from "../config/cloudinary.js";
 import AppError from "../types/appError.js";
 import { getOrganiserByUserId } from "../models/organiserModel.js";
+import { getEventTickets } from "../models/eventTicketModel.js";
 import {
   getEventById,
   getEventDateById,
@@ -113,10 +114,24 @@ export const getAdminEventRequests = async (
 ) => {
   try {
     const events = await getAdminEventRequestsModel();
+    const eventsWithTickets = await Promise.all(
+      events.map(async (event) => {
+        const tickets = await getEventTickets(event.id);
+        return {
+          ...event,
+          ticket_categories: tickets.map((ticket) => ({
+            id: ticket.id,
+            name: ticket.name,
+            description: ticket.description,
+            price: ticket.price,
+          })),
+        };
+      })
+    );
     return res.status(200).json({
       success: true,
       message: "Event requests fetched successfully",
-      events,
+      events: eventsWithTickets,
     });
   } catch (err) {
     next(err);

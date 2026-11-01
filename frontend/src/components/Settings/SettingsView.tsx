@@ -33,7 +33,6 @@ import {
 } from "react-icons/fa6";
 import "./SettingsView.css";
 import { PASSWORD_RULES } from "../../config/passwordRules";
-import ImageCropModal from "../ImageCropModal/ImageCropModal";
 
 interface City {
   id: number;
@@ -377,7 +376,6 @@ function SettingsView() {
   const [cities, setCities] = useState<City[]>([]);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
-  const [cropImageSource, setCropImageSource] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [profileMessage, setProfileMessage] = useState("");
@@ -475,6 +473,14 @@ function SettingsView() {
       }));
     }
   }, [user]);
+
+  // Clean up object URLs to prevent memory leaks
+  useEffect(() => {
+    if (!imagePreview) return;
+    return () => {
+      if (imagePreview.startsWith("blob:")) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
 
   const checkExistingOrganizerRequest = async () => {
     try {
@@ -630,7 +636,6 @@ function SettingsView() {
     setProfileError("");
   };
 
-  // DatePicker selection handler with immediate age check
   const handleDateChange = (date: Date | null) => {
     if (!date) {
       setProfile((prev) => ({ ...prev, dob: "" }));
@@ -704,32 +709,20 @@ function SettingsView() {
 
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       setProfileError("Only JPG, PNG and WEBP images are allowed.");
+      e.target.value = "";
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
       setProfileError("Profile image must be less than 5 MB.");
+      e.target.value = "";
       return;
     }
 
-    setCropImageSource(URL.createObjectURL(file));
-    e.target.value = "";
-    setProfileMessage("");
     setProfileError("");
-  };
-
-  const closeImageCrop = () => {
-    if (cropImageSource?.startsWith("blob:")) {
-      URL.revokeObjectURL(cropImageSource);
-    }
-    setCropImageSource(null);
-  };
-
-  const applyImageCrop = (file: File) => {
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setProfileMessage("");
     setSelectedImage(file);
     setImagePreview(URL.createObjectURL(file));
-    closeImageCrop();
   };
 
   const handleProfileSave = async (e: FormEvent) => {
@@ -830,7 +823,9 @@ function SettingsView() {
 
       setSelectedImage(null);
 
-      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      if (imagePreview && imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
       setImagePreview("");
 
       setProfileMessage("Profile updated successfully.");
@@ -1137,16 +1132,6 @@ function SettingsView() {
 
   return (
     <>
-      {cropImageSource && (
-        <ImageCropModal
-          imageSrc={cropImageSource}
-          title="Crop and rotate profile photo"
-          cropShape="round"
-          onCancel={closeImageCrop}
-          onApply={applyImageCrop}
-        />
-      )}
-
       <div className="settings-page">
         <div className="settings-header">
           <h1>Settings</h1>

@@ -7,7 +7,6 @@ import {
 import { ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import ImageCropModal from "../../../components/ImageCropModal/ImageCropModal";
 
 import {
   createOrganiserEvent,
@@ -103,7 +102,6 @@ const parseDurationString = (durStr?: string): { hours: number; minutes: number 
     minutes = parseInt(minMatch[1], 10);
   }
 
-  // If only a single raw number was passed (e.g. "2" or "2.5")
   if (!hourMatch && !minMatch) {
     const rawNum = parseFloat(durStr);
     if (!isNaN(rawNum)) {
@@ -176,7 +174,6 @@ export const CreateEventModal = ({
   ]);
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
-  const [cropImageSource, setCropImageSource] = useState<string | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   const [tickets, setTickets] = useState<TicketDraft[]>(defaultInitialTickets);
@@ -415,21 +412,9 @@ export const CreateEventModal = ({
       return;
     }
 
-    setCropImageSource(URL.createObjectURL(file));
-    event.target.value = "";
-  };
-
-  const closeImageCrop = () => {
-    if (cropImageSource?.startsWith("blob:")) {
-      URL.revokeObjectURL(cropImageSource);
-    }
-    setCropImageSource(null);
-  };
-
-  const applyImageCrop = (file: File) => {
     setImage(file);
     setImagePreview(URL.createObjectURL(file));
-    closeImageCrop();
+    event.target.value = "";
   };
 
   const handleAddTicket = () => {
@@ -749,15 +734,6 @@ export const CreateEventModal = ({
           </header>
 
           <form onSubmit={handleSubmit} className="org-modal-form" noValidate>
-            {cropImageSource && (
-              <ImageCropModal
-                imageSrc={cropImageSource}
-                title="Crop and rotate event image"
-                aspect={16 / 9}
-                onCancel={closeImageCrop}
-                onApply={applyImageCrop}
-              />
-            )}
             {error && (
               <div className="org-form-error" role="alert">
                 {error}
@@ -784,13 +760,19 @@ export const CreateEventModal = ({
                 </label>
               ) : (
                 <div className="org-event-image-preview">
-                  <img
-                    src={imagePreview}
-                    alt="Event preview"
-                    className="org-clickable-preview"
-                    title="Click to view full image"
+                  <button
+                    type="button"
+                    className="org-image-preview-button"
                     onClick={() => setIsLightboxOpen(true)}
-                  />
+                    aria-label="View full event image"
+                    title="View full image"
+                  >
+                    <img
+                      src={imagePreview}
+                      alt="Event preview"
+                      className="org-clickable-preview"
+                    />
+                  </button>
 
                   <div className="org-event-image-preview-actions">
                     <label
@@ -918,7 +900,6 @@ export const CreateEventModal = ({
               </select>
             </label>
 
-            {/* Structured Duration Selector: Hours & Minutes Dropdowns */}
             <div className="org-form-field">
               <span>Duration</span>
               <div style={{ display: "flex", gap: "8px", width: "100%" }}>
@@ -1005,8 +986,7 @@ export const CreateEventModal = ({
             </label>
 
             <div className="org-form-field">
-              <label htmlFor="event-date">Date
-              </label>
+              <label htmlFor="event-date">Date</label>
               <DatePicker
                 id="event-date"
                 selected={parseDateStringToDate(formData.event_date)}
@@ -1174,8 +1154,6 @@ export const CreateEventModal = ({
                         ? "Submitting for review..."
                         : "Submitting event & tickets..."}
                     </>
-                  ) : isEditMode ? (
-                    "Submit for review"
                   ) : (
                     "Submit for review"
                   )}

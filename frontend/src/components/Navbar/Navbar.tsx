@@ -2,7 +2,7 @@ import { ChevronDown, MapPin, Menu, X } from "lucide-react";
 import Auth from "../Auth/Auth";
 import { Sidebar } from "../Sidebar/Sidebar";
 import "./Navbar.css";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useUser } from "../../context/UserContext";
 import { API_BASE_URL } from "../../config/config";
 import { type City } from "../../types/auth";
@@ -10,20 +10,27 @@ import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
 import { FaUserAlt } from "react-icons/fa";
 import { useNavigate, useSearchParams, useLocation, Link } from "react-router-dom";
 
-// Check whether a city is active
+// Reliable active check handling boolean, 1/0, string, or Buffer
 const isCityActive = (city: any): boolean => {
   if (city.status !== undefined && city.status !== null) {
     return String(city.status).trim().toUpperCase() === "ACTIVE";
   }
 
   if (city.is_active !== undefined && city.is_active !== null) {
-    return (
-      city.is_active === true ||
-      Number(city.is_active) === 1 ||
-      String(city.is_active).toLowerCase() === "true"
-    );
+    if (typeof city.is_active === "boolean") return city.is_active;
+    if (typeof city.is_active === "number") return city.is_active === 1;
+    if (typeof city.is_active === "string") {
+      const lower = city.is_active.trim().toLowerCase();
+      return lower === "true" || lower === "1" || lower === "active";
+    }
+    // Handle MySQL Buffer if returned
+    if (city.is_active?.data && Array.isArray(city.is_active.data)) {
+      return city.is_active.data[0] === 1;
+    }
+    return Boolean(city.is_active);
   }
 
+  // If backend already filtered via GET /v1/cities (WHERE is_active = TRUE)
   return true;
 };
 
@@ -65,8 +72,8 @@ function Navbar() {
 
         const cityList: City[] = Array.isArray(data)
           ? data
-          : data?.city ??
-            data?.cities ??
+          : data?.cities ??
+            data?.city ??
             data?.data?.cities ??
             data?.data ??
             [];
@@ -84,6 +91,13 @@ function Navbar() {
 
     fetchCities();
   }, []);
+
+  // Filter and sort active cities alphabetically
+  const activeCities = useMemo(() => {
+    return cities
+      .filter(isCityActive)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [cities]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -128,42 +142,31 @@ function Navbar() {
     setIsMobileMenuOpen(false);
   };
 
-  // Synchronized city selection
-  
-const handleCitySelect = (cityName: string) => {
-  const isAll =
-    cityName === ALL_LOCATIONS || cityName === "ALL";
+  const handleCitySelect = (cityName: string) => {
+    const isAll = cityName === ALL_LOCATIONS || cityName === "ALL";
+    const nextCity = isAll ? ALL_LOCATIONS : cityName;
 
-  const nextCity = isAll ? ALL_LOCATIONS : cityName;
+    setSelectedCity(nextCity);
+    setIsCityMenuOpen(false);
 
-  // Update shared state so every component sees the new city.
-  setSelectedCity(nextCity);
-  setIsCityMenuOpen(false);
+    if (location.pathname === "/events") {
+      const params = new URLSearchParams(searchParams);
 
-  // If the user is on Events, synchronize the URL too.
-  if (location.pathname === "/events") {
-    const params = new URLSearchParams(searchParams);
+      if (isAll) {
+        params.delete("city");
+      } else {
+        params.set("city", nextCity);
+      }
 
-    if (isAll) {
-      params.delete("city");
-    } else {
-      params.set("city", nextCity);
+      navigate(
+        {
+          pathname: "/events",
+          search: params.toString() ? `?${params.toString()}` : "",
+        },
+        { replace: true }
+      );
     }
-
-    navigate(
-      {
-        pathname: "/events",
-        search: params.toString()
-          ? `?${params.toString()}`
-          : "",
-      },
-      { replace: true }
-    );
-  }
-};
-
-
-  const activeCities = cities.filter(isCityActive);
+  };
 
   return (
     <>
@@ -209,9 +212,7 @@ const handleCitySelect = (cityName: string) => {
               <span>{selectedCity || ALL_LOCATIONS}</span>
               <ChevronDown
                 size={16}
-                className={
-                  isCityMenuOpen ? "city-chevron open" : "city-chevron"
-                }
+                className={isCityMenuOpen ? "city-chevron open" : "city-chevron"}
               />
             </button>
 
@@ -258,10 +259,7 @@ const handleCitySelect = (cityName: string) => {
 
         {/* Desktop Navigation */}
         <div className="navbar-links">
-          <Link
-            to="/"
-            className={`nav-item ${isForYouActive ? "active" : ""}`}
-          >
+          <Link to="/" className={`nav-item ${isForYouActive ? "active" : ""}`}>
             For You
           </Link>
 

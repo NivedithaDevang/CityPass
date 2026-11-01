@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
@@ -13,6 +12,7 @@ import {
   FaTimes,
   FaTicketAlt,
   FaUser,
+  FaSearchPlus,
 } from "react-icons/fa";
 import { IoSparkles } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
@@ -73,6 +73,42 @@ const formatCurrency = (
   `₹${Number(amount ?? 0).toLocaleString("en-IN", {
     maximumFractionDigits: 2,
   })}`;
+
+const isEventCompleted = (
+  dateStr?: string,
+  timeStr?: string
+): boolean => {
+  if (!dateStr) return false;
+
+  const now = new Date();
+  const cleanDate = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr.split(" ")[0];
+  const [yearStr, monthStr, dayStr] = cleanDate.split("-");
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+
+  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
+    const fallbackDate = new Date(dateStr);
+    return !Number.isNaN(fallbackDate.getTime()) && fallbackDate < now;
+  }
+
+  let hours = 23;
+  let minutes = 59;
+
+  if (timeStr && timeStr.trim()) {
+    const raw = timeStr.trim();
+    if (raw.includes(":")) {
+      const parts = raw.split(":");
+      const parsedH = parseInt(parts[0], 10);
+      const parsedM = parseInt(parts[1], 10);
+      if (!Number.isNaN(parsedH)) hours = parsedH;
+      if (!Number.isNaN(parsedM)) minutes = parsedM;
+    }
+  }
+
+  const eventDateTime = new Date(year, month - 1, day, hours, minutes, 59);
+  return eventDateTime.getTime() < now.getTime();
+};
 
 const extractFormattedTime = (
   timeField?: string,
@@ -193,13 +229,31 @@ function DigitalTicketModal({
   const isCancelled =
     booking.status?.toUpperCase() === "CANCELLED";
 
+  const isPast =
+    !isCancelled &&
+    isEventCompleted(
+      booking.event_date || booking.booking_date,
+      booking.time || booking.event_time
+    );
+
   const eventTimeFormatted = extractFormattedTime(
     booking.time || booking.event_time,
     booking.event_date
   );
 
-  // Preserve zero when all tickets have been cancelled.
   const ticketCount = booking.number_of_tickets ?? 1;
+
+  const modalStatusText = isCancelled
+    ? "CANCELLED"
+    : isPast
+      ? "COMPLETED"
+      : booking.status || "CONFIRMED";
+
+  const modalStatusClass = isCancelled
+    ? "tag-cancelled"
+    : isPast
+      ? "tag-completed"
+      : "tag-active";
 
   return (
     <div
@@ -213,18 +267,9 @@ function DigitalTicketModal({
         className="ticket-modal-wrapper"
         onClick={(event) => event.stopPropagation()}
       >
-        <button
-          type="button"
-          className="ticket-close-btn"
-          onClick={onClose}
-          aria-label="Close ticket"
-        >
-          <FaTimes />
-        </button>
-
         <div
           className={`digital-ticket-card ${
-            isCancelled ? "ticket-cancelled" : ""
+            isCancelled ? "ticket-cancelled" : isPast ? "ticket-completed" : ""
           }`}
         >
           <div className="ticket-header-band">
@@ -233,6 +278,15 @@ function DigitalTicketModal({
                 <IoSparkles className="sparkle-icon" />
                 CityPass Official
               </span>
+
+              <button
+                type="button"
+                className="book-ticket-close-btn"
+                onClick={onClose}
+                aria-label="Close ticket"
+              >
+                <FaTimes />
+              </button>
             </div>
 
             <h2 className="ticket-main-heading">
@@ -252,12 +306,8 @@ function DigitalTicketModal({
                 </h3>
               </div>
 
-              <span
-                className={`ticket-status-tag ${
-                  isCancelled ? "tag-cancelled" : "tag-active"
-                }`}
-              >
-                {isCancelled ? "CANCELLED" : booking.status || "CONFIRMED"}
+              <span className={`ticket-status-tag ${modalStatusClass}`}>
+                {modalStatusText}
               </span>
             </div>
 
@@ -380,13 +430,30 @@ export function BookingPage() {
   const [selectedBookingForPass, setSelectedBookingForPass] =
     useState<BookingItem | null>(null);
 
+  const [previewPosterUrl, setPreviewPosterUrl] = useState<string | null>(null);
+
   const [cancelMode, setCancelMode] = useState<CancelMode>("all");
   const [cancelQuantity, setCancelQuantity] = useState<number>(1);
 
   const [isCancelling, setIsCancelling] = useState<boolean>(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
-  // Fetch the latest bookings from the backend.
+  useEffect(() => {
+    if (previewPosterUrl) {
+      document.body.style.overflow = "hidden";
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") setPreviewPosterUrl(null);
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.body.style.overflow = "unset";
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = "unset";
+    }
+  }, [previewPosterUrl]);
+
   const fetchBookings = useCallback(async () => {
     const response = await axios.get(
       `${API_BASE_URL}/v1/bookings`,
@@ -439,7 +506,6 @@ export function BookingPage() {
     };
   }, [fetchBookings, user, userLoading]);
 
-  // Open the cancellation modal with the correct default options.
   const openCancelModal = (booking: BookingItem) => {
     const bookedQuantity = booking.number_of_tickets ?? 1;
 
@@ -449,7 +515,6 @@ export function BookingPage() {
     setSelectedBookingForCancel(booking);
   };
 
-  // Submit the selected ticket quantity to the cancellation API.
   const handleConfirmCancel = async () => {
     if (!selectedBookingForCancel || isCancelling) return;
 
@@ -486,7 +551,6 @@ export function BookingPage() {
 
       const result = response.data;
 
-      // Update the booking immediately using the backend result.
       setBookings((previous) =>
         previous.map((item) =>
           item.id === booking.id
@@ -502,12 +566,9 @@ export function BookingPage() {
 
       setSelectedBookingForCancel(null);
 
-      // Refresh from the database so the displayed details stay current.
       try {
         await fetchBookings();
       } catch (refreshError) {
-        // The cancellation already succeeded. Keep the successful
-        // response reflected in local state if refreshing fails.
         console.error(
           "Cancellation succeeded, but booking refresh failed:",
           refreshError
@@ -660,6 +721,15 @@ export function BookingPage() {
               const isCancelled =
                 item.status?.toUpperCase() === "CANCELLED";
 
+              const isPast =
+                !isCancelled &&
+                isEventCompleted(
+                  item.event_date || item.booking_date,
+                  item.time || item.event_time
+                );
+
+              const isDisabled = isCancelled || isPast;
+
               const cityLabel =
                 item.city_name ||
                 item.location ||
@@ -674,18 +744,32 @@ export function BookingPage() {
                 createEventSlug(eventTitle);
 
               const targetUrl = `/events/${eventSlug}`;
-
               const ticketCount = item.number_of_tickets ?? 1;
+              const poster = getBookingPoster(item);
 
               return (
                 <article
                   key={item.id}
-                  className="hz-booking-card"
-                  onClick={() => navigate(targetUrl)}
+                  className={`hz-booking-card ${
+                    isDisabled ? "hz-booking-card-disabled" : ""
+                  }`}
+                  onClick={() => {
+                    if (!isDisabled) {
+                      navigate(targetUrl);
+                    }
+                  }}
+                  style={isDisabled ? { cursor: "default" } : undefined}
                 >
-                  <div className="hz-card-media">
+                  <div
+                    className="hz-card-media"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewPosterUrl(poster);
+                    }}
+                    title="Click to view full image"
+                  >
                     <img
-                      src={getBookingPoster(item)}
+                      src={poster}
                       alt={eventTitle}
                       className="hz-poster-img"
                       onError={(event) => {
@@ -726,6 +810,9 @@ export function BookingPage() {
                       <span className="hz-location-tag">
                         {cityLabel}
                       </span>
+                      <span className="hz-view-hint">
+                        <FaSearchPlus /> View
+                      </span>
                     </div>
                   </div>
 
@@ -738,7 +825,11 @@ export function BookingPage() {
 
                       <span
                         className={`hz-status-pill ${
-                          isCancelled ? "cancelled" : "confirmed"
+                          isCancelled
+                            ? "cancelled"
+                            : isPast
+                              ? "completed"
+                              : "confirmed"
                         }`}
                       >
                         {isCancelled ? (
@@ -747,7 +838,11 @@ export function BookingPage() {
                           <FaCheckCircle />
                         )}
 
-                        {isCancelled ? "Cancelled" : "Confirmed"}
+                        {isCancelled
+                          ? "Cancelled"
+                          : isPast
+                            ? "Completed"
+                            : "Confirmed"}
                       </span>
                     </div>
 
@@ -821,7 +916,7 @@ export function BookingPage() {
                         className="hz-action-buttons"
                         onClick={(event) => event.stopPropagation()}
                       >
-                        {!isCancelled && (
+                        {!isDisabled && (
                           <button
                             type="button"
                             className="hz-cancel-btn"
@@ -849,6 +944,30 @@ export function BookingPage() {
           </div>
         )}
       </main>
+
+      {/* Lightbox Image Preview Modal */}
+      {previewPosterUrl && (
+        <div
+          className="image-lightbox-overlay"
+          onClick={() => setPreviewPosterUrl(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <button
+            type="button"
+            className="image-lightbox-close"
+            onClick={() => setPreviewPosterUrl(null)}
+            aria-label="Close image preview"
+          >
+            <FaTimes />
+          </button>
+          <img
+            src={previewPosterUrl}
+            alt="Event poster enlarged view"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       <DigitalTicketModal
         isOpen={Boolean(selectedBookingForPass)}
@@ -1085,7 +1204,6 @@ export function BookingPage() {
           </div>
         </div>
       )}
-
     </>
   );
 }

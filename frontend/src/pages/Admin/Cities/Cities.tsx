@@ -10,7 +10,6 @@ import {
   addCity,
 } from "../../../services/adminService";
 import { FaImage } from "react-icons/fa6";
-import ImageCropModal from "../../../components/ImageCropModal/ImageCropModal";
 
 interface AdminCity {
   id: number;
@@ -45,11 +44,17 @@ const getCityStatus = (city: CityApiResponse): "ACTIVE" | "INACTIVE" => {
 function Cities() {
   const [cities, setCities] = useState<AdminCity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [addingCity, setAddingCity] = useState(false);
   const [savingCity, setSavingCity] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingCity, setEditingCity] = useState<AdminCity | null>(null);
+
+  // Status Confirmation Modal State
+  const [statusConfirmCity, setStatusConfirmCity] = useState<{
+    city: AdminCity;
+    targetStatus: "ACTIVE" | "INACTIVE";
+  } | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   // Add City States
   const [cityName, setCityName] = useState("");
@@ -64,14 +69,22 @@ function Cities() {
   const [editCityImage, setEditCityImage] = useState<File | null>(null);
   const [editCityImagePreview, setEditCityImagePreview] = useState("");
 
-  // Crop Modal States
-  const [rawImageSource, setRawImageSource] = useState<string | null>(null);
-  const [cropTarget, setCropTarget] = useState<"ADD" | "EDIT" | null>(null);
-
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("ALL");
+
+  // Prevent background scroll when modals are open
+  useEffect(() => {
+    if (editingCity || statusConfirmCity) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [editingCity, statusConfirmCity]);
 
   useEffect(() => {
     if (!cityImagePreview) return;
@@ -87,18 +100,7 @@ function Cities() {
     };
   }, [editCityImagePreview]);
 
-  const closeCropModal = () => {
-    if (rawImageSource?.startsWith("blob:")) {
-      URL.revokeObjectURL(rawImageSource);
-    }
-    setRawImageSource(null);
-    setCropTarget(null);
-  };
-
-  const onFileInputChange = (
-    e: ChangeEvent<HTMLInputElement>,
-    target: "ADD" | "EDIT"
-  ) => {
+  const handleCityImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -108,21 +110,36 @@ function Cities() {
       return;
     }
 
-    setRawImageSource(URL.createObjectURL(file));
-    setCropTarget(target);
-    e.target.value = "";
+    if (file.size > 5 * 1024 * 1024) {
+      setError("City image must be smaller than 5 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setError(null);
+    setCityImage(file);
+    setCityImagePreview(URL.createObjectURL(file));
   };
 
-  const applyImageCrop = (file: File) => {
-    const previewUrl = URL.createObjectURL(file);
-    if (cropTarget === "ADD") {
-      setCityImage(file);
-      setCityImagePreview(previewUrl);
-    } else if (cropTarget === "EDIT") {
-      setEditCityImage(file);
-      setEditCityImagePreview(previewUrl);
+  const handleEditCityImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Please select a JPG, PNG, or WebP image.");
+      e.target.value = "";
+      return;
     }
-    closeCropModal();
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("City image must be smaller than 5 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setError(null);
+    setEditCityImage(file);
+    setEditCityImagePreview(URL.createObjectURL(file));
   };
 
   const loadCities = async () => {
@@ -173,39 +190,51 @@ function Cities() {
     });
   }, [cities, search, filter]);
 
-  const handleStatusUpdate = async (
-    cityId: number,
-    status: "ACTIVE" | "INACTIVE"
-  ) => {
+  // Prompt Confirmation Popup
+  const promptStatusUpdate = (city: AdminCity) => {
+    const targetStatus = city.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    setStatusConfirmCity({ city, targetStatus });
+  };
+
+  // Execute Status Update after Confirmation
+  const executeStatusUpdate = async () => {
+    if (!statusConfirmCity) return;
+
+    const { city, targetStatus } = statusConfirmCity;
+
     try {
-      setActionLoading(cityId);
+      setUpdatingStatus(true);
       setError(null);
       setSuccess(null);
 
-      await updateCityStatus(cityId, status);
+      await updateCityStatus(city.id, targetStatus);
 
       setCities((previous) =>
-        previous.map((city) =>
-          city.id === cityId
+        previous.map((item) =>
+          item.id === city.id
             ? {
-                ...city,
-                status,
-                is_active: status === "ACTIVE" ? 1 : 0,
+                ...item,
+                status: targetStatus,
+                is_active: targetStatus === "ACTIVE" ? 1 : 0,
               }
-            : city
+            : item
         )
       );
 
       setSuccess(
-        `City ${
-          status === "ACTIVE" ? "activated" : "deactivated"
+        `City "${city.name}" ${
+          targetStatus === "ACTIVE" ? "activated" : "deactivated"
         } successfully.`
       );
-    } catch (err) {
+      setStatusConfirmCity(null);
+    } catch (err: any) {
       console.error("Failed to update city status:", err);
-      setError("Failed to update city status. Please try again.");
+      setError(
+        err?.response?.data?.message ||
+          "Failed to update city status. Please try again."
+      );
     } finally {
-      setActionLoading(null);
+      setUpdatingStatus(false);
     }
   };
 
@@ -371,17 +400,21 @@ function Cities() {
               id="cityImage"
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              onChange={(e) => onFileInputChange(e, "ADD")}
+              onChange={handleCityImageChange}
             />
             {cityImagePreview && (
               <div className="city-image-preview">
                 <img src={cityImagePreview} alt="City preview" />
-                <span>Cropped Image</span>
+                <span>{cityImage?.name}</span>
                 <button
                   type="button"
                   onClick={() => {
                     setCityImage(null);
                     setCityImagePreview("");
+                    const input = document.getElementById(
+                      "cityImage"
+                    ) as HTMLInputElement | null;
+                    if (input) input.value = "";
                   }}
                 >
                   Remove image
@@ -510,17 +543,9 @@ function Cities() {
                             ? "city-deactivate-btn"
                             : "city-activate-btn"
                         }
-                        disabled={actionLoading === city.id}
-                        onClick={() =>
-                          handleStatusUpdate(
-                            city.id,
-                            city.status === "ACTIVE" ? "INACTIVE" : "ACTIVE"
-                          )
-                        }
+                        onClick={() => promptStatusUpdate(city)}
                       >
-                        {actionLoading === city.id
-                          ? "..."
-                          : city.status === "ACTIVE"
+                        {city.status === "ACTIVE"
                           ? "Make Inactive"
                           : "Make Active"}
                       </button>
@@ -535,7 +560,7 @@ function Cities() {
 
       {/* Edit City Modal */}
       {editingCity && (
-        <div className="city-modal-overlay" onClick={handleCancelEdit}>
+        <div className="city-modal-overlay" onClick={handleCancelEdit} role="dialog" aria-modal="true">
           <div
             className="city-modal-content"
             onClick={(e) => e.stopPropagation()}
@@ -546,6 +571,7 @@ function Cities() {
                 type="button"
                 className="city-modal-close"
                 onClick={handleCancelEdit}
+                aria-label="Close modal"
               >
                 &times;
               </button>
@@ -569,14 +595,29 @@ function Cities() {
                   id="editCityImage"
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  onChange={(e) => onFileInputChange(e, "EDIT")}
+                  onChange={handleEditCityImageChange}
                 />
                 {editCityImagePreview && (
                   <div className="city-image-preview">
                     <img src={editCityImagePreview} alt="City preview" />
                     <span>
-                      {editCityImage ? "New Cropped Image" : "Current Image"}
+                      {editCityImage ? editCityImage.name : "Current Image"}
                     </span>
+                    {editCityImage && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditCityImage(null);
+                          setEditCityImagePreview(editingCity.image || "");
+                          const input = document.getElementById(
+                            "editCityImage"
+                          ) as HTMLInputElement | null;
+                          if (input) input.value = "";
+                        }}
+                      >
+                        Revert
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -628,15 +669,78 @@ function Cities() {
         </div>
       )}
 
-      {/* Interactive Crop Modal */}
-      {rawImageSource && (
-        <ImageCropModal
-          imageSrc={rawImageSource}
-          title="Crop and rotate city image"
-          cropShape="round"
-          onCancel={closeCropModal}
-          onApply={applyImageCrop}
-        />
+      {/* Confirmation Modal for Make Active / Make Inactive */}
+      {statusConfirmCity && (
+        <div
+          className="city-modal-overlay"
+          onClick={() => {
+            if (!updatingStatus) setStatusConfirmCity(null);
+          }}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="city-modal-content"
+            style={{ padding: "10px 20px 20px 20px", maxWidth: "420px", textAlign: "center" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="city-modal-header" style={{ justifyContent: "center" }}>
+              <h2>
+                {statusConfirmCity.targetStatus === "INACTIVE"
+                  ? "Deactivate City"
+                  : "Activate City"}
+              </h2>
+            </div>
+
+            <p style={{ margin: "1rem 0", color: "#475569", lineHeight: "1.5" }}>
+              Are you sure you want to mark{" "}
+              <strong>"{statusConfirmCity.city.name}"</strong> as{" "}
+              <strong
+                style={{
+                  color:
+                    statusConfirmCity.targetStatus === "ACTIVE"
+                      ? "#15803d"
+                      : "#b91c1c",
+                }}
+              >
+                {statusConfirmCity.targetStatus}
+              </strong>
+              ?
+              {statusConfirmCity.targetStatus === "INACTIVE"
+                ? " Users and organisers will not be able to select or host events in this city while it is inactive."
+                : " This city will immediately become selectable for users and event listings."}
+            </p>
+
+            <div className="city-edit-actions" style={{ justifyContent: "center" }}>
+              <button
+                type="button"
+                className="city-cancel-btn"
+                onClick={() => setStatusConfirmCity(null)}
+                disabled={updatingStatus}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="city-save-btn"
+                style={{
+                  backgroundColor:
+                    statusConfirmCity.targetStatus === "INACTIVE"
+                      ? "#dc2626"
+                      : "#16a34a",
+                }}
+                onClick={executeStatusUpdate}
+                disabled={updatingStatus}
+              >
+                {updatingStatus
+                  ? "Updating..."
+                  : statusConfirmCity.targetStatus === "INACTIVE"
+                  ? "Yes, Make Inactive"
+                  : "Yes, Make Active"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -56,7 +56,7 @@ export async function getCroppedImg(
     0,
     0,
     pixelCrop.width,
-    pixelCrop.height
+    pixelCrop.height,
   );
 
   return new Promise((resolve, reject) => {
@@ -65,11 +65,10 @@ export async function getCroppedImg(
         if (!blob) {
           return reject(new Error("Canvas crop failed"));
         }
-        const file = new File([blob], fileName, { type: "image/webp" });
-        resolve(file);
+        resolve(new File([blob], fileName, { type: "image/webp" }));
       },
       "image/webp",
-      0.9
+      0.9,
     );
   });
 }

@@ -4,11 +4,7 @@ import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import { type City, type Events } from "../../types/auth";
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
-import { FaMapPin, FaMicrophone, FaLaughSquint } from "react-icons/fa";
-import { MdSportsFootball, MdTheaterComedy } from "react-icons/md";
-import { IoFastFoodSharp } from "react-icons/io5";
-import { FaPaintbrush, FaMountain } from "react-icons/fa6";
-import type { IconType } from "react-icons";
+import { FaMapPin } from "react-icons/fa";
 import "./EventSection.css";
 
 type EventCardData = Events & {
@@ -56,27 +52,6 @@ function EventSection() {
   const [events, setEvents] = useState<EventCardData[]>([]);
   const [cityIdMap, setCityIdMap] = useState<Record<string | number, string>>({});
 
-  const categoryIcons: Record<string, IconType> = {
-    Music: FaMicrophone,
-    Sports: MdSportsFootball,
-    Comedy: MdTheaterComedy,
-    Food: IoFastFoodSharp,
-    Art: FaPaintbrush,
-    Adventure: FaMountain,
-    Entertainment: FaLaughSquint,
-  };
-
-  const getCategoryIcon = (categoryName?: string | null) => {
-    const normalizedCategory = categoryName?.toLowerCase() || "";
-    if (normalizedCategory.includes("music")) return categoryIcons.Music;
-    if (normalizedCategory.includes("sport")) return categoryIcons.Sports;
-    if (normalizedCategory.includes("comedy")) return categoryIcons.Comedy;
-    if (normalizedCategory.includes("food")) return categoryIcons.Food;
-    if (normalizedCategory.includes("art")) return categoryIcons.Art;
-    if (normalizedCategory.includes("adventure")) return categoryIcons.Adventure;
-    if (normalizedCategory.includes("entertainment")) return categoryIcons.Entertainment;
-    return null;
-  };
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -179,7 +154,7 @@ function EventSection() {
   });
 
   // Limit display to the first 5 matching events
-  const displayedEvents = filteredEvents.slice(0, 5);
+  const displayedEvents = filteredEvents.slice(0, 7);
 
   return (
     <section className="eventsec-section">
@@ -195,7 +170,6 @@ function EventSection() {
 
       <div className="eventsec-grid">
         {displayedEvents.map((event) => {
-          const CategoryIcon = getCategoryIcon(event.category_name);
           const cityName = getResolvedCityName(event);
           const eventImage = event.image ?? undefined;
 
@@ -222,7 +196,6 @@ function EventSection() {
                   }}
                 />
                 <span className="eventsec-badge">
-                  {CategoryIcon && <CategoryIcon className="eventsec-category-icon" />}
                   {event.category_name || "Event"}
                 </span>
                 <p className="eventsec-location">

@@ -48,7 +48,7 @@
   line-height: 1.6;
 }
 
-.ticket-close-btn {
+.event-ticket-close-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -63,7 +63,7 @@
   cursor: pointer;
 }
 
-.ticket-close-btn:hover {
+.event-ticket-close-btn:hover {
   background: #f5f1fc;
   color: #6c3acb;
 }
