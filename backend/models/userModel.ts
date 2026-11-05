@@ -37,6 +37,23 @@ export type UserAuthRow = RowDataPacket & {
   token_version: number;
   created_at?: string | null;
 };
+export type Query = RowDataPacket & {
+  id: number;
+  name: string;
+  query: string;
+}
+
+export const addQuery = async (id: number,query: Query): Promise<ResultSetHeader> => {
+  const sql = `
+  UPDATE users SET query = ? WHERE id = ?`;
+
+  const [results] = await db.query<ResultSetHeader>(sql, [
+    query.query,
+    id
+  ]);
+  return results;
+}
+
 
 export const getUserById = async (id: number): Promise<UserRow | undefined> => {
   const [results] = await db.query<UserRow[]>(

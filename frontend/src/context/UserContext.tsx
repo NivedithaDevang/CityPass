@@ -36,11 +36,6 @@ export function UserProvider({ children }: UserProviderProps) {
 
   const [profileImage, setProfileImageState] =
     useState<string | null>(null);
-
-  /*
-   * Convert relative profile image path
-   * into a complete image URL.
-   */
   const getImageUrl = useCallback(
     (image: string | null | undefined) => {
       if (!image) {

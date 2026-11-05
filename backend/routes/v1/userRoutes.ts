@@ -6,12 +6,15 @@ import {
   changePassword,
   deactivateAccount,
   reactivateAndLogin,
+  addUserQuery
 } from "../../controllers/userController.js";
 
 import { authenticate } from "../../middleware/authMiddleware.js";
 import upload from "../../middleware/upload.js";
 
 const userRouter = express.Router();
+
+userRouter.patch("/query", authenticate, addUserQuery);
 
 userRouter.get(
   "/userdetails",

@@ -42,6 +42,9 @@ export interface EventRequest {
   additional_instructions?: string | null;
   location?: string | null;
   event_date?: string | null;
+  date?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
   time?: string | null;
   price?: string | number;
   capacity?: number;
@@ -73,6 +76,65 @@ const getErrorMessage = (error: unknown) =>
   axios.isAxiosError<{ message?: string }>(error)
     ? error.response?.data?.message || "An unexpected error occurred."
     : error instanceof Error ? error.message : "An unexpected error occurred.";
+
+// Accurate past date check without timezone shifting
+const isEventPast = (dateValue?: string | null, timeValue?: string | null): boolean => {
+  if (!dateValue) return false;
+
+  const rawDate = dateValue.includes("T")
+    ? dateValue.split("T")[0]
+    : dateValue.split(" ")[0];
+
+  const [yearStr, monthStr, dayStr] = rawDate.split("-");
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return false;
+
+  let hours = 23;
+  let minutes = 59;
+
+  if (timeValue) {
+    const parts = timeValue.split(":");
+    if (parts.length >= 2) {
+      hours = parseInt(parts[0], 10);
+      minutes = parseInt(parts[1], 10);
+    }
+  }
+
+  const eventDateTime = new Date(year, month - 1, day, hours, minutes, 0);
+  return eventDateTime.getTime() < Date.now();
+};
+
+// Resolves past events into COMPLETED while preserving explicit cancellations or rejections
+const resolveEventStatus = (request: EventRequest): EventRequest["status"] => {
+  const rawStatus = (request.status || "").trim().toUpperCase();
+
+  if (rawStatus === "CANCELLED") return "CANCELLED";
+  if (rawStatus === "REJECTED") return "REJECTED";
+
+  const eventDate =
+    request.end_date || request.event_date || request.date || request.start_date;
+
+  if (isEventPast(eventDate, request.time)) {
+    return "COMPLETED";
+  }
+
+  if (
+    rawStatus === "PENDING" ||
+    rawStatus === "PENDING_APPROVAL" ||
+    rawStatus === "SUBMITTED" ||
+    rawStatus === "UNDER_REVIEW"
+  ) {
+    return "PENDING";
+  }
+
+  if (rawStatus === "APPROVED") return "APPROVED";
+  if (rawStatus === "COMPLETED") return "COMPLETED";
+
+  return "PENDING";
+};
 
 const formatDateDisplay = (dateStr?: string | null): string => {
   if (!dateStr) return "Date TBA";
@@ -127,7 +189,7 @@ function Events() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<FilterStatus>("PENDING");
+  const [filter, setFilter] = useState<FilterStatus>("ALL");
   const [page, setPage] = useState(1);
   const [viewingRequest, setViewingRequest] = useState<EventRequest | null>(null);
   const [decision, setDecision] = useState<Decision>(null);
@@ -161,10 +223,12 @@ function Events() {
     return () => { active = false; };
   }, []);
 
+  // Filter based on effective status (moving past events to COMPLETED)
   const filtered = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
     return requests.filter((request) => {
-      const matchesStatus = filter === "ALL" || request.status === filter;
+      const effectiveStatus = resolveEventStatus(request);
+      const matchesStatus = filter === "ALL" || effectiveStatus === filter;
       const matchesSearch = !query || [
         request.name, 
         request.organiser_name, 
@@ -241,20 +305,25 @@ function Events() {
         </div>
 
         <div className="event-request-tabs" role="tablist" aria-label="Filter event requests">
-          {FILTERS.map((status) => (
-            <button 
-              key={status} 
-              role="tab" 
-              aria-selected={filter === status} 
-              className={`tab-btn ${filter === status ? "active" : ""}`} 
-              onClick={() => { setFilter(status); setPage(1); }}
-            >
-              {status === "ALL" ? "All" : status.charAt(0) + status.slice(1).toLowerCase()}
-              <span className="tab-count">
-                {status === "ALL" ? requests.length : requests.filter((r) => r.status === status).length}
-              </span>
-            </button>
-          ))}
+          {FILTERS.map((status) => {
+            const count =
+              status === "ALL"
+                ? requests.length
+                : requests.filter((r) => resolveEventStatus(r) === status).length;
+
+            return (
+              <button 
+                key={status} 
+                role="tab" 
+                aria-selected={filter === status} 
+                className={`tab-btn ${filter === status ? "active" : ""}`} 
+                onClick={() => { setFilter(status); setPage(1); }}
+              >
+                {status === "ALL" ? "All" : status.charAt(0) + status.slice(1).toLowerCase()}
+                <span className="tab-count">{count}</span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="event-requests-count">
@@ -291,7 +360,8 @@ function Events() {
             </thead>
             <tbody>
               {pagedRequests.map((request) => {
-                const statusClass = request.status.toLowerCase();
+                const effectiveStatus = resolveEventStatus(request);
+                const statusClass = effectiveStatus.toLowerCase();
                 const displayOrganiser = 
                   request.organiser_stage_name || 
                   request.organiser_name || 
@@ -326,7 +396,7 @@ function Events() {
                     </td>
                     <td>
                       <span className={`status-pill status-${statusClass}`}>
-                        {request.status}
+                        {effectiveStatus}
                       </span>
                     </td>
                     <td className="event-col-actions">
@@ -338,7 +408,7 @@ function Events() {
                         >
                           <Eye size={13} /> View
                         </button>
-                        {request.status === "PENDING" && (
+                        {effectiveStatus === "PENDING" && (
                           <>
                             <button 
                               type="button"
@@ -408,6 +478,7 @@ function Events() {
             {(() => {
               const imgSource = viewingRequest.image_url || viewingRequest.poster_url || viewingRequest.image || viewingRequest.banner_image;
               const displayOrganiser = viewingRequest.organiser_stage_name || viewingRequest.organiser_name || viewingRequest.organiser_user_name || "Organiser";
+              const modalStatus = resolveEventStatus(viewingRequest);
               
               return (
                 <div className="ev-hero-banner">
@@ -445,10 +516,10 @@ function Events() {
                     <div className="ev-hero-meta">
                       <div className="ev-hero-pill-strip">
                         <span className="ev-cat-pill">{viewingRequest.category_name || "Event"}</span>
-                        <span className={`status-pill status-${viewingRequest.status.toLowerCase()}`}>
-                          {viewingRequest.status}
+                        <span className={`status-pill status-${modalStatus.toLowerCase()}`}>
+                          {modalStatus}
                         </span>
-                        {Boolean(viewingRequest.is_live) && (
+                        {Boolean(viewingRequest.is_live) && modalStatus !== "COMPLETED" && (
                           <span className="ev-live-pill"><Radio size={12} /> LIVE</span>
                         )}
                       </div>
@@ -600,7 +671,7 @@ function Events() {
 
             {/* ACTION FOOTER */}
             <div className="modal-footer">
-              {viewingRequest.status === "PENDING" && (
+              {resolveEventStatus(viewingRequest) === "PENDING" && (
                 <div className="modal-pending-actions">
                   <button 
                     type="button" 

@@ -32,12 +32,23 @@ interface OrgRequest {
 
 interface EventItem {
   id: number;
-  name: string;
+  name?: string;
+  title?: string;
   status: string;
-  price: number;
+  price?: number;
   category_name?: string;
   city_name?: string;
 }
+
+// Utility to safely unpack arrays from diverse API response structures
+const parseResponseArray = <T,>(response: any, key?: string): T[] => {
+  if (!response) return [];
+  if (Array.isArray(response)) return response;
+  if (key && Array.isArray(response[key])) return response[key];
+  if (Array.isArray(response.data)) return response.data;
+  if (Array.isArray(response.result)) return response.result;
+  return [];
+};
 
 function AdminHome() {
   const [loading, setLoading] = useState(true);
@@ -76,43 +87,35 @@ function AdminHome() {
       ]);
 
       if (usersRes.status === "fulfilled") {
-        setTotalUsers(
-          Array.isArray(usersRes.value.users) ? usersRes.value.users.length : 0
-        );
+        const users = parseResponseArray(usersRes.value, "users");
+        setTotalUsers(users.length);
       }
 
       if (organisersRes.status === "fulfilled") {
-        setTotalOrganisers(
-          Array.isArray(organisersRes.value.organisers)
-            ? organisersRes.value.organisers.length
-            : 0
-        );
+        const organisers = parseResponseArray(organisersRes.value, "organisers");
+        setTotalOrganisers(organisers.length);
       }
 
       if (eventsRes.status === "fulfilled") {
-        setEvents(
-          Array.isArray(eventsRes.value.events) ? eventsRes.value.events : []
-        );
+        const eventList = parseResponseArray<EventItem>(eventsRes.value, "events");
+        setEvents(eventList);
+      } else {
+        console.error("Failed to fetch admin events:", eventsRes.reason);
       }
 
       if (reqRes.status === "fulfilled") {
-        setRequests(
-          Array.isArray(reqRes.value.requests) ? reqRes.value.requests : []
-        );
+        const requestList = parseResponseArray<OrgRequest>(reqRes.value, "requests");
+        setRequests(requestList);
       }
 
       if (citiesRes.status === "fulfilled") {
-        setCitiesCount(
-          Array.isArray(citiesRes.value.cities) ? citiesRes.value.cities.length : 0
-        );
+        const cities = parseResponseArray(citiesRes.value, "cities");
+        setCitiesCount(cities.length);
       }
 
       if (categoriesRes.status === "fulfilled") {
-        setCategoriesCount(
-          Array.isArray(categoriesRes.value.categories)
-            ? categoriesRes.value.categories.length
-            : 0
-        );
+        const categories = parseResponseArray(categoriesRes.value, "categories");
+        setCategoriesCount(categories.length);
       }
     } catch (error) {
       console.error("Dashboard fetch error:", error);
@@ -145,12 +148,19 @@ function AdminHome() {
     }
   };
 
-  const pendingEvents = events.filter(
-    (event) => event.status?.toUpperCase() === "PENDING"
-  );
+  // Covers all variations of pending status
+  const pendingEvents = events.filter((event) => {
+    const st = (event.status || "").trim().toUpperCase();
+    return (
+      st === "PENDING" ||
+      st === "PENDING_APPROVAL" ||
+      st === "SUBMITTED" ||
+      st === "UNDER_REVIEW"
+    );
+  });
 
   const pendingRequests = requests.filter(
-    (request) => request.status?.toUpperCase() === "PENDING"
+    (request) => (request.status || "").trim().toUpperCase() === "PENDING"
   );
 
   return (
@@ -265,19 +275,29 @@ function AdminHome() {
               {pendingEvents.slice(0, 5).map((event) => (
                 <div key={event.id} className="adm-org-request-item">
                   <div>
-                    <div className="adm-org-applicant-name">{event.name}</div>
+                    <div className="adm-org-applicant-name">
+                      {event.name || event.title || "Untitled Event"}
+                    </div>
                     <div className="adm-org-applicant-note">
                       Price: ₹{Number(event.price || 0).toLocaleString("en-IN")}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className="adm-btn-promote"
-                    onClick={() => handleEventApproval(event.id)}
-                    disabled={actionLoading !== null}
-                  >
-                    {actionLoading === event.id ? "Approving..." : "Approve"}
-                  </button>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <Link
+                      to="/admin/event-requests"
+                      className="adm-btn-promote-link"
+                    >
+                      View
+                    </Link>
+                    <button
+                      type="button"
+                      className="adm-btn-promote"
+                      onClick={() => handleEventApproval(event.id)}
+                      disabled={actionLoading !== null}
+                    >
+                      {actionLoading === event.id ? "Approving..." : "Approve"}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

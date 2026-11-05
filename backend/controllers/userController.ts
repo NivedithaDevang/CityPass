@@ -6,7 +6,8 @@ import {
   updateUserProfile,
   getUserAuthByEmail,
   reactivateUser,
-  deactivateUser
+  deactivateUser,
+  addQuery
 } from "../models/userModel.js";
 
 import cloudinary from "../config/cloudinary.js";
@@ -18,6 +19,30 @@ import { saltRounds } from "../config/env.js";
 import { generateUserToken } from "../middleware/tokenMiddleware.js";
 import AppError from "../types/appError.js";
 import { validateId } from "../validators/idValidator.js";
+
+
+export const addUserQuery = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = validateId(req.user?.id);
+    const query = req.body;
+    console.log("Received query:", query);
+    const result = await addQuery(userId, query);
+    console.log("Query added successfully:", result);
+    return res.status(201).json({
+      success: true,
+      message: "Query added successfully",
+      result,
+    });
+  } catch (error) {
+    console.log("Error adding query:", error);
+    return next(error);
+    
+  }
+};
 
 // GET /v1/users/userdetails
 export const getUser = async (

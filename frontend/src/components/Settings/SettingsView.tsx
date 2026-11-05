@@ -31,6 +31,7 @@ import {
   FaPaperclip,
   FaFileLines,
 } from "react-icons/fa6";
+import { FaWpforms } from "react-icons/fa";
 import "./SettingsView.css";
 import { PASSWORD_RULES } from "../../config/passwordRules";
 
@@ -55,7 +56,6 @@ interface OrganizerRequestStatus {
   rejection_reason?: string;
 }
 
-// Year difference: current year minus entered birth year
 const getYearDifference = (dobString: string): number => {
   if (!dobString) return 0;
   const birthYear = new Date(dobString).getFullYear();
@@ -293,7 +293,7 @@ function StyledDropdown({
   );
 }
 
-type TabKey = "profile" | "password" | "organizer" | "deactivate";
+type TabKey = "profile" | "password" | "organizer" | "query" | "deactivate";
 
 const SLUG_TO_TAB: Record<string, TabKey> = {
   profile: "profile",
@@ -303,12 +303,14 @@ const SLUG_TO_TAB: Record<string, TabKey> = {
   "host-an-event": "organizer",
   organizer: "organizer",
   deactivate: "deactivate",
+  query: "query",
 };
 
 const TAB_TO_SLUG: Record<TabKey, string> = {
   profile: "profile",
   password: "update-password",
   organizer: "host-an-event",
+  query: "query",
   deactivate: "deactivate",
 };
 
@@ -388,6 +390,11 @@ function SettingsView() {
   const [passwordMessage, setPasswordMessage] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
+  // Query Tab States
+  const [userQuery, setUserQuery] = useState("");
+  const [queryMessage, setQueryMessage] = useState("");
+  const [queryError, setQueryError] = useState("");
+
   const allRulesPassed = PASSWORD_RULES.every((rule) => rule.check(newPassword));
 
   const [org, setOrg] = useState({
@@ -423,7 +430,6 @@ function SettingsView() {
   const [showDeactivateConfirmModal, setShowDeactivateConfirmModal] = useState(false);
   const [showDeactivateTermsModal, setShowDeactivateTermsModal] = useState(false);
 
-  // Maximum selectable birth date (16 years before today)
   const maxEligibleDate = new Date();
   maxEligibleDate.setFullYear(maxEligibleDate.getFullYear() - 16);
 
@@ -474,7 +480,6 @@ function SettingsView() {
     }
   }, [user]);
 
-  // Clean up object URLs to prevent memory leaks
   useEffect(() => {
     if (!imagePreview) return;
     return () => {
@@ -1130,6 +1135,40 @@ function SettingsView() {
     }
   };
 
+  const handleQuerySubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setQueryMessage("");
+    setQueryError("");
+
+    const trimmed = userQuery.trim();
+    if (!trimmed) {
+      setQueryError("Please describe your query or request before submitting.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await axios.patch(
+        `${API_BASE_URL}/v1/users/query`,
+        {
+          name: profile.name || user?.name || "",
+          query: trimmed,
+        },
+        { withCredentials: true }
+      );
+
+      setUserQuery("");
+      setQueryMessage("Your query has been submitted successfully.");
+    } catch (error: any) {
+      console.error("Failed to submit query:", error);
+      setQueryError(
+        error.response?.data?.message || "Failed to submit query. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <div className="settings-page">
@@ -1189,6 +1228,23 @@ function SettingsView() {
                   <div className="nav-info">
                     <h3>Host an Event</h3>
                     <p>Become a verified organiser</p>
+                  </div>
+                  <FaChevronRight className="nav-arrow" />
+                </button>
+
+                <button
+                  type="button"
+                  className={`setting-nav-item ${
+                    activeTab === "query" ? "active" : ""
+                  }`}
+                  onClick={() => handleTabChange("query")}
+                >
+                  <span className="nav-icon">
+                    <FaWpforms />
+                  </span>
+                  <div className="nav-info">
+                    <h3>Submit Query</h3>
+                    <p>Request assistance to the admin</p>
                   </div>
                   <FaChevronRight className="nav-arrow" />
                 </button>
@@ -1414,7 +1470,6 @@ function SettingsView() {
                       </div>
                     </div>
 
-                    {/* DatePicker Field */}
                     <div className="form-group">
                       <label htmlFor="dob">Date of Birth [DD-MM-YYYY]</label>
                       <DatePicker
@@ -1936,6 +1991,50 @@ function SettingsView() {
                     </div>
                   </form>
                 )}
+              </section>
+            )}
+
+            {!isSuperAdmin && activeTab === "query" && (
+              <section className="tab-pane">
+                <div className="heading-copy">
+                  <h2>Submit Query</h2>
+                  <p>Request assistance or share your feedback with the admin team</p>
+                </div>
+
+                <form onSubmit={handleQuerySubmit} className="narrow-form">
+                  <div className="form-group full-width">
+                    <label htmlFor="userQuery">Your Message / Query *</label>
+                    <textarea
+                      id="userQuery"
+                      placeholder="Kindly describe your query or request..."
+                      rows={5}
+                      value={userQuery}
+                      onChange={(event) => {
+                        setUserQuery(event.target.value);
+                        setQueryError("");
+                      }}
+                      required
+                    />
+                  </div>
+
+                  {queryMessage && (
+                    <p className="status-banner success">{queryMessage}</p>
+                  )}
+
+                  {queryError && (
+                    <p className="status-banner error">{queryError}</p>
+                  )}
+
+                  <div className="action-row">
+                    <button
+                      type="submit"
+                      className="primary-button"
+                      disabled={loading || !userQuery.trim()}
+                    >
+                      {loading ? "Submitting..." : "Submit Request"}
+                    </button>
+                  </div>
+                </form>
               </section>
             )}
 

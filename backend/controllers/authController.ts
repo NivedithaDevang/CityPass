@@ -64,6 +64,7 @@ export const registerUser = async (
 };
 
 // LOGIN USER
+
 export const loginUser = async (
   req: Request,
   res: Response,
@@ -82,17 +83,24 @@ export const loginUser = async (
       throw new AppError("Email id does not exist", 401);
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      user.password
+    );
 
     if (!isPasswordValid) {
       throw new AppError("Entered password is incorrect", 401);
     }
 
     if (user.status === "INACTIVE") {
-      throw new AppError("Your account is currently deactivated", 403);
+      throw new AppError(
+        "Your account is currently deactivated",
+        403
+      );
     }
 
-    generateUserToken(user.id, res, {
+    // Generate JWT and set cookie
+    const token = generateUserToken(user.id, res, {
       id: user.id,
       email: user.email,
       role: user.role,
@@ -100,7 +108,8 @@ export const loginUser = async (
       token_version: user.token_version ?? 0,
     });
 
-    return res.status(200).json({
+    // Prepare response
+    const responseData: any = {
       success: true,
       message: "Login successful",
       user: {
@@ -111,11 +120,21 @@ export const loginUser = async (
         status: user.status,
         profile_image: user.profile_image || null,
       },
-    });
+    };
+
+    // Send JWT to React Native only
+    if (req.headers["x-client-type"] === "mobile") {
+      responseData.token = token;
+    }
+
+    return res.status(200).json(responseData);
+
   } catch (err) {
     next(err);
   }
 };
+
+
 
 // LOGOUT USER
 export const logoutUser = async (
