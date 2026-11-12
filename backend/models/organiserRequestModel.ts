@@ -1,4 +1,3 @@
-
 import { db } from "../config/database.js";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
@@ -62,6 +61,7 @@ export const getActiveRequestByUserId = async (
             ON o.city_id = ci.id
         WHERE o.user_id = ?
           AND o.status IN ('PENDING', 'APPROVED')
+        ORDER BY o.id DESC
         LIMIT 1
     `;
 

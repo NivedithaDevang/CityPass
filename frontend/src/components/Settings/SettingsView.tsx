@@ -786,7 +786,18 @@ function SettingsView() {
         "city_id",
         profile.city_id === "" ? "" : String(profile.city_id)
       );
-      formData.append("dob", profile.dob);
+
+      // Convert stored YYYY-MM-DD to DD-MM-YYYY format for the backend validator
+      if (profile.dob) {
+        const parts = profile.dob.split("-");
+        const formattedDob =
+          parts.length === 3 && parts[0].length === 4
+            ? `${parts[2]}-${parts[1]}-${parts[0]}`
+            : profile.dob;
+        formData.append("dob", formattedDob);
+      } else {
+        formData.append("dob", "");
+      }
 
       if (profile.gender) formData.append("gender", profile.gender);
       if (selectedImage) formData.append("profile_image", selectedImage);
@@ -835,9 +846,15 @@ function SettingsView() {
 
       setProfileMessage("Profile updated successfully.");
     } catch (error: any) {
-      setProfileError(
-        error.response?.data?.message || "Unable to update profile."
-      );
+      const backendErrors = error.response?.data?.errors;
+      if (backendErrors && typeof backendErrors === "object") {
+        const specificErrors = Object.values(backendErrors).join(", ");
+        setProfileError(specificErrors);
+      } else {
+        setProfileError(
+          error.response?.data?.message || "Unable to update profile."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -886,9 +903,7 @@ function SettingsView() {
   };
 
   const handleOrgChange = (
-    e: ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
 
@@ -2158,7 +2173,7 @@ function SettingsView() {
                       <p className="status-banner error">{deactivateError}</p>
                     )}
 
-                    <div className="action-buttons-group">
+                    <div className="action-row buttons-group">
                       <button
                         type="button"
                         className="secondary-button"

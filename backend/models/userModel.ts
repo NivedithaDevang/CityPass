@@ -2,6 +2,17 @@ import { db } from "../config/database.js";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { AuthPayLoad } from "../types/auth.js";
 
+export interface UpdateProfileInput {
+  name?: string;
+  email?: string;
+  phone?: string | null;
+  city_id?: number | null;
+  dob?: string | null;
+  gender?: "MALE" | "FEMALE" | "OTHER" | null;
+  profile_image?: string | null;
+}
+
+
 export type User = RowDataPacket &
   AuthPayLoad & {
     name: string;
@@ -110,7 +121,7 @@ export const reactivateUser = async (
 
 
 export const deactivateUser = async (
-  id: number,
+  email: string,
   reason: string
 ): Promise<ResultSetHeader> => {
   const sql = `
@@ -120,10 +131,10 @@ export const deactivateUser = async (
       deactivated_at = NOW(), 
       deactivation_reason = ?, 
       token_version = token_version + 1 
-    WHERE id = ? AND status = 'ACTIVE'
+    WHERE email = ? AND status = 'ACTIVE'
   `;
 
-  const [result] = await db.query<ResultSetHeader>(sql, [reason, id]);
+  const [result] = await db.query<ResultSetHeader>(sql, [reason, email]);
   return result;
 };
 
@@ -163,40 +174,28 @@ export const updatePassword = async (
 
 export const updateUserProfile = async (
   id: number,
-  profile: {
-    name: string;
-    email: string;
-    phone: string | null;
-    city_id: number | null;
-    dob: string | null;
-    gender: "MALE" | "FEMALE" | "OTHER" | null;
-    profile_image: string | null;
-  }
+  profile: UpdateProfileInput
 ) => {
-  const sql = `
-    UPDATE users
-    SET
-      name = ?,
-      email = ?,
-      phone = ?,
-      city_id = ?,
-      dob = ?,
-      gender = ?,
-      profile_image = COALESCE(?, profile_image)
-    WHERE id = ?
-  `;
+  const fields: string[] = [];
+  const values: any[] = [];
 
-  const [results] = await db.query<ResultSetHeader>(sql, [
-    profile.name,
-    profile.email,
-    profile.phone,
-    profile.city_id,
-    profile.dob,
-    profile.gender,
-    profile.profile_image,
-    id,
-  ]);
+  // Dynamically push only defined properties
+  for (const [key, value] of Object.entries(profile)) {
+    if (value !== undefined) {
+      fields.push(`${key} = ?`);
+      values.push(value);
+    }
+  }
 
+  // If no fields were provided, return a neutral match object
+  if (fields.length === 0) {
+    return { affectedRows: 0, matchedRows: 1 };
+  }
+
+  values.push(id);
+  const sql = `UPDATE users SET ${fields.join(", ")} WHERE id = ?`;
+
+  const [results] = await db.query<ResultSetHeader>(sql, values);
   return results;
 };
 

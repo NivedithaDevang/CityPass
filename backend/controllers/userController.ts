@@ -1,4 +1,3 @@
-
 import {
   getUserById,
   getAllUsers,
@@ -7,7 +6,8 @@ import {
   getUserAuthByEmail,
   reactivateUser,
   deactivateUser,
-  addQuery
+  addQuery,
+  UpdateProfileInput
 } from "../models/userModel.js";
 
 import cloudinary from "../config/cloudinary.js";
@@ -20,7 +20,6 @@ import { generateUserToken } from "../middleware/tokenMiddleware.js";
 import AppError from "../types/appError.js";
 import { validateId } from "../validators/idValidator.js";
 
-
 export const addUserQuery = async (
   req: Request,
   res: Response,
@@ -29,18 +28,14 @@ export const addUserQuery = async (
   try {
     const userId = validateId(req.user?.id);
     const query = req.body;
-    console.log("Received query:", query);
     const result = await addQuery(userId, query);
-    console.log("Query added successfully:", result);
     return res.status(201).json({
       success: true,
       message: "Query added successfully",
       result,
     });
   } catch (error) {
-    console.log("Error adding query:", error);
     return next(error);
-    
   }
 };
 
@@ -205,9 +200,7 @@ export const getAdminUserDetails = async (
         [userId]
       );
 
-      const hostedBookings = hostedBookingRows as Array<
-        Record<string, unknown>
-      >;
+      const hostedBookings = hostedBookingRows as Array<Record<string, unknown>>;
       const events = eventRows.map((event) => {
         const eventBookings = hostedBookings.filter(
           (booking) => Number(booking.event_id) === Number(event.id)
@@ -318,7 +311,7 @@ export const getAdminUserDetails = async (
   }
 };
 
-// PUT /v1/users/profile
+// PATCH or PUT /v1/users/profile or /v1/users/userdetails
 export const updateProfile = async (
   req: Request,
   res: Response,
@@ -328,136 +321,197 @@ export const updateProfile = async (
     const authenticatedUserId = req.user?.id;
 
     if (!authenticatedUserId) {
-      throw new AppError("Authentication required", 401);
+      throw new AppError("Authentication required. Please log in.", 401);
     }
 
     const userId = validateId(authenticatedUserId);
-
     const { name, phone, email, city_id, dob, gender } = req.body;
 
-    // Validate name.
-    if (typeof name !== "string" || !name.trim()) {
-      throw new AppError("Name is required", 400);
-    }
+    const errors: Record<string, string> = {};
+    const updatePayload: UpdateProfileInput = {};
 
-    const trimmedName = name.trim();
-
-    if (trimmedName.length > 100) {
-      throw new AppError("Name cannot exceed 100 characters", 400);
-    }
-
-    // Validate phone number when provided.
-    if (
-      phone !== undefined &&
-      phone !== null &&
-      phone !== "" &&
-      (typeof phone !== "string" || !/^\d{10}$/.test(phone))
-    ) {
-      throw new AppError(
-        "Phone number must be exactly 10 digits",
-        400
-      );
-    }
-
-    // Validate date of birth when provided.
-    if (dob !== undefined && dob !== null && dob !== "") {
-      if (typeof dob !== "string") {
-        throw new AppError("Invalid date of birth", 400);
-      }
-
-      const dobPattern = /^\d{4}-\d{2}-\d{2}$/;
-
-      if (!dobPattern.test(dob)) {
-        throw new AppError("Invalid date of birth", 400);
-      }
-
-      const [year, month, day] = dob.split("-").map(Number);
-      const dobDate = new Date(year, month - 1, day);
-
-      const validDate =
-        dobDate.getFullYear() === year &&
-        dobDate.getMonth() === month - 1 &&
-        dobDate.getDate() === day;
-
-      if (!validDate) {
-        throw new AppError("Invalid date of birth", 400);
+    // 1. Validate Name
+    if (name !== undefined) {
+      if (typeof name !== "string" || !name.trim()) {
+        errors.name = "Name cannot be empty";
+      } else if (name.trim().length > 100) {
+        errors.name = "Name cannot exceed 100 characters";
+      } else {
+        updatePayload.name = name.trim();
       }
     }
 
-    // Validate gender when provided.
-    if (
-      gender !== undefined &&
-      gender !== null &&
-      gender !== "" &&
-      (typeof gender !== "string" ||
-        !["MALE", "FEMALE", "OTHER"].includes(gender))
-    ) {
-      throw new AppError("Please select a valid gender", 400);
+    // 2. Validate Email
+    if (email !== undefined) {
+      if (typeof email !== "string" || !email.trim()) {
+        errors.email = "Email address cannot be empty";
+      } else {
+        const trimmedEmail = email.trim().toLowerCase();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmedEmail)) {
+          errors.email = "Please provide a valid email address";
+        } else {
+          updatePayload.email = trimmedEmail;
+        }
+      }
     }
 
-    // Validate city ID when provided.
-    let parsedCityId: number | null = null;
+    // 3. Validate Phone Number
+    if (phone !== undefined) {
+      const phoneStr = phone !== null ? String(phone).trim() : "";
 
-    if (
-      city_id !== undefined &&
-      city_id !== null &&
-      city_id !== ""
-    ) {
-      parsedCityId = validateId(city_id);
+      if (phoneStr === "" || phone === null) {
+        updatePayload.phone = null;
+      } else {
+        let sanitizedPhone = phoneStr.replace(/[\s\-()]/g, "");
+        if (sanitizedPhone.startsWith("+91")) {
+          sanitizedPhone = sanitizedPhone.slice(3);
+        } else if (sanitizedPhone.length === 12 && sanitizedPhone.startsWith("91")) {
+          sanitizedPhone = sanitizedPhone.slice(2);
+        }
+
+        if (!/^\d{10}$/.test(sanitizedPhone)) {
+          errors.phone = "Phone number must be exactly 10 digits";
+        } else {
+          updatePayload.phone = sanitizedPhone;
+        }
+      }
     }
 
-    // Upload profile image if provided.
-    let profileImage: string | null = null;
-    const uploadedFile = req.file;
+    // 4. Validate Date of Birth (Supports both DD-MM-YYYY and YYYY-MM-DD)
+    if (dob !== undefined) {
+      if (dob === null || dob === "") {
+        updatePayload.dob = null;
+      } else if (typeof dob !== "string") {
+        errors.dob = "Invalid date format";
+      } else {
+        const trimmedDob = dob.trim();
+        let day: number, month: number, year: number;
 
-    if (uploadedFile) {
-      const cloudinaryResult = await new Promise<{
-        secure_url: string;
-      }>((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          {
-            folder: "citypass/profile-images",
-            public_id: `user_${userId}`,
-            overwrite: true,
-            resource_type: "image",
-          },
-          (error, result) => {
-            if (error || !result) {
-              return reject(
-                new AppError("Cloudinary upload failed", 502)
-              );
+        if (/^\d{2}-\d{2}-\d{4}$/.test(trimmedDob)) {
+          const parts = trimmedDob.split("-").map(Number);
+          day = parts[0];
+          month = parts[1];
+          year = parts[2];
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(trimmedDob)) {
+          const parts = trimmedDob.split("-").map(Number);
+          year = parts[0];
+          month = parts[1];
+          day = parts[2];
+        } else {
+          errors.dob = "Date of birth must be in DD-MM-YYYY or YYYY-MM-DD format";
+          day = NaN;
+          month = NaN;
+          year = NaN;
+        }
+
+        if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+          const dobDate = new Date(year, month - 1, day);
+          const isValidDate =
+            dobDate.getFullYear() === year &&
+            dobDate.getMonth() === month - 1 &&
+            dobDate.getDate() === day;
+
+          if (!isValidDate) {
+            errors.dob = "Please provide a valid calendar date";
+          } else {
+            const today = new Date();
+            let age = today.getFullYear() - dobDate.getFullYear();
+            const monthDiff = today.getMonth() - dobDate.getMonth();
+            const dayDiff = today.getDate() - dobDate.getDate();
+
+            if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+              age--;
             }
 
-            resolve({
-              secure_url: result.secure_url,
-            });
+            if (dobDate > today) {
+              errors.dob = "Date of birth cannot be in the future";
+            } else if (age < 16) {
+              errors.dob = "You must be at least 16 years old to be eligible";
+            } else {
+              const formattedMonth = String(month).padStart(2, "0");
+              const formattedDay = String(day).padStart(2, "0");
+              updatePayload.dob = `${year}-${formattedMonth}-${formattedDay}`;
+            }
           }
-        );
-
-        stream.end(uploadedFile.buffer);
-      });
-
-      profileImage = cloudinaryResult.secure_url;
+        }
+      }
     }
 
-    const result = await updateUserProfile(userId, {
-      name: trimmedName,
-      email: email,
-      phone: phone || null,
-      city_id: parsedCityId,
-      dob: dob || null,
-      gender: gender || null,
-      profile_image: profileImage,
-    });
+    // 5. Validate Gender
+    if (gender !== undefined) {
+      if (gender === null || gender === "") {
+        updatePayload.gender = null;
+      } else if (
+        typeof gender !== "string" ||
+        !["MALE", "FEMALE", "OTHER"].includes(gender.toUpperCase())
+      ) {
+        errors.gender = "Gender must be either MALE, FEMALE, or OTHER";
+      } else {
+        updatePayload.gender = gender.toUpperCase() as "MALE" | "FEMALE" | "OTHER";
+      }
+    }
 
-    if (result.affectedRows === 0) {
-      throw new AppError("User not found", 404);
+    // 6. Validate City ID
+    if (city_id !== undefined) {
+      if (city_id === null || city_id === "" || city_id === 0) {
+        updatePayload.city_id = null;
+      } else {
+        try {
+          updatePayload.city_id = validateId(city_id);
+        } catch {
+          errors.city_id = "Please select a valid city from the list";
+        }
+      }
+    }
+
+    // Return detailed validation errors if any exist
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed. Please correct the highlighted fields.",
+        errors,
+      });
+    }
+
+    // Handle Cloudinary Profile Image Upload
+    const uploadedFile = req.file;
+    if (uploadedFile) {
+      const cloudinaryResult = await new Promise<{ secure_url: string }>(
+        (resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: "citypass/profile-images",
+              public_id: `user_${userId}`,
+              overwrite: true,
+              resource_type: "image",
+            },
+            (error, result) => {
+              if (error || !result) {
+                return reject(
+                  new AppError("Failed to upload image. Please try again.", 502)
+                );
+              }
+              resolve({ secure_url: result.secure_url });
+            }
+          );
+          stream.end(uploadedFile.buffer);
+        }
+      );
+      updatePayload.profile_image = cloudinaryResult.secure_url;
+    }
+
+    // Execute Database Update
+    const result = await updateUserProfile(userId, updatePayload);
+
+    const matched = (result as any).matchedRows ?? result.affectedRows;
+    if (matched === 0) {
+      throw new AppError("User account not found", 404);
     }
 
     const updatedUser = await getUserById(userId);
-
     if (!updatedUser) {
-      throw new AppError("User not found", 404);
+      throw new AppError("User account not found", 404);
     }
 
     return res.status(200).json({
@@ -472,9 +526,21 @@ export const updateProfile = async (
       "code" in error &&
       error.code === "ER_DUP_ENTRY"
     ) {
-      return next(
-        new AppError("Phone number already exists", 409)
-      );
+      const dbMessage = "message" in error && typeof error.message === "string" ? error.message : "";
+
+      if (dbMessage.includes("email")) {
+        return res.status(409).json({
+          success: false,
+          message: "Email address is already in use by another account",
+          errors: { email: "This email address is already registered" },
+        });
+      }
+
+      return res.status(409).json({
+        success: false,
+        message: "Phone number is already registered",
+        errors: { phone: "This phone number is already registered" },
+      });
     }
 
     return next(error);
@@ -503,10 +569,7 @@ export const changePassword = async (
       !newPassword ||
       !confirmPassword
     ) {
-      throw new AppError(
-        "Both new password and confirm password are required",
-        400
-      );
+      throw new AppError("Both new password and confirm password are required", 400);
     }
 
     if (newPassword !== confirmPassword) {
@@ -514,13 +577,9 @@ export const changePassword = async (
     }
 
     if (newPassword.length < 8 || newPassword.length > 20) {
-      throw new AppError(
-        "Password must be of atleast 8 characters",
-        400
-      );
+      throw new AppError("Password must be of atleast 8 characters", 400);
     }
 
-    // Strong password criteria checks
     const hasUpperCase = /[A-Z]/.test(newPassword);
     const hasLowerCase = /[a-z]/.test(newPassword);
     const hasNumber = /[0-9]/.test(newPassword);
@@ -533,11 +592,7 @@ export const changePassword = async (
       );
     }
 
-    const hashedPassword = await bcrypt.hash(
-      newPassword,
-      saltRounds
-    );
-
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
     const result = await updatePassword(userId, hashedPassword);
 
     if (result.affectedRows === 0) {
@@ -554,49 +609,43 @@ export const changePassword = async (
 };
 
 // POST /v1/users/deactivate
-// POST /v1/users/deactivate
 export const deactivateAccount = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const authenticatedUserId = req.user?.id;
+    const sessionEmail = req.user?.email;
 
-    if (!authenticatedUserId) {
+    if (!sessionEmail) {
       throw new AppError("Authentication required", 401);
     }
 
-    const userId = validateId(authenticatedUserId);
-    const { reason } = req.body;
+    const { email, reason } = req.body;
 
-    if (
-      typeof reason !== "string" ||
-      !reason.trim()
-    ) {
-      throw new AppError(
-        "Please provide a reason for deactivating your account",
-        400
-      );
+    if (email !== undefined) {
+      if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        throw new AppError("Please provide a valid email address", 400);
+      }
+
+      if (email.trim().toLowerCase() !== sessionEmail.toLowerCase()) {
+        throw new AppError("Provided email does not match the authenticated account", 403);
+      }
+    }
+
+    if (typeof reason !== "string" || !reason.trim()) {
+      throw new AppError("Please provide a reason for deactivating your account", 400);
     }
 
     const trimmedReason = reason.trim();
-
     if (trimmedReason.length > 500) {
-      throw new AppError(
-        "Deactivation reason cannot exceed 500 characters",
-        400
-      );
+      throw new AppError("Deactivation reason cannot exceed 500 characters", 400);
     }
 
-    // Call the model function
-    const result = await deactivateUser(userId, trimmedReason);
+    const result = await deactivateUser(sessionEmail, trimmedReason);
 
     if (result.affectedRows === 0) {
-      throw new AppError(
-        "User not found or account is already inactive",
-        404
-      );
+      throw new AppError("User not found or account is already inactive", 404);
     }
 
     const cookieOptions = {
@@ -617,6 +666,7 @@ export const deactivateAccount = async (
     return next(error);
   }
 };
+
 // POST /v1/users/reactivate
 export const reactivateAndLogin = async (
   req: Request,
@@ -632,40 +682,26 @@ export const reactivateAndLogin = async (
       typeof password !== "string" ||
       !password
     ) {
-      throw new AppError(
-        "Email and password are required",
-        400
-      );
+      throw new AppError("Email and password are required", 400);
     }
 
     const user = await getUserAuthByEmail(email.trim());
 
     if (!user) {
-      throw new AppError(
-        "Invalid email or password",
-        401
-      );
+      throw new AppError("Invalid email or password", 401);
     }
 
-    const isMatch = await bcrypt.compare(
-      password,
-      user.password
-    );
+    const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
-      throw new AppError(
-        "Invalid email or password",
-        401
-      );
+      throw new AppError("Invalid email or password", 401);
     }
 
     if (user.status === "ACTIVE") {
       throw new AppError("Account is already active", 400);
     }
 
-    const {
-      token_version: updatedTokenVersion,
-    } = await reactivateUser(user.id);
+    const { token_version: updatedTokenVersion } = await reactivateUser(user.id);
 
     generateUserToken(user.id, res, {
       id: user.id,

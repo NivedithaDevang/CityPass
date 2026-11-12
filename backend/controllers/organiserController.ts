@@ -154,6 +154,7 @@ export const updateProfile = async (
 
     const { stage_name, description } = req.body;
 
+    // Validate stage_name
     if (!stage_name || typeof stage_name !== "string" || !stage_name.trim()) {
       return res.status(400).json({
         success: false,
@@ -161,15 +162,32 @@ export const updateProfile = async (
       });
     }
 
-    const result = await updateOrganiserProfile(organiser.id, {
-      stage_name: stage_name.trim(),
-      description: (description || "").trim(),
-    });
-
-    if (result.affectedRows === 0) {
+    // Validate description (must be a string if provided)
+    if (
+      description !== undefined &&
+      description !== null &&
+      typeof description !== "string"
+    ) {
       return res.status(400).json({
         success: false,
-        message: "No changes made to organiser profile.",
+        message: "Description must be in the textual form.",
+      });
+    }
+
+    const cleanDescription = (typeof description === "string" ? description.trim() : "") || "";
+    const cleanStageName = stage_name.trim();
+
+    const result = await updateOrganiserProfile(organiser.id, {
+      stage_name: cleanStageName,
+      description: cleanDescription,
+    });
+
+    // Check matchedRows if using mysql2 to prevent false 400 when submitting unchanged values
+    const matched = (result as any).matchedRows ?? result.affectedRows;
+    if (matched === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Organiser profile not found.",
       });
     }
 
@@ -178,8 +196,8 @@ export const updateProfile = async (
       message: "Organiser profile updated successfully.",
       profile: {
         id: organiser.id,
-        stage_name: stage_name.trim(),
-        description: (description || "").trim(),
+        stage_name: cleanStageName,
+        description: cleanDescription,
       },
     });
   } catch (error) {

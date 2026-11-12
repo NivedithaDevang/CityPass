@@ -1,4 +1,3 @@
-
 import { Request, Response, NextFunction } from "express";
 import { RowDataPacket } from "mysql2";
 import { db } from "../config/database.js";
@@ -6,7 +5,6 @@ import AppError from "../types/appError.js";
 import cloudinary from "../config/cloudinary.js";
 import {
   getAllRequests,
-  getActiveRequestByUserId,
   getLatestRequestByUserId,
   createRequest,
   resubmitRejectedRequest,
@@ -77,18 +75,23 @@ export const addRequest = async (
 
     const userId = validateId(authenticatedUserId);
 
-    const existing = await getActiveRequestByUserId(userId);
-
-    if (existing) {
-      throw new AppError(
-        existing.status === "APPROVED"
-          ? "You are already a registered organizer."
-          : "You already have an organizer application pending review.",
-        409
-      );
-    }
-
+    // Get the most recent application
     const latestRequest = await getLatestRequestByUserId(userId);
+
+    if (latestRequest?.status) {
+      const normalizedStatus = String(latestRequest.status).trim().toUpperCase();
+
+      if (normalizedStatus === "APPROVED") {
+        throw new AppError("You are already a registered organizer.", 409);
+      }
+
+      if (normalizedStatus === "PENDING") {
+        throw new AppError(
+          "You already have an organizer application pending review.",
+          409
+        );
+      }
+    }
 
     const organizationName =
       req.body.organization_name || req.body.stageName;
@@ -138,7 +141,7 @@ export const addRequest = async (
       );
     }
 
-    // Resolve city ID.
+    // Resolve city ID
     let cityId: number;
 
     if (
@@ -168,8 +171,7 @@ export const addRequest = async (
       throw new AppError("City is required.", 400);
     }
 
-
-    // Confirm the selected city is active.
+    // Confirm city is active
     const [cityCheck] = await db.query<IdRow[]>(
       `SELECT id
        FROM cities
@@ -185,36 +187,36 @@ export const addRequest = async (
       );
     }
 
+    // ID proof file upload (OPTIONAL: defaults to null or previous file on resubmission)
+    let idProofFileUrl: string | null = latestRequest?.id_proof_file ?? null;
     const uploadedFile = req.file;
-    if (!uploadedFile) {
-      throw new AppError(
-        "Please upload a document file for your ID proof.",
-        400
-      );
-    }
 
-    const cloudinaryResult = await new Promise<{
-      secure_url: string;
-    }>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: "citypass/id-proof",
-          public_id: `user_${userId}_id_proof`,
-          overwrite: true,
-          resource_type: "auto",
-        },
-        (error, result) => {
-          if (error || !result) {
-            reject(new AppError("Cloudinary upload failed", 502));
-            return;
+    if (uploadedFile) {
+      const cloudinaryResult = await new Promise<{
+        secure_url: string;
+      }>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "citypass/id-proof",
+            public_id: `user_${userId}_id_proof`,
+            overwrite: true,
+            resource_type: "auto",
+          },
+          (error, result) => {
+            if (error || !result) {
+              reject(new AppError("Cloudinary upload failed", 502));
+              return;
+            }
+
+            resolve({ secure_url: result.secure_url });
           }
+        );
 
-          resolve({ secure_url: result.secure_url });
-        }
-      );
+        stream.end(uploadedFile.buffer);
+      });
 
-      stream.end(uploadedFile.buffer);
-    });
+      idProofFileUrl = cloudinaryResult.secure_url;
+    }
 
     const requestData = {
       user_id: userId,
@@ -222,7 +224,7 @@ export const addRequest = async (
       description: cleanDescription,
       city_id: cityId,
       id_proof: idProof,
-      id_proof_file: cloudinaryResult.secure_url,
+      id_proof_file: idProofFileUrl,
       email,
       phone,
       status: "PENDING",
