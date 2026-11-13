@@ -125,7 +125,7 @@ export const getAllActivities = async (): Promise<EventWithCategory[]> => {
     FROM events 
     INNER JOIN categories ON categories.id = events.category_id 
     WHERE events.status = 'APPROVED' 
-      AND categories.id IN (2, 5, 6)
+      AND categories.id IN (2, 5, 6, 14)
       AND (
         events.event_date >= CURDATE()
         OR events.is_live = 1

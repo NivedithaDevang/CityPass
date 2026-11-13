@@ -41,6 +41,12 @@ interface BookingItem {
   poster_url?: string;
   banner_image?: string;
   image?: string;
+  event?: {
+    image_url?: string;
+    poster_url?: string;
+    banner_image?: string;
+    image?: string;
+  };
   event_ticket_id?: number | null;
   ticket_name?: string | null;
   ticket_description?: string | null;
@@ -52,18 +58,6 @@ interface BookingItem {
 }
 
 type CancelMode = "all" | "partial";
-
-const CITY_IMAGE_MAP: Record<string, string> = {
-  Bengaluru: "/cities/Bangalore.jpeg",
-  Mumbai: "/cities/Mumbai.jpeg",
-  Delhi: "/cities/Delhi.jpeg",
-  Lucknow: "/cities/Lucknow.jpeg",
-  Panaji: "/cities/Goa.jpeg",
-  Goa: "/cities/Goa.jpeg",
-  Hyderabad: "/cities/Hyderabad.jpeg",
-  Chennai: "/cities/Chennai.jpeg",
-  Trivandrum: "/cities/Trivandrum.jpeg",
-};
 
 const DEFAULT_POSTER = "/categories/image.png";
 
@@ -597,28 +591,14 @@ export function BookingPage() {
       item.image_url ||
       item.poster_url ||
       item.banner_image ||
-      item.image;
+      item.image ||
+      item.event?.image_url ||
+      item.event?.poster_url ||
+      item.event?.banner_image ||
+      item.event?.image;
 
     if (directEventImage?.trim()) {
       return directEventImage.trim();
-    }
-
-    const cityName = item.city_name?.trim();
-
-    if (cityName && CITY_IMAGE_MAP[cityName]) {
-      return CITY_IMAGE_MAP[cityName];
-    }
-
-    const location = (
-      item.location ||
-      item.venue ||
-      ""
-    ).trim().toLowerCase();
-
-    for (const [name, imagePath] of Object.entries(CITY_IMAGE_MAP)) {
-      if (location.includes(name.toLowerCase())) {
-        return imagePath;
-      }
     }
 
     return DEFAULT_POSTER;
@@ -782,27 +762,7 @@ export function BookingPage() {
                         }
 
                         image.dataset.fallbackApplied = "true";
-
-                        const cityName = item.city_name?.trim();
-                        let fallback = cityName
-                          ? CITY_IMAGE_MAP[cityName]
-                          : undefined;
-
-                        if (!fallback) {
-                          const location = (
-                            item.location ||
-                            item.venue ||
-                            ""
-                          ).trim().toLowerCase();
-
-                          fallback = Object.entries(
-                            CITY_IMAGE_MAP
-                          ).find(([name]) =>
-                            location.includes(name.toLowerCase())
-                          )?.[1];
-                        }
-
-                        image.src = fallback || DEFAULT_POSTER;
+                        image.src = DEFAULT_POSTER;
                       }}
                     />
 

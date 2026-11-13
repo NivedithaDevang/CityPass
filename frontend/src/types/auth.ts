@@ -66,8 +66,12 @@ export interface Events {
   category_id?: number;
   category_name?: string | null;
   city_name?: string | null;
+  city?: string | { name?: string } | null;
   organiser_stage_name?: string | null;
   organiser_user_name?: string | null;
+  image?: string | null;
+  image_url?: string | null;
+  poster_url?: string | null;
   name?: string;
   slug?: string;
   description?: string;

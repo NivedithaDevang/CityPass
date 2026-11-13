@@ -12,17 +12,6 @@ function CitySection() {
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const localCityImages: Record<string, string> = {
-    Bengaluru: "/cities/Bangalore.jpeg",
-    Mumbai: "/cities/Mumbai.jpeg",
-    Delhi: "/cities/Delhi.jpeg",
-    Lucknow: "/cities/Lucknow.jpeg",
-    Panaji: "/cities/Goa.jpeg",
-    Hyderabad: "/cities/Hyderabad.jpeg",
-    Chennai: "/cities/Chennai.jpeg",
-    Trivandrum: "/cities/Trivandrum.jpeg",
-  };
-
   useEffect(() => {
     const fetchCities = async () => {
       try {
@@ -100,12 +89,15 @@ function CitySection() {
               style={{ cursor: "pointer" }}
             >
               <img
-                src={
-                  city.image ||
-                  localCityImages[city.name] ||
-                  "/cities/default.jpeg"
-                }
+                src={city.image?.trim() || "/image.png"}
                 alt={city.name}
+                onError={(event) => {
+                  const image = event.currentTarget;
+                  if (image.dataset.fallbackApplied !== "true") {
+                    image.dataset.fallbackApplied = "true";
+                    image.src = "/image.png";
+                  }
+                }}
               />
               <h4>{city.name}</h4>
             </div>

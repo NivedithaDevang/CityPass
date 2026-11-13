@@ -12,6 +12,32 @@ import {
   FaCompass,
 } from "react-icons/fa";
 
+type ListingType = "events" | "activities" | "concerts";
+
+const listingConfig: Record<
+  ListingType,
+  { endpoint: string; responseKey: ListingType; title: string; singular: string }
+> = {
+  events: {
+    endpoint: "events",
+    responseKey: "events",
+    title: "Events",
+    singular: "Event",
+  },
+  activities: {
+    endpoint: "activities",
+    responseKey: "activities",
+    title: "Activities",
+    singular: "Activity",
+  },
+  concerts: {
+    endpoint: "concerts",
+    responseKey: "concerts",
+    title: "Concerts",
+    singular: "Concert",
+  },
+};
+
 // Parse the event date and time consistently.
 const parseEventTimestamp = (event: Events): number | null => {
   if (!event.event_date) return null;
@@ -79,9 +105,10 @@ const getTodayDateKey = (): string => {
   ].join("-");
 };
 
-function Event() {
+function Event({ listingType = "events" }: { listingType?: ListingType }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const listing = listingConfig[listingType];
 
   const { selectedCity, setSelectedCity } = useCity();
 
@@ -96,6 +123,9 @@ function Event() {
   const [sortBy, setSortBy] = useState("date_asc");
   const [locations, setLocations] = useState<string[]>([]);
   const [cityIdMap, setCityIdMap] = useState<Record<string | number, string>>({});
+  const [excludedCategoryNames, setExcludedCategoryNames] = useState<Set<string>>(
+    new Set()
+  );
 
   const [openDropdown, setOpenDropdown] = useState<
     "category" | "location" | "sort" | null
@@ -141,7 +171,12 @@ function Event() {
     ALL_LOCATIONS,
   ]);
 
-  const selectedCategory = searchParams.get("category") || "ALL";
+  const requestedCategory = searchParams.get("category") || "ALL";
+  const selectedCategory =
+    listingType === "events" &&
+    ["activities", "concerts"].includes(requestedCategory.toLowerCase())
+      ? "ALL"
+      : requestedCategory;
   const activeCityFilter =
     searchParams.get("city") || selectedCity || ALL_LOCATIONS;
 
@@ -201,24 +236,50 @@ function Event() {
     setSearchParams({}, { replace: true });
   };
 
-  // Fetch events and available cities.
+  // Fetch listings and available cities.
   useEffect(() => {
     let cancelled = false;
 
     const fetchFilterData = async () => {
       try {
-        const [eventsResponse, locationsResponse] =
+        const [
+          eventsResponse,
+          locationsResponse,
+          activitiesResponse,
+          concertsResponse,
+        ] =
           await Promise.all([
-            axios.get(`${API_BASE_URL}/v1/events/events`),
+            axios.get(`${API_BASE_URL}/v1/events/${listing.endpoint}`),
             axios.get(`${API_BASE_URL}/v1/cities`),
+            listingType === "events"
+              ? axios.get(`${API_BASE_URL}/v1/events/activities`)
+              : Promise.resolve(null),
+            listingType === "events"
+              ? axios.get(`${API_BASE_URL}/v1/events/concerts`)
+              : Promise.resolve(null),
           ]);
 
         if (cancelled) return;
 
         const rawEvents =
-          eventsResponse.data?.events || [];
+          eventsResponse.data?.[listing.responseKey];
 
-        setEvents(rawEvents);
+        setEvents(Array.isArray(rawEvents) ? rawEvents : []);
+
+        if (listingType === "events") {
+          const activityCategories = activitiesResponse?.data?.activities;
+          const concertCategories = concertsResponse?.data?.concerts;
+          const categories = [
+            ...(Array.isArray(activityCategories) ? activityCategories : []),
+            ...(Array.isArray(concertCategories) ? concertCategories : []),
+          ]
+            .map((event: Events) => event.category_name?.trim().toLowerCase())
+            .filter((category): category is string => Boolean(category));
+
+          setExcludedCategoryNames(new Set(categories));
+        } else {
+          setExcludedCategoryNames(new Set());
+        }
 
         const cityList: City[] =
           locationsResponse.data?.city ||
@@ -250,6 +311,7 @@ function Event() {
 
         setEvents([]);
         setLocations([]);
+        setExcludedCategoryNames(new Set());
       }
     };
 
@@ -258,17 +320,14 @@ function Event() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [listing]);
 
-  const getResolvedCityName = (event: any): string => {
+  const getResolvedCityName = (event: Events): string => {
     if (event.city_name && typeof event.city_name === "string") {
       return event.city_name.trim();
     }
     if (event.city && typeof event.city === "string") {
       return event.city.trim();
-    }
-    if (event.city?.name && typeof event.city.name === "string") {
-      return event.city.name.trim();
     }
     if (event.city_id && cityIdMap[event.city_id]) {
       return cityIdMap[event.city_id];
@@ -281,7 +340,15 @@ function Event() {
     const normalizedSearch = search.trim().toLowerCase();
     const todayDateKey = getTodayDateKey();
 
-    const filtered = events.filter((event: any) => {
+    const filtered = events.filter((event: Events) => {
+      if (
+        listingType === "events" &&
+        event.category_name &&
+        excludedCategoryNames.has(event.category_name.trim().toLowerCase())
+      ) {
+        return false;
+      }
+
       const eventDateKey = getEventDateKey(event);
 
       if (
@@ -332,9 +399,10 @@ function Event() {
         eventCity,
       ]
         .filter(
-          (value) => typeof value === "string" && value
+          (value): value is string =>
+            typeof value === "string" && value.length > 0
         )
-        .some((value: string) =>
+        .some((value) =>
           value.toLowerCase().includes(normalizedSearch)
         );
     });
@@ -365,6 +433,8 @@ function Event() {
     });
   }, [
     events,
+    listingType,
+    excludedCategoryNames,
     activeCityFilter,
     selectedCategory,
     search,
@@ -372,25 +442,30 @@ function Event() {
     cityIdMap,
   ]);
 
-  // Show categories that have upcoming events.
+  // Show categories that have upcoming listings.
   const activeCategories = useMemo(() => {
     const categories = new Set<string>();
     const todayDateKey = getTodayDateKey();
 
-    events.forEach((event: any) => {
+    events.forEach((event: Events) => {
       const eventDateKey = getEventDateKey(event);
+      const categoryName = event.category_name?.trim();
 
       if (
         eventDateKey !== null &&
         eventDateKey >= todayDateKey &&
-        event.category_name?.trim()
+        categoryName &&
+        !(
+          listingType === "events" &&
+          excludedCategoryNames.has(categoryName.toLowerCase())
+        )
       ) {
-        categories.add(event.category_name.trim());
+        categories.add(categoryName);
       }
     });
 
     return Array.from(categories);
-  }, [events]);
+  }, [events, listingType, excludedCategoryNames]);
 
   const formatEventDate = (eventDate?: string) => {
     if (!eventDate) return "Date TBA";
@@ -434,9 +509,9 @@ function Event() {
       ];
 
     const posterImage =
-      (event as any).poster_url ||
-      (event as any).image_url ||
-      (event as any).image ||
+      event.poster_url ||
+      event.image_url ||
+      event.image ||
       fallbackImage;
 
     const isLive =
@@ -568,13 +643,13 @@ function Event() {
 
           <h1>
             {displayLocation !== ALL_LOCATIONS
-              ? `Explore events in ${displayLocation}`
-              : "Explore events happening in the city"}
+              ? `Explore ${listing.title.toLowerCase()} in ${displayLocation}`
+              : `Explore ${listing.title.toLowerCase()} happening in the city`}
           </h1>
 
           <p>
-            Top-rated concerts, masterclasses, and weekend
-            pop-ups selling fast across your city.
+            Discover upcoming {listing.title.toLowerCase()} and experiences
+            happening across your city.
           </p>
         </div>
       </div>
@@ -583,14 +658,14 @@ function Event() {
         <div className="eventpage-filter-toolbar">
           <div className="eventpage-title-group">
             <h2 className="eventpage-main-heading">
-              All Events
+              All {listing.title}
             </h2>
 
             <span className="eventpage-count-badge">
               {processedEvents.length}{" "}
               {processedEvents.length === 1
-                ? "Event"
-                : "Events"}
+                ? listing.singular
+                : listing.title}
             </span>
           </div>
 
@@ -843,7 +918,7 @@ function Event() {
 
           {!processedEvents.length && (
             <p className="eventpage-empty">
-              No matching upcoming events found. Try adjusting
+              No matching upcoming {listing.title.toLowerCase()} found. Try adjusting
               or resetting your filters.
             </p>
           )}
@@ -851,6 +926,14 @@ function Event() {
       </section>
     </>
   );
+}
+
+export function Activities() {
+  return <Event listingType="activities" />;
+}
+
+export function Concerts() {
+  return <Event listingType="concerts" />;
 }
 
 export default Event;

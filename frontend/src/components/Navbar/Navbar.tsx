@@ -52,12 +52,9 @@ function Navbar() {
 
   // Active pill indicators
   const isForYouActive = location.pathname === "/";
-  const currentCategory = searchParams.get("category");
-  const isEventsBaseActive = location.pathname === "/events" && !currentCategory;
-  const isActivitiesActive =
-    location.pathname === "/events" && currentCategory?.toLowerCase() === "activities";
-  const isConcertsActive =
-    location.pathname === "/events" && currentCategory?.toLowerCase() === "concerts";
+  const isEventsBaseActive = location.pathname === "/events";
+  const isActivitiesActive = location.pathname === "/activities";
+  const isConcertsActive = location.pathname === "/concerts";
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -149,7 +146,7 @@ function Navbar() {
     setSelectedCity(nextCity);
     setIsCityMenuOpen(false);
 
-    if (location.pathname === "/events") {
+    if (["/events", "/activities", "/concerts"].includes(location.pathname)) {
       const params = new URLSearchParams(searchParams);
 
       if (isAll) {
@@ -160,7 +157,7 @@ function Navbar() {
 
       navigate(
         {
-          pathname: "/events",
+          pathname: location.pathname,
           search: params.toString() ? `?${params.toString()}` : "",
         },
         { replace: true }
@@ -271,14 +268,14 @@ function Navbar() {
           </Link>
 
           <Link
-            to="/events?category=Activities"
+            to="/activities"
             className={`nav-item ${isActivitiesActive ? "active" : ""}`}
           >
             Activities
           </Link>
 
           <Link
-            to="/events?category=Concerts"
+            to="/concerts"
             className={`nav-item ${isConcertsActive ? "active" : ""}`}
           >
             Concerts
@@ -317,7 +314,7 @@ function Navbar() {
             </Link>
 
             <Link
-              to="/events?category=Activities"
+              to="/activities"
               className={`mobile-nav-item ${isActivitiesActive ? "active" : ""}`}
               onClick={closeMobileMenu}
             >
@@ -325,7 +322,7 @@ function Navbar() {
             </Link>
 
             <Link
-              to="/events?category=Concerts"
+              to="/concerts"
               className={`mobile-nav-item ${isConcertsActive ? "active" : ""}`}
               onClick={closeMobileMenu}
             >
