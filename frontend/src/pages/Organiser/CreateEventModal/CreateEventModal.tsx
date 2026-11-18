@@ -1,0 +1,1190 @@
+import {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
+import { ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
+import {
+  createOrganiserEvent,
+  fetchOrganiserCategories,
+  fetchOrganiserCities,
+  getOrganiserErrorMessage,
+  patchOrganiserEvent,
+  type OrganiserEvent,
+  type OrganiserLookupOption,
+} from "../../../services/organiserService";
+import { createCustomEventTicket } from "../../../services/eventTicketService";
+import {
+  type OrganiserEventDraft,
+  type OrganiserEventDraftForm,
+} from "../../../services/organiserEventDrafts";
+import "./CreateEventModal.css";
+
+interface CreateEventModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onEventSaved: (savedEvent: OrganiserEvent) => void;
+  eventToEdit?: OrganiserEvent | null;
+  draftToEdit?: OrganiserEventDraft | null;
+  organiserId: string;
+  onDraftSaved: (draft: OrganiserEventDraft) => Promise<void>;
+  onDraftSubmitted: (draftId: string) => Promise<void>;
+}
+
+export interface TicketDraft {
+  id?: number;
+  name: string;
+  description: string;
+  price: string;
+}
+
+type FormState = OrganiserEventDraftForm;
+
+const initialFormState: FormState = {
+  name: "",
+  description: "",
+  instructions: "",
+  location: "",
+  city_id: "",
+  category_id: "",
+  event_date: "",
+  time: "",
+  price: "",
+  capacity: "",
+  age_group: "All Ages",
+  duration: "",
+};
+
+const defaultInitialTickets: TicketDraft[] = [
+  { name: "General Admission", description: "Standard entry pass", price: "" },
+];
+
+const AVAILABLE_LANGUAGES = [
+  "English",
+  "Hindi",
+  "Kannada",
+  "Tamil",
+  "Telugu",
+  "Urdu",
+  "Konkani",
+  "Malayalam",
+  "Marathi",
+  "Bengali",
+  "Punjabi",
+  "Gujarati",
+];
+
+const AGE_GROUPS = ["All Ages", "3+", "7+", "12+", "16+", "18+", "21+"];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
+
+const HOUR_OPTIONS = Array.from({ length: 13 }, (_, i) => i);
+const MINUTE_OPTIONS = [0, 15, 30, 45];
+
+const parseDurationString = (durStr?: string): { hours: number; minutes: number } => {
+  if (!durStr) return { hours: 2, minutes: 0 };
+
+  const lower = durStr.toLowerCase();
+  let hours = 0;
+  let minutes = 0;
+
+  const hourMatch = lower.match(/(\d+)\s*(?:hour|hr|h)/);
+  if (hourMatch) {
+    hours = parseInt(hourMatch[1], 10);
+  }
+
+  const minMatch = lower.match(/(\d+)\s*(?:minute|min|m)/);
+  if (minMatch) {
+    minutes = parseInt(minMatch[1], 10);
+  }
+
+  if (!hourMatch && !minMatch) {
+    const rawNum = parseFloat(durStr);
+    if (!isNaN(rawNum)) {
+      hours = Math.floor(rawNum);
+      minutes = Math.round((rawNum - hours) * 60);
+    }
+  }
+
+  return { hours, minutes };
+};
+
+const formatDurationString = (hours: number, minutes: number): string => {
+  const parts: string[] = [];
+  if (hours > 0) {
+    parts.push(`${hours} ${hours === 1 ? "Hour" : "Hours"}`);
+  }
+  if (minutes > 0) {
+    parts.push(`${minutes} Mins`);
+  }
+  return parts.length > 0 ? parts.join(" ") : "30 Mins";
+};
+
+const getTodayMidnight = (): Date => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const extractCleanDate = (dateVal?: string): string => {
+  if (!dateVal) return "";
+  if (dateVal.includes("T")) return dateVal.split("T")[0];
+  if (dateVal.includes(" ")) return dateVal.split(" ")[0];
+  return dateVal;
+};
+
+const parseDateStringToDate = (dateStr?: string): Date | null => {
+  if (!dateStr) return null;
+  const clean = extractCleanDate(dateStr);
+  const [yearStr, monthStr, dayStr] = clean.split("-");
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+  return new Date(year, month - 1, day);
+};
+
+const formatDateToYMD = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+export const CreateEventModal = ({
+  isOpen,
+  onClose,
+  onEventSaved,
+  eventToEdit,
+  draftToEdit,
+  organiserId,
+  onDraftSaved,
+  onDraftSubmitted,
+}: CreateEventModalProps) => {
+  const [formData, setFormData] = useState<FormState>(initialFormState);
+  const [durationHours, setDurationHours] = useState<number>(2);
+  const [durationMinutes, setDurationMinutes] = useState<number>(0);
+
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([
+    "English",
+  ]);
+  const [image, setImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  const [tickets, setTickets] = useState<TicketDraft[]>(defaultInitialTickets);
+  const [cities, setCities] = useState<OrganiserLookupOption[]>([]);
+  const [categories, setCategories] = useState<OrganiserLookupOption[]>([]);
+
+  const [loadingOptions, setLoadingOptions] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isEditMode = Boolean(eventToEdit);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (eventToEdit) {
+      const rawDuration =
+        (eventToEdit as any).duration_hours !== undefined &&
+        (eventToEdit as any).duration_hours !== null
+          ? `${(eventToEdit as any).duration_hours} Hours`
+          : (eventToEdit as any).duration || "2 Hours";
+
+      const parsedDur = parseDurationString(rawDuration);
+      setDurationHours(parsedDur.hours);
+      setDurationMinutes(parsedDur.minutes);
+
+      setFormData({
+        name: eventToEdit.name || "",
+        description: eventToEdit.description || "",
+        instructions:
+          (eventToEdit as any).additional_instructions ||
+          (eventToEdit as any).instructions ||
+          "",
+        location: eventToEdit.location || "",
+        city_id: String((eventToEdit as any).city_id || ""),
+        category_id: String((eventToEdit as any).category_id || ""),
+        event_date: extractCleanDate(eventToEdit.event_date),
+        time: eventToEdit.time ? eventToEdit.time.slice(0, 5) : "",
+        price:
+          eventToEdit.price !== undefined && eventToEdit.price !== null
+            ? Number(eventToEdit.price)
+            : "",
+        capacity:
+          eventToEdit.capacity !== undefined && eventToEdit.capacity !== null
+            ? String(eventToEdit.capacity)
+            : "",
+        age_group: (eventToEdit as any).age_group || "All Ages",
+        duration: rawDuration,
+      });
+
+      const langs = (eventToEdit as any).languages;
+      if (Array.isArray(langs)) {
+        setSelectedLanguages(langs);
+      } else if (typeof langs === "string") {
+        try {
+          const parsed = JSON.parse(langs);
+          setSelectedLanguages(Array.isArray(parsed) ? parsed : [langs]);
+        } catch {
+          setSelectedLanguages(langs.split(",").map((l) => l.trim()));
+        }
+      }
+
+      const existingImg =
+        (eventToEdit as any).image_url || (eventToEdit as any).image;
+      if (existingImg) setImagePreview(existingImg);
+    } else if (draftToEdit) {
+      const parsedDur = parseDurationString(draftToEdit.formData.duration);
+      setDurationHours(parsedDur.hours);
+      setDurationMinutes(parsedDur.minutes);
+
+      setFormData({
+        ...draftToEdit.formData,
+        event_date: extractCleanDate(draftToEdit.formData.event_date),
+        age_group: draftToEdit.formData.age_group || "All Ages",
+      });
+      setSelectedLanguages(draftToEdit.selectedLanguages);
+      setTickets(draftToEdit.tickets);
+      setImage(draftToEdit.image);
+      setImagePreview(
+        draftToEdit.image ? URL.createObjectURL(draftToEdit.image) : "",
+      );
+    } else {
+      setFormData(initialFormState);
+      setDurationHours(2);
+      setDurationMinutes(0);
+      setSelectedLanguages(["English"]);
+      setImage(null);
+      setImagePreview("");
+      setTickets([{ name: "", description: "", price: "" }]);
+    }
+    setIsLightboxOpen(false);
+  }, [isOpen, eventToEdit, draftToEdit]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let active = true;
+    setError(null);
+    setLoadingOptions(true);
+
+    Promise.all([fetchOrganiserCities(), fetchOrganiserCategories()])
+      .then(([cityOptions, categoryOptions]) => {
+        if (!active) return;
+        setCities(cityOptions.filter((option) => option.is_active !== false));
+        setCategories(
+          categoryOptions.filter((option) => option.is_active !== false),
+        );
+      })
+      .catch((lookupError: unknown) => {
+        if (active) {
+          setError(
+            getOrganiserErrorMessage(lookupError, "Unable to load form data."),
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setLoadingOptions(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview && imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
+  if (!isOpen) return null;
+
+  const requestClose = () => {
+    if (!submitting) {
+      setFormData(initialFormState);
+      setDurationHours(2);
+      setDurationMinutes(0);
+      setSelectedLanguages(["English"]);
+      setImage(null);
+      setImagePreview("");
+      setTickets(defaultInitialTickets);
+      setError(null);
+      setIsLightboxOpen(false);
+      onClose();
+    }
+  };
+
+  const handleChange = (
+    event: ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const { name, value, type } = event.target;
+    setError(null);
+    setFormData((current) => ({
+      ...current,
+      [name]: type === "number" ? (value === "" ? "" : Number(value)) : value,
+    }));
+  };
+
+  const handleDurationHoursChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const h = parseInt(e.target.value, 10);
+    setDurationHours(h);
+    setError(null);
+    setFormData((current) => ({
+      ...current,
+      duration: formatDurationString(h, durationMinutes),
+    }));
+  };
+
+  const handleDurationMinutesChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const m = parseInt(e.target.value, 10);
+    setDurationMinutes(m);
+    setError(null);
+    setFormData((current) => ({
+      ...current,
+      duration: formatDurationString(durationHours, m),
+    }));
+  };
+
+  const handleCapacityChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const cleanNumeric = event.target.value.replace(/\D/g, "");
+    setError(null);
+    setFormData((current) => ({
+      ...current,
+      capacity: cleanNumeric,
+    }));
+  };
+
+  const handleDateChange = (date: Date | null) => {
+    setError(null);
+
+    if (!date) {
+      setFormData((current) => ({ ...current, event_date: "" }));
+      return;
+    }
+
+    const todayMidnight = getTodayMidnight();
+    const chosenMidnight = new Date(date);
+    chosenMidnight.setHours(0, 0, 0, 0);
+
+    if (chosenMidnight.getTime() < todayMidnight.getTime()) {
+      setFormData((current) => ({ ...current, event_date: "" }));
+      setError("Past dates are not allowed. Please select today or a future date.");
+      return;
+    }
+
+    setFormData((current) => ({
+      ...current,
+      event_date: formatDateToYMD(date),
+    }));
+  };
+
+  const toggleLanguage = (lang: string) => {
+    setSelectedLanguages((prev) =>
+      prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang],
+    );
+  };
+
+  const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setError(null);
+    if (!allowedImageTypes.includes(file.type)) {
+      setError("Please upload a JPG, PNG, or WebP image.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      setError("Event image must be smaller than 5 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setImage(file);
+    setImagePreview(URL.createObjectURL(file));
+    event.target.value = "";
+  };
+
+  const handleAddTicket = () => {
+    setTickets((prev) => [
+      ...prev,
+      { name: "", description: "", price: "" },
+    ]);
+  };
+
+  const handleRemoveTicket = (index: number) => {
+    if (tickets.length === 1) {
+      return setError("At least one ticket category is required.");
+    }
+    setTickets((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleTicketChange = (
+    index: number,
+    field: keyof TicketDraft,
+    value: string,
+  ) => {
+    setError(null);
+    setTickets((prev) =>
+      prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)),
+    );
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+
+    const parsedCapacity = Number(formData.capacity);
+    if (
+      !formData.capacity.trim() ||
+      isNaN(parsedCapacity) ||
+      parsedCapacity < 1
+    ) {
+      return setError("Capacity must be at least 1 attendee.");
+    }
+
+    if (durationHours === 0 && durationMinutes === 0) {
+      return setError("Please select a valid duration for your event.");
+    }
+
+    if (selectedLanguages.length === 0) {
+      return setError("Please select at least one language for the event.");
+    }
+
+    const cleanDate = extractCleanDate(formData.event_date);
+    const cleanTime = formData.time ? formData.time.slice(0, 5) : "";
+
+    if (!cleanDate || !cleanTime) {
+      return setError("Date and start time are required.");
+    }
+
+    const todayMidnight = getTodayMidnight();
+    const chosenDate = parseDateStringToDate(cleanDate);
+    if (!chosenDate || chosenDate.getTime() < todayMidnight.getTime()) {
+      return setError("Past dates are not allowed. Please select today or a future date.");
+    }
+
+    if (!isEditMode) {
+      if (tickets.length === 0) {
+        return setError("Please add at least one ticket category.");
+      }
+
+      for (let i = 0; i < tickets.length; i++) {
+        const t = tickets[i];
+        if (!t.name.trim()) {
+          return setError(`Ticket category #${i + 1} needs a name.`);
+        }
+        const parsedP = Number(t.price);
+        if (t.price.trim() === "" || isNaN(parsedP) || parsedP < 0) {
+          return setError(
+            `Ticket category "${t.name}" needs a valid price (₹).`,
+          );
+        }
+      }
+    }
+
+    const languagesPayload = JSON.stringify(selectedLanguages);
+    const finalDuration = formatDurationString(durationHours, durationMinutes);
+
+    if (!isEditMode) {
+      if (!formData.name.trim()) return setError("Event name is required.");
+      if (!formData.city_id || !formData.category_id)
+        return setError("Choose a city and category.");
+      if (!image) return setError("Please upload an event image.");
+
+      const validPrices = tickets
+        .map((t) => Number(t.price))
+        .filter((p) => !isNaN(p));
+      const minStartingPrice = validPrices.length ? Math.min(...validPrices) : 0;
+
+      try {
+        setSubmitting(true);
+
+        const createdEvent = await createOrganiserEvent({
+          name: formData.name.trim(),
+          description: formData.description.trim() || undefined,
+          instructions: formData.instructions.trim() || undefined,
+          additional_instructions: formData.instructions.trim() || undefined,
+          languages: languagesPayload,
+          age_group: formData.age_group,
+          duration: finalDuration,
+          duration_hours: finalDuration,
+          location: formData.location.trim() || undefined,
+          city_id: Number(formData.city_id),
+          category_id: Number(formData.category_id),
+          event_date: cleanDate,
+          time: cleanTime,
+          price: minStartingPrice,
+          capacity: parsedCapacity,
+          image,
+        } as any);
+
+        const newEventId = Number(
+          createdEvent.id || (createdEvent as any).event?.id,
+        );
+
+        if (newEventId) {
+          await Promise.all(
+            tickets.map((t) =>
+              createCustomEventTicket(newEventId, {
+                name: t.name.trim(),
+                description: t.description.trim(),
+                price: Number(t.price),
+              }),
+            ),
+          );
+        }
+
+        onEventSaved(createdEvent);
+        if (draftToEdit) await onDraftSubmitted(draftToEdit.id);
+        requestClose();
+      } catch (submitError: unknown) {
+        setError(
+          getOrganiserErrorMessage(
+            submitError,
+            "Could not submit event. Please try again.",
+          ),
+        );
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // Edit flow
+    if (!eventToEdit) return;
+    const patchPayload: Record<string, any> = {};
+
+    if (formData.name.trim() !== (eventToEdit.name || "").trim()) {
+      patchPayload.name = formData.name.trim();
+    }
+    if (formData.description.trim() !== (eventToEdit.description || "").trim()) {
+      patchPayload.description = formData.description.trim();
+    }
+    if (formData.location.trim() !== (eventToEdit.location || "").trim()) {
+      patchPayload.location = formData.location.trim();
+    }
+    if (
+      formData.city_id &&
+      Number(formData.city_id) !== Number((eventToEdit as any).city_id)
+    ) {
+      patchPayload.city_id = Number(formData.city_id);
+    }
+    if (
+      formData.category_id &&
+      Number(formData.category_id) !== Number((eventToEdit as any).category_id)
+    ) {
+      patchPayload.category_id = Number(formData.category_id);
+    }
+    if (cleanDate && cleanDate !== extractCleanDate(eventToEdit.event_date)) {
+      patchPayload.event_date = cleanDate;
+    }
+    if (cleanTime && cleanTime !== (eventToEdit.time || "").slice(0, 5)) {
+      patchPayload.time = cleanTime;
+    }
+    if (parsedCapacity !== Number(eventToEdit.capacity)) {
+      patchPayload.capacity = parsedCapacity;
+    }
+    if (image instanceof File) {
+      patchPayload.image = image;
+    }
+
+    const originalInstructions = (
+      (eventToEdit as any).additional_instructions ||
+      (eventToEdit as any).instructions ||
+      ""
+    ).trim();
+    if (formData.instructions.trim() !== originalInstructions) {
+      patchPayload.additional_instructions = formData.instructions.trim();
+      patchPayload.instructions = formData.instructions.trim();
+    }
+
+    const originalAge = ((eventToEdit as any).age_group || "All Ages").trim();
+    if (formData.age_group !== originalAge) {
+      patchPayload.age_group = formData.age_group;
+    }
+
+    patchPayload.duration_hours = finalDuration;
+    patchPayload.duration = finalDuration;
+
+    const currentLanguagesStr =
+      typeof (eventToEdit as any).languages === "string"
+        ? (eventToEdit as any).languages
+        : JSON.stringify((eventToEdit as any).languages || []);
+    if (languagesPayload !== currentLanguagesStr) {
+      patchPayload.languages = languagesPayload;
+    }
+
+    patchPayload.status = "PENDING";
+    patchPayload.is_live = false;
+    patchPayload.rejection_reason = null;
+
+    try {
+      setSubmitting(true);
+      const updatedEvent = await patchOrganiserEvent(
+        eventToEdit.id,
+        patchPayload,
+      );
+      onEventSaved(updatedEvent);
+      requestClose();
+    } catch (patchError: unknown) {
+      setError(
+        getOrganiserErrorMessage(
+          patchError,
+          "Could not submit event for review. Please try again.",
+        ),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (isEditMode || submitting) return;
+
+    setError(null);
+    setSubmitting(true);
+
+    const now = new Date().toISOString();
+    const finalDuration = formatDurationString(durationHours, durationMinutes);
+
+    const draft: OrganiserEventDraft = {
+      id: draftToEdit?.id ?? crypto.randomUUID(),
+      organiserId: draftToEdit?.organiserId ?? organiserId,
+      createdAt: draftToEdit?.createdAt ?? now,
+      updatedAt: now,
+      formData: {
+        ...formData,
+        duration: finalDuration,
+        event_date: extractCleanDate(formData.event_date),
+      },
+      selectedLanguages: [...selectedLanguages],
+      tickets: tickets.map((ticket) => ({ ...ticket })),
+      image,
+    };
+
+    try {
+      await onDraftSaved(draft);
+      requestClose();
+    } catch (saveError: unknown) {
+      setError(
+        getOrganiserErrorMessage(
+          saveError,
+          "Could not save your draft. Please try again.",
+        ),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <div
+        className="org-modal-backdrop"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) requestClose();
+        }}
+      >
+        <section
+          className="org-create-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="org-create-title"
+        >
+          <header className="org-modal-header">
+            <div>
+              <span className="org-modal-eyebrow">
+                {isEditMode
+                  ? "EDIT & RESUBMIT"
+                  : draftToEdit
+                    ? "EDIT SAVED DRAFT"
+                    : "NEW LISTING"}
+              </span>
+              <h3 id="org-create-title">
+                {isEditMode
+                  ? "Edit event details"
+                  : draftToEdit
+                    ? "Edit saved draft"
+                    : "Create an event"}
+              </h3>
+            </div>
+
+            <button
+              type="button"
+              className="org-modal-close"
+              onClick={requestClose}
+              disabled={submitting}
+              aria-label="Close"
+            >
+              <X size={19} />
+            </button>
+          </header>
+
+          <form onSubmit={handleSubmit} className="org-modal-form" noValidate>
+            {error && (
+              <div className="org-form-error" role="alert">
+                {error}
+              </div>
+            )}
+
+            <div className="org-form-field org-form-wide">
+              <span>Event image</span>
+              {!imagePreview ? (
+                <label
+                  htmlFor="event-image"
+                  className="org-event-image-upload"
+                >
+                  <ImagePlus size={28} />
+                  <strong>Upload event image</strong>
+                  <small>JPG, PNG or WebP · Max 5 MB</small>
+                  <input
+                    id="event-image"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageChange}
+                    hidden
+                  />
+                </label>
+              ) : (
+                <div className="org-event-image-preview">
+                  <button
+                    type="button"
+                    className="org-image-preview-button"
+                    onClick={() => setIsLightboxOpen(true)}
+                    aria-label="View full event image"
+                    title="View full image"
+                  >
+                    <img
+                      src={imagePreview}
+                      alt="Event preview"
+                      className="org-clickable-preview"
+                    />
+                  </button>
+
+                  <div className="org-event-image-preview-actions">
+                    <label
+                      htmlFor="event-image-change"
+                      className="org-image-change-btn"
+                    >
+                      Change image
+                    </label>
+                    <button
+                      type="button"
+                      className="org-image-remove-btn"
+                      onClick={() => {
+                        setImage(null);
+                        setImagePreview("");
+                      }}
+                    >
+                      <X size={14} /> Remove
+                    </button>
+                  </div>
+
+                  <input
+                    id="event-image-change"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageChange}
+                    hidden
+                  />
+                </div>
+              )}
+            </div>
+
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-name"
+            >
+              <span>Event name</span>
+              <input
+                id="event-name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                maxLength={120}
+                placeholder="Give your event a name"
+              />
+            </label>
+
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-description"
+            >
+              <span>Description</span>
+              <textarea
+                id="event-description"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows={3}
+                placeholder="What should guests know about this event?"
+              />
+            </label>
+
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-instructions"
+            >
+              <span>Instructions, Amenities & Guidelines</span>
+              <textarea
+                id="event-instructions"
+                name="instructions"
+                value={formData.instructions}
+                onChange={handleChange}
+                rows={3}
+                placeholder="e.g. Free parking available, AC hall, Bring physical ID proof, Wheelchair accessible, Outside food strictly prohibited."
+              />
+            </label>
+
+            <div className="org-form-field org-form-wide">
+              <span>Languages</span>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "0.5rem 1rem",
+                  marginTop: "0.4rem",
+                }}
+              >
+                {AVAILABLE_LANGUAGES.map((lang) => {
+                  const isChecked = selectedLanguages.includes(lang);
+                  return (
+                    <label
+                      key={lang}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        fontSize: "0.875rem",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleLanguage(lang)}
+                      />
+                      {lang}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <label className="org-form-field" htmlFor="event-age">
+              <span>Age group</span>
+              <select
+                id="event-age"
+                name="age_group"
+                value={formData.age_group}
+                onChange={handleChange}
+              >
+                {AGE_GROUPS.map((age) => (
+                  <option key={age} value={age}>
+                    {age}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="org-form-field">
+              <span>Duration</span>
+              <div style={{ display: "flex", gap: "8px", width: "100%" }}>
+                <select
+                  aria-label="Duration Hours"
+                  value={durationHours}
+                  onChange={handleDurationHoursChange}
+                  style={{ flex: 1 }}
+                >
+                  {HOUR_OPTIONS.map((h) => (
+                    <option key={h} value={h}>
+                      {h} {h === 1 ? "Hour" : "Hours"}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  aria-label="Duration Minutes"
+                  value={durationMinutes}
+                  onChange={handleDurationMinutesChange}
+                  style={{ flex: 1 }}
+                >
+                  {MINUTE_OPTIONS.map((m) => (
+                    <option key={m} value={m}>
+                      {m} Mins
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <label className="org-form-field" htmlFor="event-city">
+              <span>City</span>
+              <select
+                id="event-city"
+                name="city_id"
+                value={formData.city_id}
+                onChange={handleChange}
+                disabled={loadingOptions}
+              >
+                <option value="">
+                  {loadingOptions ? "Loading..." : "Select a city"}
+                </option>
+                {cities.map((city) => (
+                  <option key={city.id} value={city.id}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="org-form-field" htmlFor="event-category">
+              <span>Category</span>
+              <select
+                id="event-category"
+                name="category_id"
+                value={formData.category_id}
+                onChange={handleChange}
+                disabled={loadingOptions}
+              >
+                <option value="">
+                  {loadingOptions ? "Loading..." : "Select a category"}
+                </option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-location"
+            >
+              <span>Venue or location</span>
+              <input
+                id="event-location"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                placeholder="Venue, address, or neighbourhood"
+              />
+            </label>
+
+            <div className="org-form-field">
+              <label htmlFor="event-date">Date</label>
+              <DatePicker
+                id="event-date"
+                selected={parseDateStringToDate(formData.event_date)}
+                minDate={getTodayMidnight()}
+                onChange={handleDateChange}
+                dateFormat="dd-MM-yyyy"
+                placeholderText="DD-MM-YYYY"
+                showMonthDropdown
+                showYearDropdown
+                dropdownMode="select"
+                autoComplete="off"
+              />
+            </div>
+
+            <label className="org-form-field" htmlFor="event-time">
+              <span>Start time</span>
+              <input
+                id="event-time"
+                name="time"
+                type="time"
+                value={formData.time}
+                onChange={handleChange}
+              />
+            </label>
+
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-capacity"
+            >
+              <span>Total attendee capacity</span>
+              <input
+                id="event-capacity"
+                name="capacity"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="Enter attendee limit across all categories (e.g. 100)"
+                value={formData.capacity}
+                onChange={handleCapacityChange}
+              />
+            </label>
+
+            {!isEditMode && (
+              <div className="org-form-field org-form-wide org-ticket-builder">
+                <div className="org-ticket-builder-header">
+                  <div>
+                    <span className="org-ticket-builder-title">
+                      Ticket categories
+                    </span>
+                    <small>
+                      Create ticket tiers for this event (e.g. Early Bird, VIP,
+                      General)
+                    </small>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="org-add-ticket-btn"
+                    onClick={handleAddTicket}
+                  >
+                    <Plus size={15} /> Add category
+                  </button>
+                </div>
+
+                <div className="org-ticket-builder-list">
+                  {tickets.map((ticket, index) => (
+                    <div key={index} className="org-ticket-builder-item">
+                      <div className="org-ticket-row-top">
+                        <input
+                          type="text"
+                          placeholder="Category name (e.g. VIP Pass)"
+                          value={ticket.name}
+                          onChange={(e) =>
+                            handleTicketChange(index, "name", e.target.value)
+                          }
+                          className="org-ticket-name-input"
+                        />
+
+                        <div className="org-ticket-price-input-wrapper">
+                          <span className="currency-prefix">₹</span>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="Price"
+                            value={ticket.price}
+                            onChange={(e) => {
+                              const clean = e.target.value.replace(
+                                /[^0-9.]/g,
+                                "",
+                              );
+                              handleTicketChange(index, "price", clean);
+                            }}
+                            className="org-ticket-price-input"
+                          />
+                        </div>
+
+                        {tickets.length > 1 && (
+                          <button
+                            type="button"
+                            className="org-ticket-delete-btn"
+                            onClick={() => handleRemoveTicket(index)}
+                            aria-label="Remove ticket category"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+
+                      <input
+                        type="text"
+                        placeholder="Short description / perks (e.g. Front row seat + welcome drink)"
+                        value={ticket.description}
+                        onChange={(e) =>
+                          handleTicketChange(
+                            index,
+                            "description",
+                            e.target.value,
+                          )
+                        }
+                        className="org-ticket-desc-input"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="org-modal-footer org-form-wide">
+              <p>
+                {isEditMode
+                  ? "Editing this event will reset its status to pending and require admin approval before it can go live."
+                  : "New events and their ticket tiers are submitted as pending for admin approval."}
+              </p>
+
+              <div>
+                <button
+                  type="button"
+                  className="org-button-secondary"
+                  onClick={requestClose}
+                  disabled={submitting}
+                >
+                  Cancel
+                </button>
+
+                {!isEditMode && (
+                  <button
+                    type="button"
+                    className="org-button-secondary org-save-draft-button"
+                    onClick={() => void handleSaveDraft()}
+                    disabled={submitting}
+                  >
+                    {submitting ? "Saving..." : "Save as draft"}
+                  </button>
+                )}
+
+                <button
+                  type="submit"
+                  className="org-button-primary"
+                  disabled={submitting || loadingOptions}
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 size={16} className="org-spin" />
+                      {isEditMode
+                        ? "Submitting for review..."
+                        : "Submitting event & tickets..."}
+                    </>
+                  ) : (
+                    "Submit for review"
+                  )}
+                </button>
+              </div>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      {isLightboxOpen && (
+        <div
+          className="org-image-lightbox-backdrop"
+          onClick={() => setIsLightboxOpen(false)}
+        >
+          <div
+            className="org-image-lightbox-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="org-image-lightbox-close"
+              onClick={() => setIsLightboxOpen(false)}
+              aria-label="Close image preview"
+            >
+              <X size={20} />
+            </button>
+            <img src={imagePreview} alt="Full event preview" />
+          </div>
+        </div>
+      )}
+    </>
+  );
+};

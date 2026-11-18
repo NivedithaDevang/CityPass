@@ -1,329 +1,939 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import "./Events.css";
-import { type Category, type City, type Events } from "../../types/auth";
-import Navbar from "../../components/Navbar/Navbar";
-import { Footer } from "../../components/Footer/Footer";
+import { type City, type Events } from "../../types/auth";
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
-import { FaMapPin, FaMicrophone, FaLaughSquint } from "react-icons/fa";
-import { MdSportsFootball, MdTheaterComedy } from "react-icons/md";
-import { IoFastFoodSharp } from "react-icons/io5";
-import { FaPaintbrush, FaMountain } from "react-icons/fa6";
-import type { IconType } from "react-icons";
-import { createEventSlug } from "../../config/slug";
+import { ChevronDown } from "lucide-react";
 
-function EventSection() {
+import {
+  FaMapPin,
+  FaCompass,
+} from "react-icons/fa";
+
+type ListingType = "events" | "activities" | "concerts";
+
+const listingConfig: Record<
+  ListingType,
+  { endpoint: string; responseKey: ListingType; title: string; singular: string }
+> = {
+  events: {
+    endpoint: "events",
+    responseKey: "events",
+    title: "Events",
+    singular: "Event",
+  },
+  activities: {
+    endpoint: "activities",
+    responseKey: "activities",
+    title: "Activities",
+    singular: "Activity",
+  },
+  concerts: {
+    endpoint: "concerts",
+    responseKey: "concerts",
+    title: "Concerts",
+    singular: "Concert",
+  },
+};
+
+// Parse the event date and time consistently.
+const parseEventTimestamp = (event: Events): number | null => {
+  if (!event.event_date) return null;
+
+  const dateStr = String(event.event_date);
+  const cleanDatePart = dateStr.includes("T")
+    ? dateStr.split("T")[0]
+    : dateStr.split(" ")[0];
+
+  const [year, month, day] = cleanDatePart.split("-").map(Number);
+
+  if (!year || !month || !day) {
+    const fallback = new Date(event.event_date).getTime();
+    return Number.isNaN(fallback) ? null : fallback;
+  }
+
+  let hours = 23;
+  let minutes = 59;
+  let seconds = 59;
+
+  const timeField = (event as any).time;
+
+  if (typeof timeField === "string" && timeField.includes(":")) {
+    const parts = timeField.split(":").map(Number);
+    hours = parts[0] ?? 0;
+    minutes = parts[1] ?? 0;
+    seconds = parts[2] ?? 0;
+  }
+
+  const timestamp = new Date(
+    year,
+    month - 1,
+    day,
+    hours,
+    minutes,
+    seconds
+  ).getTime();
+
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
+
+const getEventDateKey = (event: Events): string | null => {
+  if (!event.event_date) return null;
+
+  const dateString = String(event.event_date);
+  const isoDate = dateString.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoDate) return isoDate[1];
+
+  const date = new Date(event.event_date);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+};
+
+const getTodayDateKey = (): string => {
+  const today = new Date();
+  return [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, "0"),
+    String(today.getDate()).padStart(2, "0"),
+  ].join("-");
+};
+
+function Event({ listingType = "events" }: { listingType?: ListingType }) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const listing = listingConfig[listingType];
 
-  const categoryIcons: Record<string, IconType> = {
-    Music: FaMicrophone,
-    Sports: MdSportsFootball,
-    Comedy: MdTheaterComedy,
-    Food: IoFastFoodSharp,
-    Art: FaPaintbrush,
-    Adventure: FaMountain,
-    Entertainment: FaLaughSquint,
-  };
+  const { selectedCity, setSelectedCity } = useCity();
 
-  const getCategoryIcon = (categoryName?: string | null) => {
-    const normalizedCategory = categoryName?.toLowerCase() || "";
-
-    if (normalizedCategory.includes("music")) return categoryIcons.Music;
-    if (normalizedCategory.includes("sport")) return categoryIcons.Sports;
-    if (normalizedCategory.includes("comedy")) return categoryIcons.Comedy;
-    if (normalizedCategory.includes("food")) return categoryIcons.Food;
-    if (normalizedCategory.includes("art")) return categoryIcons.Art;
-    if (normalizedCategory.includes("adventure")) return categoryIcons.Adventure;
-    if (normalizedCategory.includes("entertainment")) return categoryIcons.Entertainment;
-
-    return null;
-  };
-
+  const sortOptions = [
+    { value: "date_asc", label: "Date: Upcoming first" },
+    { value: "date_desc", label: "Date: Later dates first" },
+    { value: "price_asc", label: "Price: Low to High" },
+    { value: "price_desc", label: "Price: High to Low" },
+  ];
   const [search, setSearch] = useState("");
   const [events, setEvents] = useState<Events[]>([]);
-  const { selectedCity } = useCity();
-
-  // Filter & Sort States
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
-  const [selectedLocation, setSelectedLocation] = useState<string>("ALL");
-  const [sortBy, setSortBy] = useState<string>("date_asc");
-
-  // API-driven dropdown options
-  const [categories, setCategories] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState("date_asc");
   const [locations, setLocations] = useState<string[]>([]);
+  const [cityIdMap, setCityIdMap] = useState<Record<string | number, string>>({});
+  const [excludedCategoryNames, setExcludedCategoryNames] = useState<Set<string>>(
+    new Set()
+  );
+
+  const [openDropdown, setOpenDropdown] = useState<
+    "category" | "location" | "sort" | null
+  >(null);
+
+  const controlsRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when clicking outside.
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        controlsRef.current &&
+        !controlsRef.current.contains(event.target as Node)
+      ) {
+        setOpenDropdown(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    const cityParam = searchParams.get("city");
+
+    if (cityParam) {
+      if (cityParam !== selectedCity) {
+        setSelectedCity(cityParam);
+      }
+      return;
+    }
+
+    if (selectedCity !== ALL_LOCATIONS) {
+      setSelectedCity(ALL_LOCATIONS);
+    }
+  }, [
+    searchParams,
+    selectedCity,
+    setSelectedCity,
+    ALL_LOCATIONS,
+  ]);
+
+  const requestedCategory = searchParams.get("category") || "ALL";
+  const selectedCategory =
+    listingType === "events" &&
+    ["activities", "concerts"].includes(requestedCategory.toLowerCase())
+      ? "ALL"
+      : requestedCategory;
+  const activeCityFilter =
+    searchParams.get("city") || selectedCity || ALL_LOCATIONS;
 
   const hasActiveFilters =
     search.trim() !== "" ||
     selectedCategory !== "ALL" ||
-    selectedLocation !== "ALL" ||
+    (
+      activeCityFilter !== "ALL" &&
+      activeCityFilter !== ALL_LOCATIONS
+    ) ||
     sortBy !== "date_asc";
+
+  const handleLocationChange = (location: string) => {
+    const isAll =
+      location === ALL_LOCATIONS || location === "ALL";
+
+    const nextCity = isAll ? ALL_LOCATIONS : location;
+
+    setSelectedCity(nextCity);
+    setOpenDropdown(null);
+
+    const params = new URLSearchParams(searchParams);
+
+    if (isAll) {
+      params.delete("city");
+    } else {
+      params.set("city", nextCity);
+    }
+
+    setSearchParams(params);
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setOpenDropdown(null);
+
+    const params = new URLSearchParams(searchParams);
+
+    if (category === "ALL") {
+      params.delete("category");
+    } else {
+      params.set("category", category);
+    }
+
+    setSearchParams(params);
+  };
+
+  const handleSortChange = (sort: string) => {
+    setSortBy(sort);
+    setOpenDropdown(null);
+  };
 
   const handleResetFilters = () => {
     setSearch("");
-    setSelectedCategory("ALL");
-    setSelectedLocation("ALL");
     setSortBy("date_asc");
+    setSelectedCity(ALL_LOCATIONS);
+    setOpenDropdown(null);
+    setSearchParams({}, { replace: true });
   };
 
-  // Fetch events, categories, and locations from backend
+  // Fetch listings and available cities.
   useEffect(() => {
-  const fetchFilterData = async () => {
-    try {
-      const [eventsRes, catRes, locRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/v1/events`),
-        axios.get(`${API_BASE_URL}/v1/categories`),
-        axios.get(`${API_BASE_URL}/v1/cities`),
-      ]);
+    let cancelled = false;
 
-      // -----------------------------
-      // EVENTS
-      // -----------------------------
-      setEvents(eventsRes.data?.events || []);
+    const fetchFilterData = async () => {
+      try {
+        const [
+          eventsResponse,
+          locationsResponse,
+          activitiesResponse,
+          concertsResponse,
+        ] =
+          await Promise.all([
+            axios.get(`${API_BASE_URL}/v1/events/${listing.endpoint}`),
+            axios.get(`${API_BASE_URL}/v1/cities`),
+            listingType === "events"
+              ? axios.get(`${API_BASE_URL}/v1/events/activities`)
+              : Promise.resolve(null),
+            listingType === "events"
+              ? axios.get(`${API_BASE_URL}/v1/events/concerts`)
+              : Promise.resolve(null),
+          ]);
 
-      // -----------------------------
-      // CATEGORIES
-      // -----------------------------
-      const categoryList = catRes.data?.categories || [];
+        if (cancelled) return;
 
-      const categoryNames = (categoryList as Category[])
-        .map((category) => category.name?.trim())
-        .filter((name): name is string => Boolean(name));
+        const rawEvents =
+          eventsResponse.data?.[listing.responseKey];
 
-      setCategories([...new Set(categoryNames)]);
+        setEvents(Array.isArray(rawEvents) ? rawEvents : []);
 
-      // -----------------------------
-      // CITIES
-      // -----------------------------
-      const cityList = locRes.data?.city || [];
+        if (listingType === "events") {
+          const activityCategories = activitiesResponse?.data?.activities;
+          const concertCategories = concertsResponse?.data?.concerts;
+          const categories = [
+            ...(Array.isArray(activityCategories) ? activityCategories : []),
+            ...(Array.isArray(concertCategories) ? concertCategories : []),
+          ]
+            .map((event: Events) => event.category_name?.trim().toLowerCase())
+            .filter((category): category is string => Boolean(category));
 
-      const cityNames = (cityList as City[])
-        .map((city) => city.name?.trim())
-        .filter((name): name is string => Boolean(name));
+          setExcludedCategoryNames(new Set(categories));
+        } else {
+          setExcludedCategoryNames(new Set());
+        }
 
-      setLocations([...new Set(cityNames)]);
+        const cityList: City[] =
+          locationsResponse.data?.city ||
+          locationsResponse.data?.cities ||
+          [];
 
-    } catch (error) {
-      console.error("Error fetching event and filter data:", error);
+        const idMap: Record<string | number, string> = {};
+        const names: string[] = [];
 
-      setEvents([]);
-      setCategories([]);
-      setLocations([]);
+        cityList.forEach((c: any) => {
+          const name = c?.name?.trim();
+          if (name) {
+            names.push(name);
+            if (c.id !== undefined && c.id !== null) {
+              idMap[c.id] = name;
+            }
+          }
+        });
+
+        setLocations([...new Set(names)]);
+        setCityIdMap(idMap);
+      } catch (error) {
+        if (cancelled) return;
+
+        console.error(
+          "Error fetching event and filter data:",
+          error
+        );
+
+        setEvents([]);
+        setLocations([]);
+        setExcludedCategoryNames(new Set());
+      }
+    };
+
+    fetchFilterData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [listing]);
+
+  const getResolvedCityName = (event: Events): string => {
+    if (event.city_name && typeof event.city_name === "string") {
+      return event.city_name.trim();
     }
+    if (event.city && typeof event.city === "string") {
+      return event.city.trim();
+    }
+    if (event.city_id && cityIdMap[event.city_id]) {
+      return cityIdMap[event.city_id];
+    }
+    return "";
   };
 
-  fetchFilterData();
-}, []);
-
-  // Combined Filtering and Sorting
+  // Filter and sort events.
   const processedEvents = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
+    const todayDateKey = getTodayDateKey();
 
-    const filtered = events.filter((event) => {
-      // 1. Global Navbar City
-      const matchesGlobalCity =
-        !selectedCity ||
-        selectedCity === ALL_LOCATIONS ||
-        event.location?.trim().toLowerCase() === selectedCity.trim().toLowerCase();
-
-      if (!matchesGlobalCity) return false;
-
-      // 2. Specific Location Filter
+    const filtered = events.filter((event: Events) => {
       if (
-        selectedLocation !== "ALL" &&
-        event.location?.trim().toLowerCase() !== selectedLocation.trim().toLowerCase()
+        listingType === "events" &&
+        event.category_name &&
+        excludedCategoryNames.has(event.category_name.trim().toLowerCase())
       ) {
         return false;
       }
 
-      // 3. Category Filter
+      const eventDateKey = getEventDateKey(event);
+
+      if (
+        eventDateKey === null ||
+        eventDateKey < todayDateKey
+      ) {
+        return false;
+      }
+
+      const eventLocation = String(
+        event.location || ""
+      ).trim().toLowerCase();
+
+      const eventCity = getResolvedCityName(event).toLowerCase();
+
+      // City filter.
+      if (
+        activeCityFilter !== "ALL" &&
+        activeCityFilter !== ALL_LOCATIONS
+      ) {
+        const targetCity =
+          activeCityFilter.trim().toLowerCase();
+
+        const matchesCity =
+          eventCity === targetCity ||
+          eventLocation.includes(targetCity);
+
+        if (!matchesCity) return false;
+      }
+
+      // Category filter.
       if (
         selectedCategory !== "ALL" &&
-        event.category_name?.trim().toLowerCase() !== selectedCategory.trim().toLowerCase()
+        String(event.category_name || "")
+          .trim()
+          .toLowerCase() !== selectedCategory.trim().toLowerCase()
       ) {
         return false;
       }
 
-      // 4. Text Search
+      // Search filter.
       if (!normalizedSearch) return true;
-      return [event.name, event.category_name, event.location]
-        .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(normalizedSearch));
+
+      return [
+        event.name,
+        event.category_name,
+        event.location,
+        eventCity,
+      ]
+        .filter(
+          (value): value is string =>
+            typeof value === "string" && value.length > 0
+        )
+        .some((value) =>
+          value.toLowerCase().includes(normalizedSearch)
+        );
     });
 
     return filtered.sort((a, b) => {
       const priceA = Number(a.price) || 0;
       const priceB = Number(b.price) || 0;
-      const timeA = a.event_date ? new Date(a.event_date).getTime() : Infinity;
-      const timeB = b.event_date ? new Date(b.event_date).getTime() : Infinity;
+
+      const timeA = parseEventTimestamp(a) ?? Infinity;
+      const timeB = parseEventTimestamp(b) ?? Infinity;
 
       switch (sortBy) {
         case "date_asc":
           return timeA - timeB;
+
         case "date_desc":
           return timeB - timeA;
+
         case "price_asc":
           return priceA - priceB;
+
         case "price_desc":
           return priceB - priceA;
+
         default:
           return 0;
       }
     });
-  }, [events, selectedCity, selectedLocation, selectedCategory, search, sortBy]);
+  }, [
+    events,
+    listingType,
+    excludedCategoryNames,
+    activeCityFilter,
+    selectedCategory,
+    search,
+    sortBy,
+    cityIdMap,
+  ]);
+
+  // Show categories that have upcoming listings.
+  const activeCategories = useMemo(() => {
+    const categories = new Set<string>();
+    const todayDateKey = getTodayDateKey();
+
+    events.forEach((event: Events) => {
+      const eventDateKey = getEventDateKey(event);
+      const categoryName = event.category_name?.trim();
+
+      if (
+        eventDateKey !== null &&
+        eventDateKey >= todayDateKey &&
+        categoryName &&
+        !(
+          listingType === "events" &&
+          excludedCategoryNames.has(categoryName.toLowerCase())
+        )
+      ) {
+        categories.add(categoryName);
+      }
+    });
+
+    return Array.from(categories);
+  }, [events, listingType, excludedCategoryNames]);
 
   const formatEventDate = (eventDate?: string) => {
-    if (!eventDate) return "Date to be announced";
+    if (!eventDate) return "Date TBA";
 
-    return new Intl.DateTimeFormat("en-US", {
-      dateStyle: "medium",
-    }).format(new Date(eventDate));
+    const date = new Date(eventDate);
+
+    if (Number.isNaN(date.getTime())) {
+      return "Date TBA";
+    }
+
+    return new Intl.DateTimeFormat("en-IN", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    }).format(date);
   };
 
   const handleCardClick = (event: Events) => {
-    navigate(`/events/${createEventSlug(event.name)}`);
+    if (!event.slug) {
+      console.warn(
+        "Event is missing a slug! Event ID:",
+        event.id
+      );
+
+      return;
+    }
+
+    navigate(`/events/${event.slug}`);
   };
 
-  return (
-    <>
-      <Navbar />
-      <div className="section-heading">
-        <h2>Explore events happening in the city</h2>
-        <p>Top-rated concerts, masterclasses, and weekend pop-ups selling fast</p>
-      </div>
+  const renderEventCard = (event: Events) => {
+    const eventBackgrounds = [
+      "/eventBG/image1.png",
+      "/eventBG/image2.png",
+      "/eventBG/image3.png",
+    ];
 
-      <section className="event-section">
-        {/* Search & Filter Toolbar */}
-        <div className="event-filter-toolbar">
-          <form className="event-search" onSubmit={(e) => e.preventDefault()}>
-            <input
-              id="event-search-input"
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by category, event name, or location"
-            />
-          </form>
+    const fallbackImage =
+      eventBackgrounds[
+        Number(event.id || 0) % eventBackgrounds.length
+      ];
 
-          <div className="event-controls">
-            {/* Category Filter from API */}
-            <select
-              className="event-filter-select"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-            >
-              <option value="ALL">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+    const posterImage =
+      event.poster_url ||
+      event.image_url ||
+      event.image ||
+      fallbackImage;
 
-            {/* Location Filter from API */}
-            <select
-              className="event-filter-select"
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
-            >
-              <option value="ALL">All Locations</option>
-              {locations.map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
-                </option>
-              ))}
-            </select>
+    const isLive =
+      event.is_live === true ||
+      Number(event.is_live) === 1;
 
-            {/* Sort Dropdown */}
-            <select
-              className="event-filter-select sort-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="date_asc">Date: Upcoming first</option>
-              <option value="date_desc">Date: Later dates first</option>
-              <option value="price_asc">Price: Low to High</option>
-              <option value="price_desc">Price: High to Low</option>
-            </select>
+    const cityName = getResolvedCityName(event);
 
-            {/* Reset Filters */}
-            {hasActiveFilters && (
-              <button
-                type="button"
-                className="event-reset-button"
-                onClick={handleResetFilters}
-              >
-                Reset Filters
-              </button>
-            )}
+    return (
+      <article
+        className="eventpage-card"
+        key={event.id || event.name}
+        onClick={() => handleCardClick(event)}
+      >
+        <div
+          className="eventpage-card-media-wrapper"
+          style={{
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          <img
+            src={posterImage}
+            alt={event.name || "Event"}
+            className="eventpage-card-poster"
+            loading="lazy"
+            onError={(e) => {
+              const image = e.currentTarget;
+
+              if (
+                image.dataset.fallbackApplied !== "true"
+              ) {
+                image.dataset.fallbackApplied = "true";
+                image.src = fallbackImage;
+              } else {
+                image.style.visibility = "hidden";
+              }
+            }}
+          />
+
+          <div className="eventpage-media-badges">
+            <span className="eventpage-badge">
+              {event.category_name || "Event"}
+            </span>
           </div>
         </div>
 
-        {/* Events Grid */}
-        <div className="event-grid">
-          {processedEvents.map((event) => {
-            const CategoryIcon = getCategoryIcon(event.category_name);
+        <div className="eventpage-card-content">
+          <div className="eventpage-card-info">
+            <span className="eventpage-date-text">
+              {formatEventDate(event.event_date)}
+              {event.time &&
+                ` · ${String(event.time).slice(0, 5)}`}
+            </span>
 
-            return (
-              <article
-                className="event-card"
-                key={event.id}
-                onClick={() => handleCardClick(event)}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="event-card-media">
-                  <span className="event-badge">
-                    {CategoryIcon && <CategoryIcon className="event-category-icon" />}
-                    {event.category_name || "Event"}
+            <div className="eventpage-title-row">
+              <h3 title={event.name}>
+                {event.name || "Untitled event"}
+              </h3>
+
+              {isLive && (
+                <span className="eventpage-live-badge-title">
+                  <span className="live-pulse-dot" />
+                  LIVE
+                </span>
+              )}
+            </div>
+
+            <p className="eventpage-location">
+              <FaMapPin className="eventpage-location-pin" />
+              <span>
+                {event.location ||
+                  cityName ||
+                  "Venue TBA"} , {cityName || "City yet to be announced"}
+              </span>
+            </p>
+
+            
+          </div>
+
+          <div className="eventpage-card-footer">
+            <div className="eventpage-price-box">
+              <span className="eventpage-price-label">
+                Starting from
+              </span>
+
+              <p className="eventpage-price">
+                ₹
+                {Number(event.price || 0).toLocaleString(
+                  "en-IN",
+                  {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                  }
+                )}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="eventpage-pass-button"
+              onClick={(clickEvent) => {
+                clickEvent.stopPropagation();
+                handleCardClick(event);
+              }}
+            >
+              Get Tickets
+            </button>
+          </div>
+        </div>
+      </article>
+    );
+  };
+
+  const displayLocation =
+    activeCityFilter !== "ALL" &&
+    activeCityFilter !== ALL_LOCATIONS
+      ? activeCityFilter
+      : ALL_LOCATIONS;
+
+  return (
+    <>
+      <div className="events-hero-banner">
+        <div className="events-hero-content">
+          <span className="events-hero-badge">
+            <FaCompass className="hero-badge-icon" />
+            Discover & Explore
+          </span>
+
+          <h1>
+            {displayLocation !== ALL_LOCATIONS
+              ? `Explore ${listing.title.toLowerCase()} in ${displayLocation}`
+              : `Explore ${listing.title.toLowerCase()} happening in the city`}
+          </h1>
+
+          <p>
+            Discover upcoming {listing.title.toLowerCase()} and experiences
+            happening across your city.
+          </p>
+        </div>
+      </div>
+
+      <section className="eventpage-section">
+        <div className="eventpage-filter-toolbar">
+          <div className="eventpage-title-group">
+            <h2 className="eventpage-main-heading">
+              All {listing.title}
+            </h2>
+
+            <span className="eventpage-count-badge">
+              {processedEvents.length}{" "}
+              {processedEvents.length === 1
+                ? listing.singular
+                : listing.title}
+            </span>
+          </div>
+
+          <div className="eventpage-actions-row">
+            <form
+              className="eventpage-search"
+              onSubmit={(e) => e.preventDefault()}
+            >
+              <input
+                id="eventpage-search-input"
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by category, event name, or location"
+              />
+            </form>
+
+            <div
+              className="eventpage-controls"
+              ref={controlsRef}
+            >
+              {/* Category dropdown */}
+              <div className="custom-event-dropdown">
+                <button
+                  type="button"
+                  className={`custom-event-trigger ${
+                    selectedCategory !== "ALL"
+                      ? "has-value"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setOpenDropdown(
+                      openDropdown === "category"
+                        ? null
+                        : "category"
+                    )
+                  }
+                >
+                  <span>
+                    {selectedCategory === "ALL"
+                      ? "All Categories"
+                      : selectedCategory}
                   </span>
-                  <p className="event-location">
-                    <FaMapPin className="event-location-pin" />
-                    {event.location || "Location to be announced"}
-                  </p>
-                </div>
 
-                <div className="event-card-content">
-                  <span className="event-date">{formatEventDate(event.event_date)}</span>
-                  <h3>{event.name || "Untitled event"}</h3>
+                  <ChevronDown
+                    size={16}
+                    className={`custom-event-chevron ${
+                      openDropdown === "category"
+                        ? "open"
+                        : ""
+                    }`}
+                  />
+                </button>
 
-                  <div className="event-card-footer">
-                    <div>
-                      <span className="event-price-label">Starting from</span>
-                      <p className="event-price">
-                        ₹ {event.price || "Price yet to be announced"}
-                      </p>
-                    </div>
+                {openDropdown === "category" && (
+                  <div className="custom-event-menu">
                     <button
                       type="button"
-                      className="event-pass-button"
-                      onClick={(clickEvent) => {
-                        clickEvent.stopPropagation();
-                        handleCardClick(event);
-                      }}
+                      className={`custom-event-option ${
+                        selectedCategory === "ALL"
+                          ? "selected"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        handleCategoryChange("ALL")
+                      }
                     >
-                      Get Tickets
+                      <span>All Categories</span>
+
+                      {selectedCategory === "ALL" && (
+                        <span className="custom-event-check">
+                          &#10003;
+                        </span>
+                      )}
                     </button>
+
+                    {activeCategories.map((category) => (
+                      <button
+                        type="button"
+                        key={category}
+                        className={`custom-event-option ${
+                          selectedCategory === category
+                            ? "selected"
+                            : ""
+                        }`}
+                        onClick={() =>
+                          handleCategoryChange(category)
+                        }
+                      >
+                        <span>{category}</span>
+
+                        {selectedCategory === category && (
+                          <span className="custom-event-check">
+                            &#10003;
+                          </span>
+                        )}
+                      </button>
+                    ))}
                   </div>
-                </div>
-              </article>
-            );
-          })}
+                )}
+              </div>
+
+              {/* Location dropdown */}
+              <div className="custom-event-dropdown">
+                <button
+                  type="button"
+                  className={`custom-event-trigger ${
+                    displayLocation !== ALL_LOCATIONS
+                      ? "has-value"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    setOpenDropdown(
+                      openDropdown === "location"
+                        ? null
+                        : "location"
+                    )
+                  }
+                >
+                  <span>{displayLocation}</span>
+
+                  <ChevronDown
+                    size={16}
+                    className={`custom-event-chevron ${
+                      openDropdown === "location"
+                        ? "open"
+                        : ""
+                    }`}
+                  />
+                </button>
+
+                {openDropdown === "location" && (
+                  <div className="custom-event-menu">
+                    <button
+                      type="button"
+                      className={`custom-event-option ${
+                        displayLocation === ALL_LOCATIONS
+                          ? "selected"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        handleLocationChange(ALL_LOCATIONS)
+                      }
+                    >
+                      <span>{ALL_LOCATIONS}</span>
+
+                      {displayLocation === ALL_LOCATIONS && (
+                        <span className="custom-event-check">
+                          &#10003;
+                        </span>
+                      )}
+                    </button>
+
+                    {locations.map((location) => (
+                      <button
+                        type="button"
+                        key={location}
+                        className={`custom-event-option ${
+                          displayLocation === location
+                            ? "selected"
+                            : ""
+                        }`}
+                        onClick={() =>
+                          handleLocationChange(location)
+                        }
+                      >
+                        <span>{location}</span>
+
+                        {displayLocation === location && (
+                          <span className="custom-event-check">
+                            &#10003;
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Sort dropdown */}
+              <div className="custom-event-dropdown">
+                <button
+                  type="button"
+                  className="custom-event-trigger sort-trigger"
+                  onClick={() =>
+                    setOpenDropdown(
+                      openDropdown === "sort"
+                        ? null
+                        : "sort"
+                    )
+                  }
+                >
+                  <span>
+                    {sortOptions.find(
+                      (option) => option.value === sortBy
+                    )?.label || "Sort"}
+                  </span>
+
+                  <ChevronDown
+                    size={16}
+                    className={`custom-event-chevron ${
+                      openDropdown === "sort" ? "open" : ""
+                    }`}
+                  />
+                </button>
+
+                {openDropdown === "sort" && (
+                  <div className="custom-event-menu sort-menu">
+                    {sortOptions.map((option) => (
+                      <button
+                        type="button"
+                        key={option.value}
+                        className={`custom-event-option ${
+                          sortBy === option.value
+                            ? "selected"
+                            : ""
+                        }`}
+                        onClick={() =>
+                          handleSortChange(option.value)
+                        }
+                      >
+                        <span>{option.label}</span>
+
+                        {sortBy === option.value && (
+                          <span className="custom-event-check">
+                            &#10003;
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  className="eventpage-reset-button"
+                  onClick={handleResetFilters}
+                >
+                  Reset Filters
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="eventpage-grid">
+          {processedEvents.map(renderEventCard)}
 
           {!processedEvents.length && (
-            <p className="event-empty">
-              {hasActiveFilters
-                ? "No matching events found. Try adjusting or resetting your filters."
-                : selectedCity && selectedCity !== ALL_LOCATIONS
-                ? "Currently no events in this place."
-                : "No upcoming events are available right now."}
+            <p className="eventpage-empty">
+              No matching upcoming {listing.title.toLowerCase()} found. Try adjusting
+              or resetting your filters.
             </p>
           )}
         </div>
       </section>
-      <Footer />
     </>
   );
 }
 
-export default EventSection;
+export function Activities() {
+  return <Event listingType="activities" />;
+}
+
+export function Concerts() {
+  return <Event listingType="concerts" />;
+}
+
+export default Event;

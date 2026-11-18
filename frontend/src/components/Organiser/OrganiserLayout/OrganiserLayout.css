@@ -1,0 +1,219 @@
+:root {
+  --org-primary: #5144ed;
+  --org-primary-hover: #4336d3;
+  --org-primary-subtle: #f5f3ff;
+
+  --org-bg: #f8fafc;
+  --org-card-bg: #ffffff;
+
+  --org-border: #e2e8f0;
+  --org-border-subtle: #f1f5f9;
+
+  --org-text-main: #0f172a;
+  --org-text-muted: #64748b;
+  --org-text-subtle: #94a3b8;
+
+  --org-radius-lg: 20px;
+  --org-radius-md: 14px;
+  --org-radius-sm: 10px;
+
+  --org-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+  --org-shadow-md: 0 4px 16px -2px rgba(15, 23, 42, 0.06);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Master container: standard two-column flex with natural page scrolling */
+.org-layout-wrapper {
+  display: flex;
+  align-items: flex-start;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: 24px;
+  gap: 24px;
+  background-color: var(--org-bg);
+  box-sizing: border-box;
+}
+
+/* Sidebar */
+.org-sidebar {
+  position: static;
+  width: 250px;
+  flex-shrink: 0;
+  min-height: calc(115vh - 10px);
+  background: var(--org-card-bg);
+  border: 1px solid var(--org-border);
+  padding: 24px 16px 20px;
+  border-radius: var(--org-radius-lg);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--org-shadow-sm);
+  box-sizing: border-box;
+}
+
+.org-sidebar-brand-block {
+  padding: 0 8px 18px 8px;
+  border-bottom: 1px solid var(--org-border-subtle);
+  margin-bottom: 16px;
+}
+
+.org-sidebar-pill-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--org-primary);
+  display: inline-block;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.org-sidebar-brand-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--org-text-main);
+  letter-spacing: -0.02em;
+}
+
+.org-sidebar-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.org-sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--org-radius-sm);
+  color: var(--org-text-muted);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all 0.15s ease-in-out;
+}
+
+.org-nav-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--org-border-subtle);
+  color: var(--org-text-muted);
+  font-size: 15px;
+  flex-shrink: 0;
+  transition: all 0.15s ease-in-out;
+}
+
+.org-sidebar-label {
+  flex: 1;
+}
+
+.org-sidebar-nav-item:hover {
+  background-color: var(--org-primary-subtle);
+  color: var(--org-primary);
+}
+
+.org-sidebar-nav-item:hover .org-nav-icon-wrapper {
+  background: #ffffff;
+  color: var(--org-primary);
+}
+
+.org-sidebar-nav-item.active {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(30, 27, 75, 0.15);
+}
+
+.org-sidebar-nav-item.active .org-nav-icon-wrapper {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+/* Logout Item */
+.org-logout-item:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.org-logout-item:hover .org-nav-icon-wrapper {
+  background: #ffffff;
+  color: #dc2626;
+}
+
+/* Sidebar Footer */
+.org-sidebar-footer-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--org-radius-sm);
+  background: var(--org-border-subtle);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--org-text-muted);
+  margin-top: auto;
+}
+
+.org-sidebar-system-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+  flex-shrink: 0;
+}
+
+/* Main Content Area */
+.org-main-viewport {
+  flex: 1;
+  min-width: 0;
+  margin-left: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-sizing: border-box;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .org-layout-wrapper {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .org-sidebar {
+    width: 220px;
+  }
+}
+
+@media (max-width: 768px) {
+  .org-layout-wrapper {
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  .org-sidebar {
+    width: 100%;
+    min-height: auto;
+    margin: 0;
+  }
+
+  .org-main-viewport {
+    width: 100%;
+  }
+}

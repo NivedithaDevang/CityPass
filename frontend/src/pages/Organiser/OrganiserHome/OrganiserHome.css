@@ -1,0 +1,507 @@
+:root {
+  --org-primary: #5144ed;
+  --org-primary-hover: #4336d3;
+  --org-primary-subtle: #f5f3ff;
+  --org-accent: #8b5cf6;
+
+  --org-bg: #f8fafc;
+  --org-card-bg: #ffffff;
+  --org-border: #e2e8f0;
+  --org-border-subtle: #f1f5f9;
+
+  --org-text-main: #0f172a;
+  --org-text-muted: #64748b;
+  --org-text-subtle: #94a3b8;
+
+  --org-radius-lg: 20px;
+  --org-radius-md: 14px;
+  --org-radius-sm: 10px;
+
+  --org-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+  --org-shadow-md: 0 4px 16px -2px rgba(15, 23, 42, 0.06);
+}
+
+/* Error Banner */
+.org-cmd-error-banner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--org-radius-sm);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.org-cmd-error-banner button {
+  border: none;
+  background: transparent;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Header Card (Midnight Radiance) */
+.org-header-card {
+  width: 100%;
+  background:
+    radial-gradient(circle at 12% 25%, rgba(99, 102, 241, 0.38) 0%, transparent 45%),
+    radial-gradient(circle at 88% 75%, rgba(139, 92, 246, 0.3) 0%, transparent 45%),
+    linear-gradient(135deg, #090d16 0%, #11152a 100%);
+  border-radius: var(--org-radius-lg);
+  padding: 28px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--org-shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.org-header-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(165, 180, 252, 0.4), transparent);
+}
+
+.org-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #c4b5fd;
+  text-transform: uppercase;
+}
+
+.org-title {
+  margin: 6px 0 8px;
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.org-subtitle {
+  margin: 0;
+  max-width: 650px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #94a3b8;
+}
+
+.org-btn-create-event {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #5144ed 0%, #3f35c8 100%);
+  color: #ffffff;
+  border: none;
+  padding: 11px 22px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(81, 68, 237, 0.35);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.org-btn-create-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(81, 68, 237, 0.45);
+}
+
+/* ==========================================================================
+   KPI Stats Grid
+   ========================================================================== */
+
+.org-stats-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.org-stat-card {
+  min-width: 0;
+  background: var(--org-card-bg);
+  border: 1px solid var(--org-border);
+  border-radius: var(--org-radius-md);
+  padding: 18px 16px;
+  box-shadow: var(--org-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  min-height: 130px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.org-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: #ddd6fe;
+  box-shadow: 0 8px 20px -3px rgba(81, 68, 237, 0.08);
+}
+
+.org-stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--org-text-muted);
+}
+
+.org-stat-header span:last-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--org-primary-subtle);
+  flex-shrink: 0;
+}
+
+.org-stat-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--org-primary);
+  flex-shrink: 0;
+}
+
+.org-stat-value {
+  margin-top: 14px;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--org-text-main);
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.org-stat-subtext {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--org-text-subtle);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   Dual Operational Queues (2-Column Grid)
+   ========================================================================== */
+
+.org-queues-grid-dual {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+
+.org-queue-card {
+  background: var(--org-card-bg);
+  border: 1px solid var(--org-border);
+  border-radius: var(--org-radius-md);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--org-shadow-sm);
+}
+
+.org-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--org-border-subtle);
+  margin-bottom: 16px;
+}
+
+.org-queue-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--org-text-main);
+  letter-spacing: -0.01em;
+}
+
+.org-queue-desc {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--org-text-muted);
+}
+
+.org-queue-link {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--org-primary);
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--org-primary-subtle);
+  transition: all 0.15s ease;
+}
+
+.org-queue-link:hover {
+  background: #ede9fe;
+  transform: translateX(2px);
+}
+
+/* Empty State */
+.org-queue-empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 20px;
+  color: var(--org-text-subtle);
+}
+
+.org-empty-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--org-primary-subtle);
+  margin-bottom: 12px;
+}
+
+.org-queue-empty-state p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--org-text-muted);
+}
+
+/* Progress Bars */
+.org-status-bars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.org-status-progress-row {
+  display: grid;
+  grid-template-columns: 85px 1fr 30px;
+  align-items: center;
+  gap: 12px;
+}
+
+.org-status-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--org-text-main);
+}
+
+.org-progress-track {
+  width: 100%;
+  height: 8px;
+  background: var(--org-border-subtle);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.org-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+
+.fill-pending   { background: linear-gradient(90deg, #f59e0b, #d97706); }
+.fill-approved  { background: linear-gradient(90deg, #10b981, #059669); }
+.fill-rejected  { background: linear-gradient(90deg, #f87171, #dc2626); }
+.fill-cancelled { background: linear-gradient(90deg, #94a3b8, #64748b); }
+.fill-completed { background: linear-gradient(90deg, #818cf8, #4f46e5); }
+
+.org-status-count {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--org-text-main);
+  text-align: right;
+}
+
+/* List Item Rows */
+.org-queue-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.org-item-row {
+  border: 1px solid var(--org-border-subtle);
+  background: #fafafc;
+  border-radius: var(--org-radius-sm);
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  transition: all 0.15s ease;
+}
+
+.org-item-row:hover {
+  border-color: #ddd6fe;
+  background: #ffffff;
+}
+
+.org-item-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--org-primary-subtle);
+  color: var(--org-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.org-event-date-box {
+  width: 40px;
+  height: 42px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  border: 1px solid var(--org-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.org-event-date-box b {
+  font-size: 14px;
+  color: var(--org-text-main);
+}
+
+.org-event-date-box small {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--org-primary);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.org-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.org-item-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--org-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.org-item-sub {
+  font-size: 12px;
+  color: var(--org-text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.org-ticket-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: var(--org-text-muted);
+  white-space: nowrap;
+}
+
+.org-badge-status {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.org-badge-status.approved {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.org-badge-status.pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.org-badge-status.rejected {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.org-badge-status.cancelled {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* ==========================================================================
+   Responsive Breakpoints
+   ========================================================================== */
+
+@media (max-width: 1100px) {
+  .org-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .org-queues-grid-dual {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .org-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 24px;
+    gap: 18px;
+  }
+
+  .org-btn-create-event {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 580px) {
+  .org-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .org-item-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .org-badge-status,
+  .org-ticket-badge {
+    align-self: flex-start;
+  }
+}

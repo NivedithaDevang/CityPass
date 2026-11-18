@@ -1,85 +1,278 @@
-import { getAllRequests,
-    createRequest, 
-    updateRequest as updateOrgReq
-     } 
-    from "../models/organiserRequestModel.js";
 import { Request, Response, NextFunction } from "express";
+import { RowDataPacket } from "mysql2";
+import { db } from "../config/database.js";
+import AppError from "../types/appError.js";
+import cloudinary from "../config/cloudinary.js";
+import {
+  getAllRequests,
+  getLatestRequestByUserId,
+  createRequest,
+  resubmitRejectedRequest,
+} from "../models/organiserRequestModel.js";
 
+import { validateId } from "../validators/idValidator.js";
 
-//for getting all requests
-export const getRequests = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const results = await getAllRequests();
+interface IdRow extends RowDataPacket {
+  id: number;
+}
 
-        res.status(200).json({
-            message: "Requests fetched successfully",
-            requests: results
-        });
-    } catch (err) {
-        next(err);
+// GET /v1/organiser-requests/status
+export const getMyRequestStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authenticatedUserId = req.user?.id;
+    if (!authenticatedUserId) {
+      throw new AppError("Authentication required", 401);
     }
+
+    const userId = validateId(authenticatedUserId);
+    const request = await getLatestRequestByUserId(userId);
+
+    return res.status(200).json({
+      success: true,
+      status: request?.status ?? "NONE",
+      rejection_reason: request?.rejection_reason ?? null,
+    });
+  } catch (error) {
+    return next(error);
+  }
 };
 
-//for posting new request
-export const addRequest = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const { organization_name, description } = req.body;
+// GET /v1/organisers/requests
+export const getRequests = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const results = await getAllRequests();
 
-        if (!organization_name?.trim() || !description?.trim()) {
-            return res.status(400).json({
-                message: "organization_name and description are required"
-            });
-        }
-
-        const result = await createRequest({
-            organization_name: organization_name.trim(),
-            description: description.trim(),
-            status: "PENDING"
-        });
-
-        res.status(201).json({
-            message: "Request submitted successfully",
-            requestId: result.insertId
-        });
-    } catch (err) {
-        next(err);
-    }
+    return res.status(200).json({
+      success: true,
+      message: "Requests fetched successfully",
+      requests: results,
+    });
+  } catch (error) {
+    return next(error);
+  }
 };
 
+// POST /v1/organisers/requests
+export const addRequest = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authenticatedUserId = req.user?.id;
 
-//for updating request details
-export const updateRequest = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const reqId = Number(req.params.id);
-        const { organization_name, description, status } = req.body;
-
-        if (!Number.isInteger(reqId) || reqId <= 0) {
-            return res.status(400).json({
-                message: "A valid request id is required"
-            });
-        }
-
-        if (!organization_name || !description || !status) {
-            return res.status(400).json({
-                message: "organization_name, description, and status are required"
-            });
-        }
-
-        const result = await updateOrgReq(reqId, {
-            organization_name, description, status        });
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                message: "Request not found"
-            });
-        }
-
-        res.status(200).json({
-            message: "Request updated successfully",
-            reqId
-        });
-    } catch (err) {
-        next(err);
+    if (!authenticatedUserId) {
+      throw new AppError("Authentication required", 401);
     }
-};
 
+    const userId = validateId(authenticatedUserId);
+
+    // Get the most recent application
+    const latestRequest = await getLatestRequestByUserId(userId);
+
+    if (latestRequest?.status) {
+      const normalizedStatus = String(latestRequest.status).trim().toUpperCase();
+
+      if (normalizedStatus === "APPROVED") {
+        throw new AppError("You are already a registered organizer.", 409);
+      }
+
+      if (normalizedStatus === "PENDING") {
+        throw new AppError(
+          "You already have an organizer application pending review.",
+          409
+        );
+      }
+    }
+
+    const organizationName =
+      req.body.organization_name || req.body.stageName;
+
+    const description = req.body.description;
+
+    const email =
+      typeof req.body.email === "string" ? req.body.email.trim() : "";
+
+    const phone =
+      typeof req.body.phone === "string" ? req.body.phone.trim() : "";
+
+    const idProof =
+      typeof req.body.id_proof === "string"
+        ? req.body.id_proof.trim().toUpperCase()
+        : "";
+
+    if (
+      typeof organizationName !== "string" ||
+      !organizationName.trim() ||
+      typeof description !== "string" ||
+      !description.trim() ||
+      !email ||
+      !phone ||
+      !idProof
+    ) {
+      throw new AppError(
+        "All fields are required. Please fill in every field.",
+        400
+      );
+    }
+
+    const stageName = organizationName.trim();
+    const cleanDescription = description.trim();
+
+    if (cleanDescription.length < 10) {
+      throw new AppError(
+        "Description must be at least 10 characters long.",
+        400
+      );
+    }
+
+    if (cleanDescription.length > 300) {
+      throw new AppError(
+        "Description cannot exceed 300 characters.",
+        400
+      );
+    }
+
+    // Resolve city ID
+    let cityId: number;
+
+    if (
+      req.body.city_id !== undefined &&
+      req.body.city_id !== null &&
+      req.body.city_id !== ""
+    ) {
+      cityId = validateId(req.body.city_id);
+    } else if (
+      typeof req.body.city === "string" &&
+      req.body.city.trim()
+    ) {
+      const [cityRows] = await db.query<IdRow[]>(
+        `SELECT id
+         FROM cities
+         WHERE name = ?
+         LIMIT 1`,
+        [req.body.city.trim()]
+      );
+
+      if (cityRows.length === 0) {
+        throw new AppError("Selected city does not exist.", 400);
+      }
+
+      cityId = cityRows[0].id;
+    } else {
+      throw new AppError("City is required.", 400);
+    }
+
+    // Confirm city is active
+    const [cityCheck] = await db.query<IdRow[]>(
+      `SELECT id
+       FROM cities
+       WHERE id = ? AND is_active = 1
+       LIMIT 1`,
+      [cityId]
+    );
+
+    if (cityCheck.length === 0) {
+      throw new AppError(
+        "Selected city is inactive or does not exist.",
+        400
+      );
+    }
+
+    // ID proof file upload (OPTIONAL: defaults to null or previous file on resubmission)
+    let idProofFileUrl: string | null = latestRequest?.id_proof_file ?? null;
+    const uploadedFile = req.file;
+
+    if (uploadedFile) {
+      const cloudinaryResult = await new Promise<{
+        secure_url: string;
+      }>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "citypass/id-proof",
+            public_id: `user_${userId}_id_proof`,
+            overwrite: true,
+            resource_type: "auto",
+          },
+          (error, result) => {
+            if (error || !result) {
+              reject(new AppError("Cloudinary upload failed", 502));
+              return;
+            }
+
+            resolve({ secure_url: result.secure_url });
+          }
+        );
+
+        stream.end(uploadedFile.buffer);
+      });
+
+      idProofFileUrl = cloudinaryResult.secure_url;
+    }
+
+    const requestData = {
+      user_id: userId,
+      organization_name: stageName,
+      description: cleanDescription,
+      city_id: cityId,
+      id_proof: idProof,
+      id_proof_file: idProofFileUrl,
+      email,
+      phone,
+      status: "PENDING",
+    } as const;
+
+    if (latestRequest?.status === "REJECTED") {
+      const result = await resubmitRejectedRequest(
+        latestRequest.id,
+        userId,
+        requestData
+      );
+
+      if (result.affectedRows === 0) {
+        throw new AppError(
+          "This rejected request can no longer be resubmitted. Refresh and try again.",
+          409
+        );
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Organizer request resubmitted successfully!",
+        requestId: latestRequest.id,
+      });
+    }
+
+    const result = await createRequest(requestData);
+
+    return res.status(201).json({
+      success: true,
+      message: "Organizer request submitted successfully!",
+      requestId: result.insertId,
+    });
+  } catch (error: unknown) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "ER_DUP_ENTRY"
+    ) {
+      return next(
+        new AppError(
+          "An application with this email or identity proof already exists.",
+          409
+        )
+      );
+    }
+
+    return next(error);
+  }
+};

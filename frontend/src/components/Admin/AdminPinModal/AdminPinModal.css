@@ -1,0 +1,126 @@
+.admin-pin-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 30, 45, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.admin-pin-modal {
+  background: #ffffff;
+  border-radius: 20px;
+  max-width: 440px;
+  width: 100%;
+  padding: 28px 24px;
+  box-shadow: 0 20px 40px rgba(127, 96, 222, 0.18);
+  border: 1px solid #ebe7f6;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-pin-icon {
+  font-size: 2.2rem;
+  margin-bottom: 12px;
+}
+
+.admin-pin-modal h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1e1e2d;
+  margin: 0 0 8px 0;
+}
+
+.admin-pin-message {
+  font-size: 0.9rem;
+  color: #4b4661;
+  margin: 0 0 6px 0;
+}
+
+.admin-pin-warning {
+  font-size: 0.8rem;
+  color: #7a7593;
+  line-height: 1.45;
+  margin: 0 0 20px 0;
+}
+
+.admin-pin-modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.admin-pin-modal label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #3f395b;
+}
+
+.admin-pin-modal input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border: 1px solid #e2def0;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  outline: none;
+  font-family: inherit;
+  color: #1e1e2d;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.admin-pin-modal input:focus {
+  border-color: #7f60de;
+  box-shadow: 0 0 0 3px rgba(127, 96, 222, 0.12);
+}
+
+.admin-pin-error {
+  color: #ef4444;
+  font-size: 0.82rem;
+  margin: 2px 0 0 0;
+  font-weight: 500;
+}
+
+.admin-pin-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.admin-pin-cancel {
+  background: #f1eff8;
+  color: #5d5677;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.admin-pin-cancel:hover {
+  background: #e5e0f3;
+}
+
+.admin-pin-submit {
+  background: #7f60de;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.admin-pin-submit:hover {
+  background: #6c4ec9;
+}

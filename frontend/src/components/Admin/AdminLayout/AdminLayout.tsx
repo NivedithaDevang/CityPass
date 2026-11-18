@@ -1,0 +1,203 @@
+import { useEffect, useState } from "react";
+import { NavLink, Outlet } from "react-router-dom";
+
+import { MdSpaceDashboard } from "react-icons/md";
+import {
+  BsPersonFillCheck,
+  BsCalendar2EventFill,
+} from "react-icons/bs";
+import { FaMapMarkerAlt, FaTag } from "react-icons/fa";
+import { IoPerson } from "react-icons/io5";
+
+import { fetchAdminEventRequests, fetchAdminOrganiserRequests } from "../../../services/adminService";
+
+import "./AdminLayout.css";
+
+function AdminLayout() {
+  const [pendingReqCount, setPendingReqCount] = useState(0);
+  const [pendingEventCount, setPendingEventCount] = useState(0);
+
+  useEffect(() => {
+    const getBadgeCount = async () => {
+      try {
+        const res = await fetchAdminOrganiserRequests();
+
+        const list = Array.isArray(res)
+          ? res
+          : res?.requests || res?.data || [];
+
+        const pending = list.filter(
+          (request: { status?: string }) =>
+            request.status?.toUpperCase() === "PENDING"
+        );
+
+        setPendingReqCount(pending.length);
+      } catch (error) {
+        console.error("Failed to load organiser request count:", error);
+      }
+    };
+
+    void getBadgeCount();
+  }, []);
+
+  useEffect(() => {
+    const getPendingEventCount = async () => {
+      try {
+        const response = await fetchAdminEventRequests();
+        const events = Array.isArray(response?.events) ? response.events : [];
+        setPendingEventCount(events.filter((event: { status?: string }) => event.status?.toUpperCase() === "PENDING").length);
+      } catch (error) {
+        console.error("Failed to load event request count:", error);
+      }
+    };
+
+    void getPendingEventCount();
+  }, []);
+
+  return (
+    <div className="admin-layout-wrapper">
+      <aside className="admin-sidebar">
+        <div className="sidebar-brand-block">
+          <span className="sidebar-pill-badge">
+            ADMIN PORTAL
+          </span>
+
+          <h3 className="sidebar-brand-title">
+            CityPass
+          </h3>
+        </div>
+
+        <nav className="sidebar-menu-list">
+
+          <NavLink
+            to="/admin"
+            end
+            className={({ isActive }) =>
+              isActive
+                ? "sidebar-nav-item active"
+                : "sidebar-nav-item"
+            }
+          >
+            <div className="nav-icon-wrapper">
+              <MdSpaceDashboard className="sidebar-icon" />
+            </div>
+
+            <span className="sidebar-label">
+              Dashboard
+            </span>
+          </NavLink>
+
+          <NavLink
+            to="/admin/organiser-requests"
+            className={({ isActive }) =>
+              isActive
+                ? "sidebar-nav-item active"
+                : "sidebar-nav-item"
+            }
+          >
+            <div className="nav-icon-wrapper">
+              <BsPersonFillCheck className="sidebar-icon" />
+            </div>
+
+            <span className="sidebar-label">
+              Organiser Requests
+            </span>
+
+            {pendingReqCount > 0 && (
+              <span className="sidebar-count-tag">
+                {pendingReqCount}
+              </span>
+            )}
+          </NavLink>
+
+          <NavLink
+            to="/admin/events"
+            className={({ isActive }) =>
+              isActive
+                ? "sidebar-nav-item active"
+                : "sidebar-nav-item"
+            }
+          >
+            <div className="nav-icon-wrapper">
+              <BsCalendar2EventFill className="sidebar-icon" />
+            </div>
+
+            <span className="sidebar-label">
+              Event Requests
+            </span>
+            {pendingEventCount > 0 && (
+              <span className="sidebar-count-tag">
+                {pendingEventCount}
+              </span>
+            )}
+          </NavLink>
+
+          <NavLink
+            to="/admin/cities"
+            className={({ isActive }) =>
+              isActive
+                ? "sidebar-nav-item active"
+                : "sidebar-nav-item"
+            }
+          >
+            <div className="nav-icon-wrapper">
+              <FaMapMarkerAlt className="sidebar-icon" />
+            </div>
+
+            <span className="sidebar-label">
+              Cities
+            </span>
+          </NavLink>
+
+          <NavLink
+            to="/admin/categories"
+            className={({ isActive }) =>
+              isActive
+                ? "sidebar-nav-item active"
+                : "sidebar-nav-item"
+            }
+          >
+            <div className="nav-icon-wrapper">
+              <FaTag className="sidebar-icon" />
+            </div>
+
+            <span className="sidebar-label">
+              Categories
+            </span>
+          </NavLink>
+
+          <NavLink
+            to="/admin/users"
+            className={({ isActive }) =>
+              isActive
+                ? "sidebar-nav-item active"
+                : "sidebar-nav-item"
+            }
+          >
+            <div className="nav-icon-wrapper">
+              <IoPerson className="sidebar-icon" />
+            </div>
+
+            <span className="sidebar-label">
+              Users
+            </span>
+          </NavLink>
+
+        </nav>
+
+        <div className="sidebar-footer-card">
+          <div className="sidebar-system-dot" />
+          <span>System Healthy</span>
+        </div>
+
+      </aside>
+
+      <main className="admin-main-viewport">
+        <Outlet />
+      </main>
+
+    </div>
+  );
+}
+
+export default AdminLayout;

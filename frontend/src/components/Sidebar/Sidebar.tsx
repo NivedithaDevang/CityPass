@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useUser } from "../../context/UserContext";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../../config/config";
+import ConfirmationPopup from "../Terms/ConfirmationPopup";
 import "./Sidebar.css";
+
 import {
   IoSettings,
   IoLogOut,
@@ -10,7 +13,13 @@ import {
   IoDocumentText,
   IoShieldCheckmark,
 } from "react-icons/io5";
-import { IoIosArrowForward, IoMdCloseCircle } from "react-icons/io";
+
+import { MdSpaceDashboard } from "react-icons/md";
+
+import {
+  IoIosArrowForward,
+  IoMdCloseCircle,
+} from "react-icons/io";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -18,11 +27,27 @@ interface SidebarProps {
   onLogout: () => void;
 }
 
-export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
-  const { user, profileImage } = useUser();
+export function Sidebar({
+  isOpen,
+  onClose,
+  onLogout,
+}: SidebarProps) {
+  const { user } = useUser();
   const navigate = useNavigate();
+
   const [isBookingsOpen, setIsBookingsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const normalizedRole = user?.role?.toUpperCase() || "";
+
+  const isAdmin =
+    normalizedRole === "ADMIN" ||
+    normalizedRole === "SUPER_ADMIN" ||
+    normalizedRole === "SUPERADMIN";
+
+  const isOrganiser =
+    normalizedRole === "ORGANISER" || normalizedRole === "ORGANIZER";
 
   const getInitial = () => {
     if (user?.name) {
@@ -31,9 +56,44 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
     return "U";
   };
 
+  const getProfileImage = () => {
+    if (!user?.profile_image) {
+      return "";
+    }
+
+    if (
+      user.profile_image.startsWith("http://") ||
+      user.profile_image.startsWith("https://")
+    ) {
+      return user.profile_image;
+    }
+
+    return `${API_BASE_URL.replace(/\/$/, "")}/${user.profile_image.replace(
+      /^\/+/,
+      ""
+    )}`;
+  };
+
+  const handleAccountClick = () => {
+    onClose();
+    navigate("/settings/profile");
+  };
+
+  const handleProfileImageError = (
+    event: React.SyntheticEvent<HTMLImageElement>
+  ) => {
+    event.currentTarget.style.display = "none";
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
+    onClose();
+    onLogout();
+  };
+
   return (
     <>
-      {/* Backdrop */}
+      {/* Sidebar backdrop */}
       <div
         className={`sidebar-backdrop ${isOpen ? "show" : ""}`}
         onClick={onClose}
@@ -41,9 +101,14 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
 
       {/* Sidebar */}
       <aside className={`sidebar-drawer ${isOpen ? "open" : ""}`}>
-        {/* Header */}
+        {/* Top */}
         <div className="sidebar-top">
-          <button className="close-btn" onClick={onClose}>
+          <button
+            type="button"
+            className="close-btn"
+            onClick={onClose}
+            aria-label="Close sidebar"
+          >
             <IoMdCloseCircle />
           </button>
         </div>
@@ -51,11 +116,20 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
         {/* Profile */}
         <div className="profile-section">
           <div className="profile-avatar">
-            {profileImage ? <img src={profileImage} alt="" /> : getInitial()}
+            {getProfileImage() ? (
+              <img
+                src={getProfileImage()}
+                alt="Profile"
+                onError={handleProfileImageError}
+              />
+            ) : (
+              getInitial()
+            )}
           </div>
 
           <div className="profile-details">
             <h2>{user?.name || "User"}</h2>
+
             <span
               className={`status ${
                 user?.status === "INACTIVE" ? "status-inactive" : ""
@@ -66,18 +140,47 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
           </div>
         </div>
 
-        {/* Divider */}
         <div className="sidebar-divider" />
 
-        {/* Menu */}
+        {/* Sidebar Content */}
         <div className="sidebar-content">
-          {/* My Account -> /settings/profile */}
+          {/* Admin Dashboard */}
+          {isAdmin && (
+            <button
+              type="button"
+              className="sidebar-menu-item admin-item"
+              onClick={() => {
+                onClose();
+                navigate("/admin");
+              }}
+            >
+              <span className="profile-icon">
+                <MdSpaceDashboard />
+              </span>
+              <span>Admin Dashboard</span>
+            </button>
+          )}
+
+          {isOrganiser && (
+            <button
+              type="button"
+              className="sidebar-menu-item admin-item"
+              onClick={() => {
+                onClose();
+                navigate("/organiser");
+              }}
+            >
+              <span className="profile-icon">
+                <MdSpaceDashboard />
+              </span>
+              <span>Organiser Dashboard</span>
+            </button>
+          )}
+
           <button
+            type="button"
             className="sidebar-menu-item"
-            onClick={() => {
-              onClose();
-              navigate("/settings/profile");
-            }}
+            onClick={handleAccountClick}
           >
             <span className="profile-icon">
               <IoPersonCircle />
@@ -85,9 +188,10 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
             <span>My Account</span>
           </button>
 
-          {/* Bookings */}
+          {/* My Bookings */}
           <div className="booking-section">
             <button
+              type="button"
               className="sidebar-menu-item booking-button"
               onClick={() => setIsBookingsOpen((prev) => !prev)}
             >
@@ -95,6 +199,7 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
                 <span className="ticket-icon">
                   <IoTicket />
                 </span>
+
                 <span>My Bookings</span>
               </div>
 
@@ -110,36 +215,42 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
                 isBookingsOpen ? "expanded" : ""
               }`}
             >
-              <a
+              <button
+                type="button"
                 onClick={() => {
                   onClose();
                   navigate("/bookings");
                 }}
               >
                 Events
-              </a>
-              <a
+              </button>
+
+              <button
+                type="button"
                 onClick={() => {
                   onClose();
                   navigate("/bookings");
                 }}
               >
                 Activities
-              </a>
-              <a
+              </button>
+
+              <button
+                type="button"
                 onClick={() => {
                   onClose();
                   navigate("/bookings");
                 }}
               >
                 Concerts
-              </a>
+              </button>
             </div>
           </div>
 
-          {/* Settings Submenu */}
+          {/* Settings */}
           <div className="settings-section">
             <button
+              type="button"
               className="sidebar-menu-item settings-button"
               onClick={() => setIsSettingsOpen((prev) => !prev)}
             >
@@ -147,10 +258,14 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
                 <span className="setting-icon">
                   <IoSettings />
                 </span>
+
                 <span>Settings</span>
               </div>
+
               <span
-                className={`settings-arrow ${isSettingsOpen ? "rotate" : ""}`}
+                className={`sidebar-settings-arrow ${
+                  isSettingsOpen ? "rotate" : ""
+                }`}
               >
                 <IoIosArrowForward size={20} />
               </span>
@@ -161,37 +276,44 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
                 isSettingsOpen ? "expanded" : ""
               }`}
             >
-              <a
+              {/* Change Password */}
+              <button
+                type="button"
                 onClick={() => {
                   onClose();
                   navigate("/settings/password");
                 }}
               >
                 Change Password
-              </a>
+              </button>
 
-              <a
+              {/* Host an Event */}
+              <button
+                type="button"
                 onClick={() => {
                   onClose();
                   navigate("/settings/host-an-event");
                 }}
               >
-                Host an event
-              </a>
+                Host an Event
+              </button>
 
-              <a
+              {/* Deactivate */}
+              <button
+                type="button"
                 onClick={() => {
                   onClose();
                   navigate("/settings/deactivate");
                 }}
               >
-                Deactivate account
-              </a>
+                Deactivate Account
+              </button>
             </div>
           </div>
 
-          {/* Terms & Conditions */}
+          {/* Terms */}
           <button
+            type="button"
             className="sidebar-menu-item"
             onClick={() => {
               onClose();
@@ -201,11 +323,13 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
             <span className="terms-icon">
               <IoDocumentText />
             </span>
+
             <span>Terms & Conditions</span>
           </button>
 
-          {/* Privacy Policy */}
+          {/* Privacy */}
           <button
+            type="button"
             className="sidebar-menu-item"
             onClick={() => {
               onClose();
@@ -215,13 +339,18 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
             <span className="privacy-icon">
               <IoShieldCheckmark />
             </span>
+
             <span>Privacy Policy</span>
           </button>
         </div>
 
-        {/* Bottom */}
+        {/* Logout */}
         <div className="sidebar-bottom">
-          <button className="logout-btn" onClick={onLogout}>
+          <button
+            type="button"
+            className="logout-btn"
+            onClick={() => setShowLogoutModal(true)}
+          >
             <span>
               <IoLogOut />
             </span>
@@ -229,6 +358,18 @@ export function Sidebar({ isOpen, onClose, onLogout }: SidebarProps) {
           </button>
         </div>
       </aside>
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmationPopup
+        isOpen={showLogoutModal}
+        title="Log Out"
+        message="Are you sure you want to log out of your account?"
+        confirmText="Log Out"
+        danger={true}
+        isLoading={false}
+        onConfirm={handleConfirmLogout}
+        onClose={() => setShowLogoutModal(false)}
+      />
     </>
   );
 }

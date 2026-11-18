@@ -1,3 +1,14 @@
+body {
+  padding-top: 80px;
+  margin-top: 92px auto 30px;
+  
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+
+
+
 .bms-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -8,15 +19,17 @@
   align-items: center;
   justify-content: center;
   padding: 1.25rem;
-  z-index: 3000; /* Stacks above the deactivate confirmation overlay */
+  z-index: 3000; 
   box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  
 }
 
 .bms-modal-card {
   position: relative;
   background: #ffffff;
-  width: 100%;
-  max-width: 680px;
+  width: 50%;
   max-height: 85vh;
   border-radius: 16px;
   padding: 2.25rem 2rem 1.75rem 2rem;
@@ -88,10 +101,11 @@
 
 .bms-modal-list {
   margin: 0;
-  padding-left: 1.25rem;
+  padding-left: 0.5rem;
   color: #475569;
   line-height: 1.65;
   font-size: 0.95rem;
+  list-style-position: inside;
 }
 
 .bms-modal-list li {
@@ -100,4 +114,132 @@
 
 .bms-modal-list li:last-child {
   margin-bottom: 0;
+}
+
+.confirmation-popup-backdrop {
+  z-index: 2900;
+}
+
+.confirmation-popup-card {
+  width: min(100%, 460px);
+  max-height: 85vh;
+  gap: 0;
+  padding: 30px;
+  border-top: 4px solid #4336d6;
+  border-radius: 12px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.28);
+}
+
+.confirmation-popup-card-danger {
+  border-top-color: #d83b4d;
+}
+
+.confirmation-popup-title {
+  margin: 0 0 10px;
+  font-size: 22px;
+  line-height: 1.3;
+}
+
+.confirmation-popup-message {
+  margin: 0;
+  color: #52616b;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.confirmation-terms-button {
+  align-self: flex-start;
+  margin-top: 14px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: #4336d6;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.confirmation-terms-button:hover {
+  color: #0d514c;
+}
+
+.confirmation-terms-button:focus-visible,
+.confirmation-cancel-button:focus-visible,
+.confirmation-confirm-button:focus-visible {
+  outline: 3px solid #4336d6
+}
+
+.confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #e7ecef;
+}
+
+.confirmation-cancel-button,
+.confirmation-confirm-button {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease,
+    transform 150ms ease;
+}
+
+.confirmation-cancel-button {
+  border-color: #cbd5dc;
+  background: #ffffff;
+  color: #34424b;
+}
+
+.confirmation-cancel-button:hover:not(:disabled) {
+  background: #f3f6f7;
+}
+
+.confirmation-confirm-button {
+  background: #4336d6;
+  color: #ffffff;
+}
+
+.confirmation-confirm-button:hover:not(:disabled) {
+  background: #4336d6;
+  transform: translateY(-1px);
+}
+
+.confirmation-confirm-button-danger {
+  background: #d83b4d;
+}
+
+.confirmation-confirm-button-danger:hover:not(:disabled) {
+  background: #b72e3e;
+}
+
+.confirmation-cancel-button:disabled,
+.confirmation-confirm-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+  .confirmation-popup-card {
+    padding: 24px 20px;
+  }
+
+  .confirmation-actions {
+    flex-direction: column-reverse;
+  }
+
+  .confirmation-cancel-button,
+  .confirmation-confirm-button {
+    width: 100%;
+  }
 }

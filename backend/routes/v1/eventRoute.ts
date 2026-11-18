@@ -3,24 +3,23 @@ import {
     getEvents,
     getActivities,
     getConcerts,
-    updateEvent,
-    getEventDetailsBySlug,
-    addEvent
+    getEventDetailsBySlug
 } from "../../controllers/eventController.js";
-import { handleValidation } from "../../middleware/validate.js";
-import { validateEvent } from "../../validators/eventValidator.js";
+
+import { getTicketsForEvent } from "../../controllers/eventTicketController.js";
+
 
 const eventRouter = express.Router();
 
-eventRouter.get("/", getEvents);
-
-eventRouter.post("/", validateEvent, handleValidation, addEvent);
-
+eventRouter.get("/events", getEvents);
 eventRouter.get("/activities", getActivities);
-
 eventRouter.get("/concerts", getConcerts);
 
-eventRouter.put("/:id", updateEvent);
 eventRouter.get("/:slug", getEventDetailsBySlug);
+
+eventRouter.get(
+  "/:eventId/tickets",
+  getTicketsForEvent
+);
 
 export default eventRouter; 

@@ -1,363 +1,260 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom"; // Added useSearchParams
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
-import "./EventSection.css";
-import { type Category, type City, type Events } from "../../types/auth";
-import Navbar from "../../components/Navbar/Navbar";
+import { type City, type Events } from "../../types/auth";
 import { ALL_LOCATIONS, useCity } from "../../context/CityContext";
-import { FaMapPin, FaMicrophone, FaLaughSquint } from "react-icons/fa";
-import { MdSportsFootball, MdTheaterComedy } from "react-icons/md";
-import { IoFastFoodSharp } from "react-icons/io5";
-import { FaPaintbrush, FaMountain } from "react-icons/fa6";
-import type { IconType } from "react-icons";
-import { createEventSlug } from "../../config/slug";
+import { FaMapPin } from "react-icons/fa";
+import "./EventSection.css";
+
+type EventCardData = Events & {
+  city?: string | { name?: string } | null;
+  image?: string;
+};
+
+const isUpcomingEvent = (event: Events): boolean => {
+  if (!event.event_date) return false;
+
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(event.event_date);
+  const eventDate = dateOnly
+    ? new Date(`${event.event_date}T00:00:00`)
+    : new Date(event.event_date);
+
+  if (Number.isNaN(eventDate.getTime())) return false;
+
+  const eventTime = event.time?.trim();
+  const timeMatch = eventTime?.match(/^(\d{1,2}):(\d{2})/);
+  if (timeMatch) {
+    eventDate.setHours(Number(timeMatch[1]), Number(timeMatch[2]), 0, 0);
+    const today = new Date();
+    if (
+      eventDate.getFullYear() === today.getFullYear() &&
+      eventDate.getMonth() === today.getMonth() &&
+      eventDate.getDate() === today.getDate()
+    ) {
+      return true;
+    }
+    return eventDate.getTime() >= Date.now();
+  }
+
+  if (dateOnly) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return eventDate.getTime() >= today.getTime();
+  }
+
+  return eventDate.getTime() >= Date.now();
+};
 
 function EventSection() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams(); //useSearchParams() is used to read the parameters
-  const { selectedCity, setSelectedCity } = useCity();
+  const { selectedCity } = useCity(); // Access current selected city
+  const [events, setEvents] = useState<EventCardData[]>([]);
+  const [cityIdMap, setCityIdMap] = useState<Record<string | number, string>>({});
 
-  const categoryIcons: Record<string, IconType> = {
-    Music: FaMicrophone,
-    Sports: MdSportsFootball,
-    Comedy: MdTheaterComedy,
-    Food: IoFastFoodSharp,
-    Art: FaPaintbrush,
-    Adventure: FaMountain,
-    Entertainment: FaLaughSquint,
-  };
 
-  const getCategoryIcon = (categoryName?: string | null) => {
-    const normalizedCategory = categoryName?.toLowerCase() || "";
-
-    if (normalizedCategory.includes("music")) return categoryIcons.Music;
-    if (normalizedCategory.includes("sport")) return categoryIcons.Sports;
-    if (normalizedCategory.includes("comedy")) return categoryIcons.Comedy;
-    if (normalizedCategory.includes("food")) return categoryIcons.Food;
-    if (normalizedCategory.includes("art")) return categoryIcons.Art;
-    if (normalizedCategory.includes("adventure")) return categoryIcons.Adventure;
-    if (normalizedCategory.includes("entertainment")) return categoryIcons.Entertainment;
-
-    return null;
-  };
-
-  const [search, setSearch] = useState("");
-  const [events, setEvents] = useState<Events[]>([]);
-
-  // Filter & Sort States
-    // "ALL" means no category filter is applied.
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
-  const [selectedLocation, setSelectedLocation] = useState<string>("ALL");
-  const [sortBy, setSortBy] = useState<string>("date_asc");
-
-  // API-driven dropdown options
-  const [categories, setCategories] = useState<string[]>([]);
-  const [locations, setLocations] = useState<string[]>([]);
-
-  // Sync city from URL search params into dropdown and context
-  // Ex: /events?city=Bangalore
-    // cityParam = "Bangalore"
   useEffect(() => {
-    const cityParam = searchParams.get("city");
-    if (cityParam) {
-    // Update the location dropdown
-      setSelectedLocation(cityParam);
-      if (setSelectedCity) {
-        setSelectedCity(cityParam);
+    const fetchEvents = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/v1/events/events`);
+        const rawData = response.data;
+        const eventList: EventCardData[] = Array.isArray(rawData)
+          ? rawData
+          : rawData?.events || rawData?.data || [];
+        setEvents(eventList);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+        setEvents([]);
       }
-    }
-  }, [searchParams, setSelectedCity]);   // Run this effect when searchParams or setSelectedCity changes.
+    };
 
+    fetchEvents();
+  }, []);
 
-  const hasActiveFilters =
-    search.trim() !== "" ||
-    selectedCategory !== "ALL" ||
-    selectedLocation !== "ALL" ||
-    sortBy !== "date_asc";
-
-  const handleLocationChange = (loc: string) => {
-    setSelectedLocation(loc);
-    if (loc === "ALL") {
-      searchParams.delete("city"); //delete city from the url
-      setSearchParams(searchParams);
-    } else {
-      setSearchParams({ city: loc });
-    }
-  };
-
-  const handleResetFilters = () => {
-    setSearch("");
-    setSelectedCategory("ALL");
-    setSelectedLocation("ALL");
-    setSortBy("date_asc");
-    searchParams.delete("city");
-    setSearchParams(searchParams);
-  };
-
-  // Fetch events, categories, and locations from backend
   useEffect(() => {
-  const fetchFilterData = async () => {
-    try {
-      const [eventsRes, catRes, locRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/v1/events`),
-        axios.get(`${API_BASE_URL}/v1/categories`),
-        axios.get(`${API_BASE_URL}/v1/cities`),
-      ]);
+    const fetchCities = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/v1/cities`);
+        const data = response.data;
+        const cityList: City[] = Array.isArray(data)
+          ? data
+          : data?.cities || data?.city || data?.data?.cities || data?.data || [];
 
-      // EVENTS
-      setEvents(eventsRes.data?.events || []);
+        if (!Array.isArray(cityList)) {
+          console.error("Cities response is not an array:", data);
+          return;
+        }
 
-      // CATEGORIES
-      const categoryList = catRes.data?.categories || [];
+        const idMap: Record<string | number, string> = {};
+        cityList.forEach((city) => {
+          const name = city?.name?.trim();
+          if (name && city.id !== undefined && city.id !== null) {
+            idMap[city.id] = name;
+          }
+        });
+        setCityIdMap(idMap);
+      } catch (error) {
+        console.error("Error fetching cities:", error);
+      }
+    };
 
-      const categoryNames = (categoryList as Category[])
-        .map((category) => category.name?.trim())
-        .filter((name): name is string => Boolean(name));
+    fetchCities();
+  }, []);
 
-      setCategories([...new Set(categoryNames)]);
-
-      // CITIES
-      const cityList = locRes.data?.city || [];
-
-      const cityNames = (cityList as City[])
-        .map((city) => city.name?.trim())
-        .filter((name): name is string => Boolean(name));
-
-      setLocations([...new Set(cityNames)]);
-
-    } catch (error) {
-      console.error("Error fetching event and filter data:", error);
-
-      // Prevent undefined data from breaking the UI
-      setEvents([]);
-      setCategories([]);
-      setLocations([]);
+  const getResolvedCityName = (event: EventCardData): string => {
+    if (event.city_name && typeof event.city_name === "string") {
+      return event.city_name.trim();
     }
+    if (event.city && typeof event.city === "string") {
+      return event.city.trim();
+    }
+    if (
+      typeof event.city === "object" &&
+      typeof event.city?.name === "string"
+    ) {
+      return event.city.name.trim();
+    }
+    if (event.city_id != null && cityIdMap[event.city_id]) {
+      return cityIdMap[event.city_id];
+    }
+    return "";
   };
-
-  fetchFilterData();
-}, []);
-
-  // Combined Filtering and Sorting
-  // useMemo calculates the final list of events to display.
-  const processedEvents = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-
-    const filtered = events.filter((event) => {
-      // 1. Global Navbar City
-        // An event matches the global city when:
-      // 1. No city is selected
-      // OR
-      // 2. "All Locations" is selected
-      // OR
-      // 3. Event location matches selected city
-      const matchesGlobalCity =
-        !selectedCity ||
-        selectedCity === ALL_LOCATIONS ||
-        event.location?.trim().toLowerCase() === selectedCity.trim().toLowerCase();
-
-      if (!matchesGlobalCity) return false;
-
-      // Specific Location Filter
-      if (
-        selectedLocation !== "ALL" &&
-        event.location?.trim().toLowerCase() !== selectedLocation.trim().toLowerCase()
-      ) {
-        return false;
-      }
-
-      // Category Filter
-      if (
-        selectedCategory !== "ALL" &&
-        event.category_name?.trim().toLowerCase() !== selectedCategory.trim().toLowerCase()
-      ) {
-        return false;
-      }
-
-      // Text Search
-      if (!normalizedSearch) return true;
-      return [event.name, event.category_name, event.location]
-        .filter(Boolean)
-        // some() returns true if at least one value matches.
-        .some((value) => value!.toLowerCase().includes(normalizedSearch));
-    });
-
-    return filtered.sort((a, b) => {
-      const priceA = Number(a.price) || 0;
-      const priceB = Number(b.price) || 0;
-      // If an event has no date,use Infinity so it goes to the end when sorting ascending.
-      const timeA = a.event_date ? new Date(a.event_date).getTime() : Infinity;
-      const timeB = b.event_date ? new Date(b.event_date).getTime() : Infinity;
-
-      switch (sortBy) {
-        case "date_asc":
-          return timeA - timeB;   // Earlier timestamp comes first.
-        case "date_desc":
-          return timeB - timeA;             // Later timestamp comes first.
-        case "price_asc":
-          return priceA - priceB;             // Smaller price comes first.
-        case "price_desc":
-          return priceB - priceA;            // Higher price comes first.
-        default:
-          return 0;
-      }
-    });
-  }, [events, selectedCity, selectedLocation, selectedCategory, search, sortBy]);
 
   const formatEventDate = (eventDate?: string) => {
     if (!eventDate) return "Date to be announced";
-
-    return new Intl.DateTimeFormat("en-US", {
-      dateStyle: "medium",
-    }).format(new Date(eventDate));
-  };       // Example: "Sep 25, 2026"
-
-  const handleCardClick = (event: Events) => {
-    navigate(`/events/${createEventSlug(event.name)}`);
+    return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(
+      new Date(eventDate)
+    );
   };
 
-  return (
-    <>
-      <Navbar />
-            <section className="event-section">
+  const handleCardClick = (event: Events) => {
+    if (!event.slug) {
+      console.warn("Event is missing a slug! Event ID:", event.id);
+      return;
+    }
+    navigate(`/events/${event.slug}`);
+  };
 
-      <div className="section-heading">
+  // Filter events by selected city (supports event.city or matches inside event.location)
+  const filteredEvents = events.filter((event) => {
+    if (!isUpcomingEvent(event)) return false;
+
+    if (!selectedCity || selectedCity === ALL_LOCATIONS) {
+      return true;
+    }
+
+    const targetCity = selectedCity.trim().toLowerCase();
+    const eventCity = getResolvedCityName(event).toLowerCase();
+    const eventLocation = (event.location || "").trim().toLowerCase();
+
+    return (
+      eventCity === targetCity ||
+      eventLocation.includes(targetCity)
+    );
+  });
+
+  // Limit display to the first 5 matching events
+  const displayedEvents = filteredEvents.slice(0, 7);
+
+  return (
+    <section className="eventsec-section">
+      <div className="event-section-heading">
         <p>THE LINEUP</p>
-        <h2>The City's Best Plans</h2>
+        <h2>
+          {selectedCity && selectedCity !== ALL_LOCATIONS
+            ? `Best Plans in ${selectedCity}`
+            : "The City's Best Plans"}
+        </h2>
         <span>Limited passes, standing pits, and reserved seats up for grabs.</span>
       </div>
 
-        {/* Search & Filter Toolbar */}
-        <div className="event-filter-toolbar">
-          <form className="event-search" onSubmit={(e) => e.preventDefault()}>
-            <input
-              id="event-search-input"
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by category, event name, or location"
-            />
-          </form>
+      <div className="eventsec-grid">
+        {displayedEvents.map((event) => {
+          const cityName = getResolvedCityName(event);
+          const eventImage = event.image ?? undefined;
 
-          <div className="event-controls">
-            {/* Category Filter from API */}
-            <select
-              className="event-filter-select"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)} 
-              // Update category when user selects an option.
-
+          return (
+            <article
+              className="eventsec-card"
+              key={event.id || event.name}
+              onClick={() => handleCardClick(event)}
+              style={{ cursor: "pointer" }}
             >
-              <option value="ALL">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+              <div className="eventsec-card-media">
+                <img
+                  src={eventImage}
+                  alt={event.name || "Event"}
+                  className="eventsec-card-poster"
+                  loading="lazy"
+                  onError={(error) => {
+                    const image = error.currentTarget;
+                    if (image.dataset.fallbackApplied !== "true") {
+                      image.dataset.fallbackApplied = "true";
+                    } else {
+                      image.style.visibility = "hidden";
+                    }
+                  }}
+                />
+                <span className="eventsec-badge">
+                  {event.category_name || "Event"}
+                </span>
+                <p className="eventsec-location">
+                  <FaMapPin className="eventsec-location-pin" />
+                  {event.location || cityName || "Location to be announced"}
+                </p>
+              </div>
 
-            {/* Location Filter from API */}
-            <select
-              className="event-filter-select"
-              value={selectedLocation}
-              onChange={(e) => handleLocationChange(e.target.value)}
-            >
-              <option value="ALL">All Locations</option>
-              {locations.map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
-                </option>
-              ))}
-            </select>
-
-            {/* Sort Dropdown */}
-            <select
-              className="event-filter-select sort-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="date_asc">Date: Upcoming first</option>
-              <option value="date_desc">Date: Later dates first</option>
-              <option value="price_asc">Price: Low to High</option>
-              <option value="price_desc">Price: High to Low</option>
-            </select>
-
-            {/* Reset Filters */}
-            {hasActiveFilters && (
-              <button
-                type="button"
-                className="event-reset-button"
-                onClick={handleResetFilters}
-              >
-                Reset Filters
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Events Grid */}
-        <div className="event-grid">
-          {processedEvents.map((event) => {
-            const CategoryIcon = getCategoryIcon(event.category_name);
-
-            return (
-              <article
-                className="event-card"
-                key={event.id}
-                onClick={() => handleCardClick(event)}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="event-card-media">
-                  <span className="event-badge">
-                    {CategoryIcon && <CategoryIcon className="event-category-icon" />}
-                    {event.category_name || "Event"}
-                  </span>
-                  <p className="event-location">
-                    <FaMapPin className="event-location-pin" />
-                    {event.location || "Location to be announced"}
-                  </p>
-                </div>
-
-                <div className="event-card-content">
-                  <span className="event-date">{formatEventDate(event.event_date)}</span>
+              <div className="eventsec-card-content">
+                <span className="event-date">
+                  {formatEventDate(event.event_date)}
+                </span>
+                <span className="event-date">
+                  {cityName || "City to be announced"}
+                </span>
+                <div className="eventsec-title-row">
                   <h3>{event.name || "Untitled event"}</h3>
-
-                  <div className="event-card-footer">
-                    <div>
-                      <span className="event-price-label">Starting from</span>
-                      <p className="event-price">
-                        ₹ {event.price || "Price yet to be announced"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="event-pass-button"
-                      onClick={(clickEvent) => {
-                        clickEvent.stopPropagation();
-                        handleCardClick(event);
-                      }}
-                    >
-                      Get Tickets
-                    </button>
-                  </div>
+                  {(event.is_live === true || event.is_live === 1) && (
+                    <span className="eventsec-live-badge">
+                      <span className="eventsec-live-dot" />
+                      LIVE
+                    </span>
+                  )}
                 </div>
-              </article>
-            );
-          })}
 
-          {!processedEvents.length && (
-            <p className="event-empty">
-              {hasActiveFilters
-                ? "No matching events found. Try adjusting or resetting your filters."
-                : selectedCity && selectedCity !== ALL_LOCATIONS
-                ? "Currently no events in this place."
-                : "No upcoming events are available right now."}
-            </p>
-          )}
-        </div>
-      </section>
-    </>
+                <div className="eventsec-card-footer">
+                  <div>
+                    <span className="eventsec-price-label">Starting from</span>
+                    <p className="eventsec-price">
+                      ₹ {event.price || "Price yet to be announced"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="eventsec-pass-button"
+                    onClick={(clickEvent) => {
+                      clickEvent.stopPropagation();
+                      handleCardClick(event);
+                    }}
+                  >
+                    Get Tickets
+                  </button>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+
+        {!displayedEvents.length && (
+          <p className="eventsec-empty">
+            No upcoming events found for{" "}
+            {selectedCity && selectedCity !== ALL_LOCATIONS
+              ? selectedCity
+              : "this location"}
+            .
+          </p>
+        )}
+      </div>
+    </section>
   );
 }
 

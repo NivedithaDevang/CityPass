@@ -1,9 +1,7 @@
 import "./LegalPage.css";
-import Navbar from "../../components/Navbar/Navbar";
 function TermsConditions() {
   return (
     <>
-<Navbar />
       <div className="legal-page">
         <div className="legal-header">
           <h1>Terms & Conditions</h1>

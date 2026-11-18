@@ -2,29 +2,50 @@ import { body } from "express-validator";
 
 export const validateRegister = [
     body("name")
-    .notEmpty()
-    .withMessage("Name is required"),
-
-
-    body("email")
     .trim()
-    .isEmail()
-    .withMessage("Valid email is required"),
+    .notEmpty()
+    .withMessage("Name is required")
+    .isLength({ min: 3})
+    .withMessage("Name must be atleast 3 characters")
+    .isLength({ max : 25})
+    .withMessage("Name cannot exceed 25 characters"),
+
+
+
+body("email")
+  .trim()
+  .notEmpty()
+  .withMessage("Email is required")
+  .contains("@")
+  .withMessage("Email must contain an '@' symbol")
+  .isEmail()
+  .withMessage("Valid email is required")
+  .normalizeEmail(),
 
 
     body("password")
   .notEmpty()
   .withMessage("Password is required")
-  .isLength({ min: 8 })
-  .withMessage("Password must be at least 8 characters long")
-  .matches(/[A-Z]/)
-  .withMessage("Password must contain at least one uppercase letter")
-  .matches(/[a-z]/)
-  .withMessage("Password must contain at least one lowercase letter")
-  .matches(/[0-9]/)
-  .withMessage("Password must contain at least one number")
-  .matches(/[!@#$%^&*(),.?":{}|<>]/)
-  .withMessage("Password must contain at least one special character"),
+  .isStrongPassword({
+    minLength: 8,
+    minLowercase: 1,
+    minUppercase: 1,
+    minNumbers: 1,
+    minSymbols: 1,
+  })
+  .withMessage(
+    "Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character"
+  ),
+
+body("confirmpassword")
+  .notEmpty()
+  .withMessage("Confirm password is required")
+  .custom((value, { req }) => {
+    if (value !== req.body.password) {
+      throw new Error("Passwords do not match");
+    }
+    return true;
+  })
 
 
     // body("role")

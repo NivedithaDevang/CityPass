@@ -1,30 +1,48 @@
 import express from "express";
-import { uploadAvatar } from "../../middleware/upload.js";
+
 import {
+  getUser,
   updateProfile,
   changePassword,
-  reactivateAccount,
   deactivateAccount,
-  getUser,
-  reactivateAndLogin
+  reactivateAndLogin,
+  addUserQuery
 } from "../../controllers/userController.js";
+
 import { authenticate } from "../../middleware/authMiddleware.js";
+import upload from "../../middleware/upload.js";
 
 const userRouter = express.Router();
 
-userRouter.get("/userdetails", authenticate, getUser);
+userRouter.patch("/query", authenticate, addUserQuery);
 
-// Add uploadAvatar.single("avatar") here
+userRouter.get(
+  "/userdetails",
+  authenticate,
+  getUser
+);
+
 userRouter.patch(
   "/userdetails",
   authenticate,
-  uploadAvatar.single("avatar") as unknown as express.RequestHandler,
+  upload.single("profile_image"),
   updateProfile
 );
 
-userRouter.patch("/password", authenticate, changePassword);
-userRouter.put("/deactivate", authenticate, deactivateAccount);
-userRouter.put("/:id/reactivate", authenticate, reactivateAccount);
-userRouter.post("/reactivate-login", reactivateAndLogin);
+userRouter.patch(
+  "/password",
+  authenticate,
+  changePassword
+);
+
+userRouter.patch(
+  "/deactivate",
+  authenticate,
+  deactivateAccount
+);
+userRouter.post(
+  "/reactivate-login",
+  reactivateAndLogin
+);
 
 export default userRouter;

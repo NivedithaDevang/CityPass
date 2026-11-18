@@ -1,40 +1,48 @@
 import multer from "multer";
-import path from "path";
-import fs from "fs";
 
-// Create destination folder if it doesn't exist
-//folder where uploaded profile images will be stored
-const uploadDir = "uploads/avatars";
+const storage = multer.memoryStorage();
 
-// Create the folder if it doesn't exist.
-  // recursive: true also creates any missing parent folders.
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-
-    // Decide the folder where the uploaded file should be saved.
-  destination: (_req, _file, cb) => {
-    cb(null, uploadDir);
-  },
-    // Generate a unique filename for every uploaded image.
-  filename: (req: any, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const userId = req.user?.id || "guest";
-    cb(null, `avatar-${userId}-${Date.now()}${ext}`);
-    //ex: avatar-11-12092023.jpg
-  },
-});
-
-export const uploadAvatar = multer({
+const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
+
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Only image files are allowed"));
+      cb(new Error("Only JPG, PNG and WEBP images are allowed"));
     }
   },
 });
+
+export const idProofUpload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "application/pdf",
+    ];
+
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only JPG, PNG, WEBP and PDF files are allowed"));
+    }
+  },
+});
+
+export default upload;

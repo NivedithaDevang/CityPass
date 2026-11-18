@@ -1,23 +1,264 @@
-import { getAllOrganizers } from "../models/organiserModel.js";
 import { Request, Response, NextFunction } from "express";
+import AppError from "../types/appError.js";
+import {
+  getAllOrganisers,
+  getOrganiserByUserId,
+  updateOrganiserProfile,
+  deactivateOrganiser,
+} from "../models/organiserModel.js";
+import {
+  getEventsByOrganiser,
+  hasUpcomingOrganiserEvents,
+} from "../models/eventModel.js";
+import { getBookingsByOrganiserId } from "../models/bookingModel.js";
+import { validateId } from "../validators/idValidator.js";
 
-export const getOrganizers = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
+// GET /organisers/profile (Fetch logged-in organiser's profile)
+export const getOrganiserProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
-    try {
-        // Fetch all organizers from the database
-        const results = await getAllOrganizers();
+  try {
+    const authenticatedUserId = req.user?.id;
 
-        // Send the fetched organizers to the frontend
-        res.status(200).json({
-            message: "Organizers fetched successfully",
-            organizers: results
-        });
-
-    } catch (err) {
-        // Pass the error to the centralized error-handling middleware
-        next(err);
+    if (!authenticatedUserId) {
+      throw new AppError("Authentication required", 401);
     }
+
+    const userId = validateId(authenticatedUserId);
+    const organiser = await getOrganiserByUserId(userId);
+
+    if (!organiser) {
+      throw new AppError("Organiser profile not found", 404);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Organiser profile fetched successfully",
+      profile: organiser,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /organisers
+export const getOrganisers = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const organisers = await getAllOrganisers();
+
+    return res.status(200).json({
+      success: true,
+      message: "Organisers fetched successfully",
+      organisers,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /organisers/events
+export const getMyEvents = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authenticatedUserId = req.user?.id;
+
+    if (!authenticatedUserId) {
+      throw new AppError("Authentication required", 401);
+    }
+
+    const userId = validateId(authenticatedUserId);
+    const organiser = await getOrganiserByUserId(userId);
+
+    if (!organiser) {
+      throw new AppError("Organiser profile not found", 404);
+    }
+
+    const events = await getEventsByOrganiser(organiser.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Organiser events fetched successfully",
+      events,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /organisers/bookings
+export const getMyBookings = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authenticatedUserId = req.user?.id;
+
+    if (!authenticatedUserId) {
+      throw new AppError("Authentication required", 401);
+    }
+
+    const userId = validateId(authenticatedUserId);
+    const organiser = await getOrganiserByUserId(userId);
+
+    if (!organiser) {
+      throw new AppError("Organiser profile not found", 404);
+    }
+
+    const bookings = await getBookingsByOrganiserId(organiser.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Organiser bookings fetched successfully",
+      bookings,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /organisers/profile or /organisers/edit-org-profile
+export const updateProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authenticatedUserId = req.user?.id;
+
+    if (!authenticatedUserId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: Authentication required.",
+      });
+    }
+
+    const userId = validateId(authenticatedUserId);
+    const organiser = await getOrganiserByUserId(userId);
+
+    if (!organiser) {
+      return res.status(404).json({
+        success: false,
+        message: "Organiser profile not found.",
+      });
+    }
+
+    const { stage_name, description } = req.body;
+
+    // Validate stage_name
+    if (!stage_name || typeof stage_name !== "string" || !stage_name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Stage name is required.",
+      });
+    }
+
+    // Validate description (must be a string if provided)
+    if (
+      description !== undefined &&
+      description !== null &&
+      typeof description !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Description must be in the textual form.",
+      });
+    }
+
+    const cleanDescription = (typeof description === "string" ? description.trim() : "") || "";
+    const cleanStageName = stage_name.trim();
+
+    const result = await updateOrganiserProfile(organiser.id, {
+      stage_name: cleanStageName,
+      description: cleanDescription,
+    });
+
+    // Check matchedRows if using mysql2 to prevent false 400 when submitting unchanged values
+    const matched = (result as any).matchedRows ?? result.affectedRows;
+    if (matched === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Organiser profile not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Organiser profile updated successfully.",
+      profile: {
+        id: organiser.id,
+        stage_name: cleanStageName,
+        description: cleanDescription,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// PATCH /organisers/deactivate
+export const deactivateOrganiserAccount = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authenticatedUserId = req.user?.id;
+    if (!authenticatedUserId) {
+      throw new AppError("Authentication required", 401);
+    }
+    const userId = validateId(authenticatedUserId);
+    const organiser = await getOrganiserByUserId(userId);
+
+    if (!organiser) {
+      throw new AppError("Organiser profile not found", 404);
+    }
+
+    if (await hasUpcomingOrganiserEvents(organiser.id)) {
+      throw new AppError(
+        "You cannot deactivate your account while you have upcoming events. Cancel or complete them before trying again.",
+        409
+      );
+    }
+
+    const result = await deactivateOrganiser(organiser.id);
+
+    if (result.affectedRows === 0) {
+      if (await hasUpcomingOrganiserEvents(organiser.id)) {
+        throw new AppError(
+          "You cannot deactivate your account while you have upcoming events. Cancel or complete them before trying again.",
+          409
+        );
+      }
+      throw new AppError(
+        "Organiser not found or account is already inactive",
+        404
+      );
+    }
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax" as const,
+      path: "/",
+    };
+
+    res.clearCookie("userToken", cookieOptions);
+    res.clearCookie("token", cookieOptions);
+
+    return res.status(200).json({
+      success: true,
+      message: "Account deactivated successfully",
+    });
+  } catch (error) {
+    return next(error);
+  }
 };

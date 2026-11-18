@@ -1,17 +1,21 @@
 import express from "express";
 import {
-    getRequests,
     addRequest,
-    updateRequest
+    getMyRequestStatus,
 } from "../../controllers/organiserRequestController.js";
+import { authenticate } from "../../middleware/authMiddleware.js";
+import { idProofUpload } from "../../middleware/upload.js";
 
-const orgRequestRouter = express.Router();
+const organiserRequestRouter = express.Router();
 
-orgRequestRouter.get("/", getRequests);
+organiserRequestRouter.get("/status", authenticate, getMyRequestStatus);
+organiserRequestRouter.post(
+    "/",
+    authenticate,
+    idProofUpload.single("id_proof_file"),
+    addRequest
+);
 
-orgRequestRouter.post("/", addRequest);
-
-orgRequestRouter.put("/:id", updateRequest);
 
 
-export default orgRequestRouter; 
+export default organiserRequestRouter;

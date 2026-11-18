@@ -1,4 +1,4 @@
-import React from "react";
+
 import "./ServerDown.css";
 
 interface ServerDownProps {
@@ -6,7 +6,7 @@ interface ServerDownProps {
   onLogin?: () => void;
 }
 
-const ServerDown: React.FC<ServerDownProps> = ({ onRetry }) => {
+const ServerDown = ({ onRetry }: ServerDownProps) => {
   const handleRetry = (): void => {
     if (onRetry) {
       onRetry();

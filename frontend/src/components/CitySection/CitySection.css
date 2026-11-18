@@ -2,13 +2,12 @@
   padding: 40px 8%;
 }
 
-.city-section .section-heading {
+.city-section .city-section-heading {
   width: 100%;
-  margin: 0 0 28px;
+  margin: 0 auto 28px;
 }
 
-.city-section .section-heading p {
-  margin: 0 0 8px;
+.city-section .city-section-heading p {
   font-size: 15px;
   font-weight: 400;
   line-height: 1.5;
@@ -16,8 +15,8 @@
   letter-spacing: normal;
 }
 
-.city-section .section-heading h2 {
-  margin: 0 0 8px;
+.city-section .city-section-heading h2 {
+  margin: 0 auto 8px;
   font-size: 32px;
   font-weight: 800;
   line-height: 1.2;
@@ -25,9 +24,9 @@
   color: #111;
 }
 
-.city-section .section-heading span {
+.city-section .city-section-heading span {
   display: block;
-  margin-top: 4px;
+  margin: 4px auto 0;
   font-size: 15px;
   font-weight: 400;
   color: #64748b;
@@ -58,14 +57,111 @@
 .city-card img {
   width: 80px;
   height: 80px;
-  margin-bottom: 12px;
+  margin: 0 auto 12px;
   border-radius: 50%;
   object-fit: cover;
+  display: block;
 }
 
-.city-card h3 {
+.city-card h4 {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
   color: #222;
+  text-align: center;
+}
+
+/* Tablet (max-width: 1024px) */
+@media (max-width: 1024px) {
+  .city-section {
+    padding: 36px 5%;
+  }
+
+  .city-section .section-heading h2 {
+    font-size: 28px;
+  }
+
+  .city-grid {
+    grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+    gap: 14px;
+  }
+
+  .city-icon {
+    width: 68px;
+    height: 68px;
+    font-size: 32px;
+  }
+}
+
+/* Mobile Devices (max-width: 768px) */
+@media (max-width: 768px) {
+  .city-section {
+    padding: 28px 16px;
+  }
+
+  .city-section .section-heading {
+    margin-bottom: 20px;
+  }
+
+  .city-section .section-heading h2 {
+    font-size: 24px;
+  }
+
+  .city-section .section-heading p,
+  .city-section .section-heading span {
+    font-size: 14px;
+  }
+
+  .city-grid {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 12px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .city-grid::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
+
+  .city-card {
+    flex: 0 0 105px;
+    scroll-snap-align: start;
+    padding: 14px 8px;
+    border-radius: 14px;
+  }
+
+  .city-card:hover {
+    transform: none;
+  }
+
+  .city-icon {
+    width: 56px;
+    height: 56px;
+    font-size: 26px;
+    margin: 0 auto 8px;
+  }
+
+  .city-card h2,
+  .city-card h4 {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .city-section .section-heading h2 {
+    font-size: 22px;
+  }
+
+  .city-card {
+    flex: 0 0 95px;
+  }
+
+  .city-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+  }
 }

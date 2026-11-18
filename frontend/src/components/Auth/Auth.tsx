@@ -1,18 +1,21 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import axios, { AxiosError } from "axios";
 import "./Auth.css";
 import { API_BASE_URL } from "../../config/config";
 import type { User } from "../../types/auth";
 import { useUser } from "../../context/UserContext";
-import { getPasswordErrors } from "../../config/passwordCheck";
+import { PASSWORD_RULES } from "../../config/passwordRules";
+import { FaCheckCircle, FaTimesCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 
-// This tells TypeScript what your successful API response looks like.
 interface ApiResponse {
   message: string;
   user?: User;
+  token?: string;
+  userId?: number;
 }
 
-// This describes possible error responses from your backend.
 interface ApiErrorResponse {
   code?: string;
   userId?: number;
@@ -25,293 +28,609 @@ interface AuthProps {
   onClose: () => void;
   onSuccess: (user: User) => void;
   initialLogin?: boolean;
+  redirectOnSuccess?: boolean;
 }
 
-function Auth({ onClose, onSuccess, initialLogin = false }: AuthProps) {
-  const { setUser } = useUser(); //stores logged in user's details globally
-  const [isLogin, setIsLogin] = useState(initialLogin); //whether the form is in login or reg
-  const [name, setName] = useState(""); //store name while registering
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_REGEX = /^[A-Za-z\s.'-]+$/;
+
+function Auth({
+  onClose,
+  onSuccess,
+  initialLogin = false,
+  redirectOnSuccess = true,
+}: AuthProps) {
+  const navigate = useNavigate();
+  const { setUser } = useUser();
+
+  const [isLogin, setIsLogin] = useState(initialLogin);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [dob, setDob] = useState("");
+
+  // Visibility toggle states (default: hidden)
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [passwordFocused, setPasswordFocused] = useState(false);
+  const [confirmFocused, setConfirmFocused] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false); //whether an API request is running
-  const [isRegisteredSuccess, setIsRegisteredSuccess] = useState(false); //reg success screen
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Reactivation modal states
-    // Stores whether the inactive-account reactivation modal should be displayed.
   const [showReactivatePrompt, setShowReactivatePrompt] = useState(false);
-    // Stores the ID of the inactive user who wants to reactivate the account.
-  const [inactiveUserId, setInactiveUserId] = useState<number | null>(null);
-    // Tracks whether the account reactivation request is in progress.
-  const [reactivating, setReactivating] = useState(false);
+  const [isReactivating, setIsReactivating] = useState(false);
 
-  // Only validate the password when we're in registration mode.
-  const passwordErrors = !isLogin ? getPasswordErrors(password) : [];
+  const allRulesPassed = PASSWORD_RULES.every((rule) =>
+    rule.check(password)
+  );
+
+  const isConfirmValid =
+    confirmPassword.length > 0 && confirmPassword === password;
+
+  const calculateAge = (dobString: string): number => {
+    if (!dobString) return 0;
+
+    const birthDate = new Date(`${dobString}`);
+    const today = new Date();
+
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    const dayDiff = today.getDate() - birthDate.getDate();
+
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      age--;
+    }
+
+    return age;
+  };
+
+  const getMaxSelectableDob = (): string => {
+    const today = new Date();
+    today.setFullYear(today.getFullYear() - 16);
+
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const resetFormFields = () => {
+    setName("");
+    setEmail("");
+    setDob("");
+    setPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setPasswordFocused(false);
+    setConfirmFocused(false);
+    setError(null);
+    setNameError(null);
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setName(val);
+    setError(null);
+
+    if (!val) {
+      setNameError(null);
+      return;
+    }
+
+    if (!NAME_REGEX.test(val)) {
+      setNameError("Name can only contain letters and spaces (no numbers or special characters).");
+    } else {
+      setNameError(null);
+    }
+  };
+
+  const handleSuccessfulAuth = (authenticatedUser: User) => {
+    setUser(authenticatedUser);
+    onSuccess(authenticatedUser);
+
+    resetFormFields();
+    onClose();
+
+    const normalizedRole =
+      authenticatedUser.role?.toUpperCase().trim().replace(/[\s-]+/g, "_") ||
+      "";
+    const isAdmin =
+      normalizedRole === "SUPER_ADMIN" ||
+      normalizedRole === "SUPERADMIN" ||
+      normalizedRole === "ADMIN";
+
+    if (redirectOnSuccess) {
+      if (normalizedRole === "ORGANIZER" || normalizedRole === "ORGANISER") {
+        navigate("/organiser");
+      } else if (isAdmin) {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
-    if (!isLogin && passwordErrors.length > 0) {
-      setError(passwordErrors.join(". "));
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError("Please enter your email address.");
       return;
+    }
+
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (!isLogin) {
+      const trimmedName = name.trim();
+
+      if (!trimmedName) {
+        setError("Please enter your full name.");
+        return;
+      }
+
+      if (!NAME_REGEX.test(trimmedName)) {
+        setError("Name can only contain letters and spaces.");
+        return;
+      }
+
+      if (trimmedName.length < 2) {
+        setError("Name must be at least 2 characters long.");
+        return;
+      }
+
+      if (!dob) {
+        setError("Please select your date of birth.");
+        return;
+      }
+
+      const age = calculateAge(dob);
+
+      if (age < 16) {
+        setError(
+          "You are not eligible to register for CityPass. You must be at least 16 years old."
+        );
+        return;
+      }
+
+      if (!allRulesPassed) {
+        setError("Please fulfill all password requirements.");
+        return;
+      }
+
+      if (!isConfirmValid) {
+        setError("Passwords do not match.");
+        return;
+      }
     }
 
     setIsLoading(true);
 
     try {
-      const url = isLogin
-        ? `${API_BASE_URL}/v1/auth/login`
-        : `${API_BASE_URL}/v1/auth/register`;
-
-      const payload = isLogin
-        ? { email, password }
-        : { name, email, password, role: "USER" };
-
-      const response = await axios.post<ApiResponse>(url, payload, {
-        withCredentials: true,
-      });
-
       if (isLogin) {
-        if (response.data.user) {
-          setUser(response.data.user);
-          onSuccess(response.data.user);
-        } else {
-          setError("Login successful, but user details were not returned.");
+        const response = await axios.post<ApiResponse>(
+          `${API_BASE_URL}/v1/auth/login`,
+          { email: trimmedEmail, password },
+          { withCredentials: true }
+        );
+
+        if (!response.data.user) {
+          setError("User details were not returned.");
           return;
         }
 
-        setEmail("");
-        setPassword("");
-        onClose();
+        handleSuccessfulAuth(response.data.user);
       } else {
-        setName("");
-        setEmail("");
-        setPassword("");
-        setIsRegisteredSuccess(true);
+        const regResponse = await axios.post<ApiResponse>(
+          `${API_BASE_URL}/v1/auth/register`,
+          {
+            name: name.trim(),
+            email: trimmedEmail,
+            dob,
+            password,
+            confirmpassword: confirmPassword,
+            role: "USER",
+          },
+          { withCredentials: true }
+        );
+
+        if (regResponse.data.user) {
+          handleSuccessfulAuth(regResponse.data.user);
+          return;
+        }
+
+        try {
+          const loginResponse = await axios.post<ApiResponse>(
+            `${API_BASE_URL}/v1/auth/login`,
+            { email: trimmedEmail, password },
+            { withCredentials: true }
+          );
+
+          if (loginResponse.data.user) {
+            handleSuccessfulAuth(loginResponse.data.user);
+            return;
+          }
+        } catch {
+          // Fallback if auto-login fails
+        }
+
+        const fallbackUser: User = {
+          name: name.trim(),
+          email: trimmedEmail,
+          dob,
+          role: "USER",
+          status: "ACTIVE",
+          ...(regResponse.data.userId
+            ? { id: String(regResponse.data.userId) }
+            : {}),
+        } as User;
+
+        handleSuccessfulAuth(fallbackUser);
       }
     } catch (err) {
       const axiosError = err as AxiosError<ApiErrorResponse>;
 
-      // check whether the backend says that the accouont is inactive
+      const serverMessage =
+        axiosError.response?.data?.message ||
+        axiosError.response?.data?.error ||
+        "";
+
       if (
-        axiosError.response?.status === 403 &&
-        axiosError.response?.data?.code === "ACCOUNT_INACTIVE"
+        serverMessage.toLowerCase().includes("deactivated") ||
+        axiosError.response?.data?.code === "ACCOUNT_DEACTIVATED"
       ) {
-        //stores the inactive user's id so that it can be sent during reactivating
-        setInactiveUserId(axiosError.response.data.userId ?? null);
         setShowReactivatePrompt(true);
         return;
       }
 
-      //error message returned by the backend
       setError(
-        axiosError.response?.data?.message ||
+        serverMessage ||
           axiosError.response?.data?.errors
-            ?.map((validationError) => validationError.msg)
+            ?.map((e) => e.msg)
             .filter(Boolean)
             .join(". ") ||
-          "Something went wrong. Please try again."
+          "Authentication failed."
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  //user's confirmation to reactivate a deactivated account
-  const handleConfirmReactivation = async () => {
-    if (!inactiveUserId) return;
+  const handleReactivate = async () => {
+    setIsReactivating(true);
+    setError(null);
 
     try {
-      setReactivating(true); //show reactivation loading state
-      setError(null);
-
-      //send inactive user's id to backend to reactivate and log in
       const response = await axios.post<ApiResponse>(
         `${API_BASE_URL}/v1/users/reactivate-login`,
-        { userId: inactiveUserId },
+        { email: email.trim(), password },
         { withCredentials: true }
       );
 
-      if (response.data.user) {
-        setUser(response.data.user);
-        onSuccess(response.data.user);
+      const reactivatedUser = response.data.user;
+
+      if (reactivatedUser) {
+        setUser(reactivatedUser);
+        onSuccess(reactivatedUser);
       }
 
       setShowReactivatePrompt(false);
-      setEmail("");
-      setPassword("");
+      resetFormFields();
       onClose();
+
+      navigate("/settings/profile");
     } catch (err) {
-      //convert axios error to expected backend error-response type 
       const axiosError = err as AxiosError<ApiErrorResponse>;
+
       setError(
-        axiosError.response?.data?.message || "Unable to reactivate account."
+        axiosError.response?.data?.message || "Failed to reactivate account."
       );
+
       setShowReactivatePrompt(false);
     } finally {
-      setReactivating(false);
+      setIsReactivating(false);
     }
   };
 
-  const handleGoToLogin = () => {
-    setIsRegisteredSuccess(false);
-    setIsLogin(true);
-    setError(null);
-  };
+  return createPortal(
+    <div className="auth-overlay" onClick={onClose}>
+      <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          className="auth-close"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          &times;
+        </button>
 
-  return (
-    <>
-      <div className="auth-overlay" onClick={onClose}>
-        <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
-          <button className="auth-close" onClick={onClose}>
-            &times;
-          </button>
+        {showReactivatePrompt ? (
+          <div className="reactivate-modal-body">
+            <h2>Account Deactivated</h2>
+            <p>
+              Your account is currently deactivated. Would you like to reactivate
+              it and continue?
+            </p>
 
-          {isRegisteredSuccess ? (
-            /* Success Screen after Registration */
-            <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
-              <h2 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
-                Registration Successful!
-              </h2>
-              <p style={{ color: "#666", marginBottom: "1.5rem" }}>
-                Your account has been created. Please login to continue.
-              </p>
+            <div className="reactivate-actions">
               <button
                 type="button"
-                className="auth-submit"
-                onClick={handleGoToLogin}
+                className="auth-submit reactivate-confirm-btn"
+                onClick={handleReactivate}
+                disabled={isReactivating}
               >
-                Go to Login
+                {isReactivating ? "Reactivating..." : "Yes, Reactivate"}
+              </button>
+
+              <button
+                type="button"
+                className="auth-cancel-btn"
+                onClick={() => setShowReactivatePrompt(false)}
+                disabled={isReactivating}
+              >
+                Cancel
               </button>
             </div>
-          ) : (
-            /* Normal Auth Form (Login or Register) */
-            <>
-              {!isLogin ? (
-                <>
-                  <h2>Create your account</h2>
-                  <p>Join CityPass and explore your city</p>
-                </>
-              ) : (
-                <>
-                  <h2>Welcome back</h2>
-                  <p>Login to continue exploring CityPass</p>
-                </>
-              )}
+          </div>
+        ) : (
+          <>
+            <h2>{isLogin ? "Welcome back" : "Create your account"}</h2>
+            <p>
+              {isLogin
+                ? "Login to explore CityPass"
+                : "Join CityPass and explore your city"}
+            </p>
 
-              {error && <div className="auth-error">{error}</div>}
+            {error && (
+              <div className="auth-error-banner" role="alert">
+                {error}
+              </div>
+            )}
 
-              <form onSubmit={handleSubmit}>
-                {!isLogin && (
+            <form onSubmit={handleSubmit} noValidate>
+              {!isLogin && (
+                <div className="input-group">
                   <input
                     type="text"
                     placeholder="Full Name"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={handleNameChange}
+                    className={nameError ? "input-match-fail" : ""}
                     required
                   />
-                )}
+                  {nameError && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        fontSize: "0.8rem",
+                        color: "#ef4444",
+                        marginTop: "4px",
+                        paddingLeft: "4px",
+                      }}
+                    >
+                      <FaTimesCircle />
+                      <span>{nameError}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
+              {!isLogin && (
                 <input
-                  type="email"
-                  placeholder="Email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="date"
+                  placeholder="Enter your DOB"
+                  value={dob}
+                  max={getMaxSelectableDob()}
+                  onChange={(e) => {
+                    setDob(e.target.value);
+                    setError(null);
+                  }}
                   required
                 />
+              )}
 
+              <input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError(null);
+                }}
+                required
+              />
+
+              {/* Password field with visibility toggle */}
+              <div className="input-group" style={{ position: "relative" }}>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ paddingRight: "42px" }}
+                  onFocus={() => setPasswordFocused(true)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError(null);
+                  }}
                   required
                 />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  style={{
+                    position: "absolute",
+                    right: "12px",
+                    top: "22px",
+                    transform: "translateY(-50%)",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#9ca3af",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 0,
+                  }}
+                >
+                  {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                </button>
 
-                {!isLogin && password && passwordErrors.length > 0 && (
-                  <div className="password-errors" role="alert">
-                    {passwordErrors.map((passwordError) => (
-                      <div key={passwordError}>{passwordError}</div>
-                    ))}
+                {!isLogin && (passwordFocused || password.length > 0) && (
+                  <div className="live-rule-tray">
+                    {PASSWORD_RULES.map((rule) => {
+                      const passed = rule.check(password);
+                      return (
+                        <span
+                          key={rule.id}
+                          className={`rule-badge ${
+                            passed ? "valid" : "invalid"
+                          }`}
+                        >
+                          {passed ? (
+                            <FaCheckCircle className="badge-icon" />
+                          ) : (
+                            <span className="dot" />
+                          )}
+                          {rule.label}
+                        </span>
+                      );
+                    })}
                   </div>
                 )}
-
-                <button
-                  type="submit"
-                  className="auth-submit"
-                  disabled={isLoading}
-                >
-                  {isLoading
-                    ? isLogin
-                      ? "Logging in..."
-                      : "Creating account..."
-                    : isLogin
-                    ? "Login"
-                    : "Create account"}
-                </button>
-              </form>
-
-              <div className="auth-switch">
-                {isLogin ? (
-                  <>
-                    Don't have an account?{" "}
-                    <button type="button" onClick={() => setIsLogin(false)}>
-                      Register
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Already have an account?{" "}
-                    <button type="button" onClick={() => setIsLogin(true)}>
-                      Login
-                    </button>
-                  </>
-                )}
               </div>
-            </>
-          )}
-        </div>
-      </div>
 
-      {/* Account Deactivated / Reactivation Prompt Modal */}
-      {showReactivatePrompt && (
-        <div
-          className="reactivate-modal-overlay"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="reactivate-modal-card">
-            <h3>Your account is currently deactivated.</h3>
-            <p>
-              Would you like to reactivate your CityPass account and continue?
-            </p>
+              {/* Confirm Password field with visibility toggle */}
+              {!isLogin && (
+                <div className="input-group" style={{ position: "relative" }}>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm Password"
+                    value={confirmPassword}
+                    style={{ paddingRight: "42px" }}
+                    onFocus={() => setConfirmFocused(true)}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      setError(null);
+                    }}
+                    className={
+                      confirmPassword.length > 0
+                        ? isConfirmValid
+                          ? "input-match-success"
+                          : "input-match-fail"
+                        : ""
+                    }
+                    required
+                  />
+                  <button
+                    type="button"
+                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      top: "22px",
+                      transform: "translateY(-50%)",
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "#9ca3af",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 0,
+                    }}
+                  >
+                    {showConfirmPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                  </button>
 
-            <div className="reactivate-modal-actions">
+                  {(confirmFocused || confirmPassword.length > 0) &&
+                    confirmPassword.length > 0 && (
+                      <div
+                        className={`live-match-hint ${
+                          isConfirmValid ? "valid" : "invalid"
+                        }`}
+                      >
+                        {isConfirmValid ? (
+                          <>
+                            <FaCheckCircle />
+                            Passwords match
+                          </>
+                        ) : (
+                          <>
+                            <FaTimesCircle />
+                            Passwords do not match
+                          </>
+                        )}
+                      </div>
+                    )}
+                </div>
+              )}
+
               <button
-                type="button"
-                className="reactivate-cancel-btn"
-                onClick={() => {
-                  setShowReactivatePrompt(false);
-                  setInactiveUserId(null);
-                }}
-                disabled={reactivating}
+                type="submit"
+                className="auth-submit"
+                disabled={
+                  isLoading ||
+                  (!isLogin && (Boolean(nameError) || !allRulesPassed || !isConfirmValid))
+                }
               >
-                Cancel
+                {isLoading
+                  ? isLogin
+                    ? "Logging in..."
+                    : "Creating account..."
+                  : isLogin
+                  ? "Login"
+                  : "Create account"}
               </button>
-              <button
-                type="button"
-                className="reactivate-confirm-btn"
-                onClick={handleConfirmReactivation}
-                disabled={reactivating}
-              >
-                {reactivating ? "Reactivating..." : "Reactivate Account"}
-              </button>
+            </form>
+
+            <div className="auth-switch">
+              {isLogin ? (
+                <>
+                  Don't have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetFormFields();
+                      setIsLogin(false);
+                    }}
+                  >
+                    Register
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetFormFields();
+                      setIsLogin(true);
+                    }}
+                  >
+                    Login
+                  </button>
+                </>
+              )}
             </div>
-          </div>
-        </div>
-      )}
-    </>
+          </>
+        )}
+      </div>
+    </div>,
+    document.body
   );
 }
 

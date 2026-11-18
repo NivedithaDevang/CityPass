@@ -1,0 +1,44 @@
+import express from "express";
+import { verifySuperAdminKey, approveOrganiser } from "../../controllers/adminController.js";
+import {
+  getAdminUserDetails,
+  getUsers,
+} from "../../controllers/userController.js";
+import { getAdminCategories, addCategory, editCategory } from "../../controllers/categoryController.js";
+import { getCities, addCity, getAdminCities, editCity } from "../../controllers/cityController.js";
+import { getAdminEventRequests, getEvents, updateEventStatus } from "../../controllers/eventController.js";
+import { getOrganisers } from "../../controllers/organiserController.js";
+import { getRequests } from "../../controllers/organiserRequestController.js";
+import { authenticate } from "../../middleware/authMiddleware.js";
+import { checkAdminRole } from "../../middleware/roleMiddleware.js";
+import { validateCategory } from "../../validators/categoryValidator.js";
+import { validateCity } from "../../validators/cityValidator.js";
+import upload from "../../middleware/upload.js";
+
+const adminRouter = express.Router();
+
+adminRouter.post("/verify-super-admin-key", authenticate, verifySuperAdminKey);
+
+adminRouter.use( authenticate, checkAdminRole );
+
+adminRouter.get( "/users", getUsers );
+adminRouter.get( "/users/:id/details", getAdminUserDetails );
+adminRouter.get( "/categories", getAdminCategories );
+adminRouter.get( "/cities", getAdminCities );
+adminRouter.get( "/events", getEvents);
+adminRouter.get( "/event-requests", getAdminEventRequests);
+adminRouter.get( "/organisers", getOrganisers );
+adminRouter.get( "/organiser-requests", getRequests );
+
+
+adminRouter.post( "/add-city", upload.single("image"), validateCity, addCity );
+adminRouter.post( "/add-category", upload.single("image"), validateCategory, addCategory );
+
+adminRouter.patch( "/categories/:id", upload.single("image"), editCategory );
+adminRouter.patch( "/events/:id/status", updateEventStatus );
+adminRouter.patch( "/cities/:id", upload.single("image"), editCity );
+adminRouter.patch( "/organiser-requests/:id", approveOrganiser);
+
+
+
+export default adminRouter;

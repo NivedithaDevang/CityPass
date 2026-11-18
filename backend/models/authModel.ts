@@ -4,6 +4,7 @@ import { AuthPayLoad } from "../types/auth.js";
 export type AuthUser = RowDataPacket & AuthPayLoad & {
     name: string;
     email: string;
+    dob: string;
     password: string;
 };
 
@@ -13,7 +14,16 @@ Does a user with this email exist, and if so, give me their details.
 */
 export const findUserByEmail = async (email: string) => {
     const [rows] = await db.query(
-        `SELECT id, name, email, password, role, status, token_version
+        `SELECT
+            id,
+            name,
+            email,
+            password,
+            role,
+            status,
+            city_id,
+            token_version,
+            profile_image
          FROM users
          WHERE email = ?`,
         [email]
@@ -26,17 +36,19 @@ export const findUserByEmail = async (email: string) => {
 export const createUser = async (user: {
     name: string;
     email: string;
+    dob: string;
     password: string;
     role?: "USER" | "ORGANIZER" | "ADMIN";
 }): Promise<{ insertId: number }> => {
     const sql = `
-        INSERT INTO users (name, email, password)
-        VALUES (?, ?, ?)
+        INSERT INTO users (name, email, dob, password, created_at)
+        VALUES (?, ?, ?, ?, NOW())
     `;
 
     const [result] = await db.query<any>(sql, [
         user.name,
         user.email,
+        user.dob,
         user.password,
     ]);
 

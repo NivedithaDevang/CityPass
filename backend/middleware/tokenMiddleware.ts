@@ -1,12 +1,19 @@
+
 import jwt from "jsonwebtoken";
 import { Response } from "express";
-import { JWT_SECRET } from "../config/env.js"; // Must match authMiddleware
+import { JWT_SECRET } from "../config/env.js";
 
-export const generateUserToken = (userId: number, res: Response, user: any) => {
+export const generateUserToken = (
+  userId: number,
+  res: Response,
+  user: any
+): string => {
+
   const payload = {
     id: userId || user?.id,
     email: user?.email,
     role: user?.role || "USER",
+    city_id: user?.city_id ?? null,
     token_version: user?.token_version ?? 0,
   };
 
@@ -22,8 +29,9 @@ export const generateUserToken = (userId: number, res: Response, user: any) => {
     maxAge: 7 * 24 * 60 * 60 * 1000,
   };
 
+  // Set HttpOnly cookie for web application
   res.cookie("userToken", token, cookieOptions);
-  res.cookie("token", token, cookieOptions);
 
+  // Return JWT for mobile application
   return token;
 };

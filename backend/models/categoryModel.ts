@@ -2,89 +2,100 @@ import { db } from "../config/database.js";
 import { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 
 export type Category = RowDataPacket & {
-    id: number;
-    name: string;
-    is_active: boolean;
+  id: number;
+  name: string;
+  is_active: boolean;
+  image?: string;
 };
 
-// Get all categories
-export const getAllCategory = async (): Promise<Category[]> => {
-    const sql = `
-        SELECT id, name, is_active
-        FROM categories
-    `;
-
-    const [results] = await db.query<Category[]>(sql);
-
-    return results;
-};
-
-// Get one category
 export const getCategoryById = async (
-    id: number
+  id: number
 ): Promise<Category | undefined> => {
-    const sql = `
-        SELECT id, name, is_active
-        FROM categories
-        WHERE id = ?
-    `;
+  const sql = `
+    SELECT id, name, image, is_active
+    FROM categories
+    WHERE id = ?
+  `;
 
-    const [results] = await db.query<Category[]>(sql, [id]);
-
-    return results[0];
+  const [results] = await db.query<Category[]>(sql, [id]);
+  return results[0];
 };
 
-// Create category
-export const createCategory = async (
-    name: string
-): Promise<number> => {
-    const sql = `
-        INSERT INTO categories (name, is_active)
-        VALUES (?, TRUE)
-    `;
+// Public: Only active categories
+export const getActiveCategories = async (): Promise<Category[]> => {
+  const sql = `
+    SELECT id, name, is_active, image
+    FROM categories
+    WHERE is_active = TRUE
+    ORDER BY name ASC
+  `;
 
-    const [result] = await db.execute<ResultSetHeader>(
-        sql,
-        [name]
-    );
-
-    return result.insertId;
+  const [results] = await db.query<Category[]>(sql);
+  return results;
 };
 
-// Update category
+// Admin: All categories (both ACTIVE and INACTIVE)
+export const getAllCategory = async (): Promise<Category[]> => {
+  const sql = `
+    SELECT id, name, is_active, image
+    FROM categories
+    ORDER BY id ASC
+  `;
+
+  const [results] = await db.query<Category[]>(sql);
+  return results;
+};
+
+// Create category (defaults to TRUE)
+export const createCategory = async (name: string, imageUrl: string | null): Promise<number> => {
+  const sql = `
+    INSERT INTO categories (name, image, is_active)
+    VALUES (?, ?, TRUE)
+  `;
+
+  const [result] = await db.execute<ResultSetHeader>(sql, [
+    name.trim(),
+    imageUrl,
+  ]);
+  return result.insertId;
+};
+
+// Update category (supports name and is_active)
 export const updateCategory = async (
-    id: number,
-    name: string,
-): Promise<number> => {
-    const sql = `
-        UPDATE categories
-        SET name = ? 
-        WHERE id = ?
-    `;
+  id: number,
+  name?: string,
+  image?: string,
+  is_active?: boolean
+) => {
+  const fields: string[] = [];
+  const values: any[] = [];
 
-    const [result] = await db.execute<ResultSetHeader>(
-        sql,
-        [name, id]
-    );
+  if (name !== undefined) {
+    fields.push("name = ?");
+    values.push(name.trim());
+  }
+  if (image !== undefined) {
+    fields.push("image = ?");
+    values.push(image.trim());
+  }
 
-    return result.affectedRows;
-};
+  if (is_active !== undefined) {
+    fields.push("is_active = ?");
+    values.push(is_active);
+  }
 
-// Change active/inactive status
-export const updateCategoryStatus = async (
-    id: number,
-    isActive: boolean
-): Promise<number> => {
-    const sql = `
-        UPDATE categories
-        SET is_active = ?
-        WHERE id = ?
-    `;
+  if (fields.length === 0) {
+    return 0;
+  }
 
-    const [result] = await db.execute<ResultSetHeader>(
-        sql,
-        [isActive, id]
-    );
+  values.push(id);
 
-    return result.affectedRows;
+  const sql = `
+    UPDATE categories
+    SET ${fields.join(", ")}
+    WHERE id = ?
+  `;
+
+  const [result]: any = await db.query(sql, values);
+  return result.affectedRows;
 };
