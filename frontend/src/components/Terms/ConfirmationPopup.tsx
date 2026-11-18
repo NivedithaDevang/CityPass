@@ -1,4 +1,3 @@
-
 interface ConfirmationPopupProps {
   isOpen: boolean;
   title: string;
@@ -8,7 +7,7 @@ interface ConfirmationPopupProps {
   danger?: boolean;
   onConfirm: () => void;
   onClose: () => void;
-  onViewTerms: () => void;
+  onViewTerms?: () => void;
 }
 
 const ConfirmationPopup = ({
@@ -43,13 +42,15 @@ const ConfirmationPopup = ({
 
         <p className="confirmation-popup-message">{message}</p>
 
-        <button
-          type="button"
-          className="confirmation-terms-button"
-          onClick={onViewTerms}
-        >
-          View Terms and Conditions
-        </button>
+        {onViewTerms && (
+          <button
+            type="button"
+            className="confirmation-terms-button"
+            onClick={onViewTerms}
+          >
+            View Terms and Conditions
+          </button>
+        )}
 
         <div className="confirmation-actions">
           <button

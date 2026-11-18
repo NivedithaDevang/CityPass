@@ -130,20 +130,20 @@ export function DigitalTicketModal({
                 <IoSparkles className="book-sparkle-icon" />
                 CityPass Official
               </span>
+
+              <button
+                type="button"
+                className="book-close-btn"
+                onClick={onClose}
+                aria-label="Close ticket"
+              >
+                <FaTimes />
+              </button>
             </div>
 
             <h2 className="book-ticket-main-heading">
               CityPass Digital Ticket
             </h2>
-
-            <button
-              type="button"
-              className="book-ticket-close-btn"
-              onClick={onClose}
-              aria-label="Close ticket"
-            >
-              <FaTimes />
-            </button>
           </div>
 
           <div className="book-ticket-body">
@@ -266,3 +266,5 @@ export function DigitalTicketModal({
     </div>
   );
 }
+
+export default DigitalTicketModal;

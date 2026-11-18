@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -13,6 +13,8 @@ import {
   FaCheckCircle,
   FaQuestionCircle,
   FaTicketAlt,
+  FaChevronDown,
+  FaCheck,
 } from "react-icons/fa";
 
 import {
@@ -30,6 +32,8 @@ interface BookingProps {
   isOpen: boolean;
   onClose: () => void;
   event: ExtendedEvent;
+  capacityLeft: number;
+  onCapacityChanged: (capacityLeft: number) => void;
   onRequireAuth?: () => void;
 }
 
@@ -37,22 +41,27 @@ export function Booking({
   isOpen,
   onClose,
   event,
+  capacityLeft,
+  onCapacityChanged,
   onRequireAuth,
 }: BookingProps) {
   const navigate = useNavigate();
   const { user } = useUser();
 
-  // Tickets assigned to this specific event.
+  // Tickets assigned to this event
   const [parsedTiers, setParsedTiers] = useState<EventTicket[]>([]);
   const [selectedTierId, setSelectedTierId] = useState<number | "">("");
   const [loadingTiers, setLoadingTiers] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Booking state.
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  // Booking state
   const [ticketQuantity, setTicketQuantity] = useState<number>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
 
-  // Confirmation modal state.
+  // Confirmation modal state
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [confirmedBookingId, setConfirmedBookingId] =
@@ -60,7 +69,24 @@ export function Booking({
 
   const isConfirmationOpen = showReviewModal || showSuccessModal;
 
-  // Fetch tickets whenever this booking panel opens for an event.
+  // Handle outside click for custom dropdown
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+
+    const handlePointerDown = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [isDropdownOpen]);
+
+  // Fetch tickets whenever the booking panel opens for this event
   useEffect(() => {
     if (!isOpen || !event.id) return;
 
@@ -72,6 +98,7 @@ export function Booking({
       setParsedTiers([]);
       setSelectedTierId("");
       setTicketQuantity(1);
+      setIsDropdownOpen(false);
 
       try {
         const tickets = await getEventTickets(Number(event.id));
@@ -104,17 +131,18 @@ export function Booking({
     };
   }, [isOpen, event.id]);
 
-  // Find the selected ticket.
+  // Find the selected ticket
   const activeTier = useMemo(
     () => parsedTiers.find((tier) => tier.id === selectedTierId),
     [parsedTiers, selectedTierId],
   );
 
-  // Calculate the amount for the selected ticket and quantity.
+  // Calculate the amount for the selected ticket and quantity
   const unitPrice = Number(activeTier?.price ?? 0);
   const totalAmount = unitPrice * ticketQuantity;
+  const maxTicketQuantity = Math.min(10, Math.max(0, capacityLeft));
 
-  // Prevent background scrolling while a confirmation modal is open.
+  // Prevent background scrolling while confirmation modal is open
   useEffect(() => {
     if (!isConfirmationOpen) return;
 
@@ -149,6 +177,19 @@ export function Booking({
       return;
     }
 
+    if (capacityLeft <= 0) {
+      setBookingError("Tickets are sold out for this event.");
+      return;
+    }
+
+    if (ticketQuantity > capacityLeft) {
+      setTicketQuantity(capacityLeft);
+      setBookingError(
+        `Only ${capacityLeft} seat${capacityLeft === 1 ? "" : "s"} left.`,
+      );
+      return;
+    }
+
     setBookingError(null);
     setShowReviewModal(true);
   };
@@ -156,6 +197,16 @@ export function Booking({
   const handleFinalBookingSubmit = async () => {
     if (!activeTier) {
       setBookingError("Please select an available ticket.");
+      return;
+    }
+
+    if (capacityLeft <= 0 || ticketQuantity > capacityLeft) {
+      setShowReviewModal(false);
+      setBookingError(
+        capacityLeft <= 0
+          ? "Tickets are sold out for this event."
+          : `Only ${capacityLeft} seat${capacityLeft === 1 ? "" : "s"} left.`,
+      );
       return;
     }
 
@@ -168,8 +219,6 @@ export function Booking({
       setIsSubmitting(true);
       setBookingError(null);
 
-      // The backend must validate this ticket belongs to this event
-      // and calculate the final amount using its database price.
       const payload = {
         pass_id: Number(event.id),
         event_ticket_id: Number(activeTier.id),
@@ -184,6 +233,8 @@ export function Booking({
         payload,
         { withCredentials: true },
       );
+
+      onCapacityChanged(Math.max(0, capacityLeft - ticketQuantity));
 
       setConfirmedBookingId(response.data?.bookingId ?? null);
       setShowReviewModal(false);
@@ -225,47 +276,88 @@ export function Booking({
   return (
     <>
       <div className="booking-inline-panel">
+        {capacityLeft <= 0 && (
+          <div className="inline-error-banner" role="status">
+            Tickets sold out for this event.
+          </div>
+        )}
+
         {bookingError && (
           <div className="inline-error-banner" role="alert">
             {bookingError}
           </div>
         )}
 
-        {/* TICKET CATEGORY DROPDOWN */}
+        {/* CUSTOM TICKET CATEGORY DROPDOWN */}
         <div className="booking-tier-select-box">
-          <label
-            htmlFor="booking-tier-select"
-            className="booking-tier-label"
-          >
+          <label className="booking-tier-label">
             <FaTicketAlt className="booking-tier-icon" />
             <span>Select Ticket Category</span>
           </label>
 
-          <select
-            id="booking-tier-select"
-            className="booking-tier-dropdown"
-            value={selectedTierId}
-            onChange={(e) => {
-              setSelectedTierId(
-                e.target.value ? Number(e.target.value) : "",
-              );
-              setBookingError(null);
-            }}
-            disabled={loadingTiers || parsedTiers.length === 0}
-          >
-            {loadingTiers ? (
-              <option value="">Loading tickets...</option>
-            ) : parsedTiers.length === 0 ? (
-              <option value="">No ticket category assigned</option>
-            ) : (
-              parsedTiers.map((tier) => (
-                <option key={tier.id} value={tier.id}>
-                  {tier.name} — ₹
-                  {Number(tier.price).toLocaleString("en-IN")}
-                </option>
-              ))
+          <div className="custom-tier-dropdown" ref={dropdownRef}>
+            <button
+              type="button"
+              className={`custom-tier-trigger ${isDropdownOpen ? "open" : ""}`}
+              onClick={() => {
+                if (!loadingTiers && parsedTiers.length > 0) {
+                  setIsDropdownOpen((prev) => !prev);
+                }
+              }}
+              disabled={loadingTiers || parsedTiers.length === 0 || capacityLeft <= 0}
+              aria-haspopup="listbox"
+              aria-expanded={isDropdownOpen}
+            >
+              <span className="tier-trigger-text">
+                {loadingTiers ? (
+                  <span className="tier-placeholder">Loading tickets...</span>
+                ) : parsedTiers.length === 0 ? (
+                  <span className="tier-placeholder">No tickets assigned</span>
+                ) : activeTier ? (
+                  <>
+                    <span className="tier-name">{activeTier.name}</span>
+                    <span className="tier-separator">—</span>
+                    <span className="tier-price">₹{Number(activeTier.price).toLocaleString("en-IN")}</span>
+                  </>
+                ) : (
+                  <span className="tier-placeholder">Select a ticket</span>
+                )}
+              </span>
+
+              <FaChevronDown
+                className={`tier-chevron ${isDropdownOpen ? "rotated" : ""}`}
+              />
+            </button>
+
+            {isDropdownOpen && parsedTiers.length > 0 && (
+              <ul className="custom-tier-menu" role="listbox">
+                {parsedTiers.map((tier) => {
+                  const isSelected = tier.id === selectedTierId;
+                  return (
+                    <li
+                      key={tier.id}
+                      role="option"
+                      aria-selected={isSelected}
+                      className={`custom-tier-option ${isSelected ? "selected" : ""}`}
+                      onClick={() => {
+                        setSelectedTierId(tier.id);
+                        setBookingError(null);
+                        setIsDropdownOpen(false);
+                      }}
+                    >
+                      <div className="tier-option-info">
+                        <span className="tier-option-name">{tier.name}</span>
+                        <span className="tier-option-price">
+                          ₹{Number(tier.price).toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                      {isSelected && <FaCheck className="tier-check-icon" />}
+                    </li>
+                  );
+                })}
+              </ul>
             )}
-          </select>
+          </div>
 
           {activeTier?.description && (
             <p className="booking-tier-description">
@@ -293,7 +385,7 @@ export function Booking({
                   Math.max(1, quantity - 1),
                 )
               }
-              disabled={ticketQuantity <= 1}
+              disabled={ticketQuantity <= 1 || capacityLeft <= 0}
               aria-label="Decrease quantity"
             >
               <FaMinus />
@@ -306,10 +398,10 @@ export function Booking({
               className="counter-action-btn"
               onClick={() =>
                 setTicketQuantity((quantity) =>
-                  Math.min(10, quantity + 1),
+                  Math.min(maxTicketQuantity, quantity + 1),
                 )
               }
-              disabled={ticketQuantity >= 10}
+              disabled={ticketQuantity >= maxTicketQuantity || capacityLeft <= 0}
               aria-label="Increase quantity"
             >
               <FaPlus />
@@ -351,11 +443,13 @@ export function Booking({
             type="button"
             className="inline-pay-btn"
             onClick={handleOpenReview}
-            disabled={loadingTiers || !activeTier || isSubmitting}
+            disabled={loadingTiers || !activeTier || isSubmitting || capacityLeft <= 0}
           >
             {loadingTiers
               ? "Loading tickets..."
-              : !activeTier
+              : capacityLeft <= 0
+                ? "Tickets Sold Out"
+                : !activeTier
                 ? "Tickets unavailable"
                 : `Pay ₹ ${totalAmount.toLocaleString("en-IN")}`}
           </button>

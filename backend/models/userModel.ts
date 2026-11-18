@@ -2,6 +2,17 @@ import { db } from "../config/database.js";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { AuthPayLoad } from "../types/auth.js";
 
+export interface UpdateProfileInput {
+  name?: string;
+  email?: string;
+  phone?: string | null;
+  city_id?: number | null;
+  dob?: string | null;
+  gender?: "MALE" | "FEMALE" | "OTHER" | null;
+  profile_image?: string | null;
+}
+
+
 export type User = RowDataPacket &
   AuthPayLoad & {
     name: string;
@@ -10,6 +21,7 @@ export type User = RowDataPacket &
     status?: string;
     role: "USER" | "ORGANIZER" | "ADMIN" | "SUPER_ADMIN";
     token_version: number;
+    created_at?: Date | string | null;
   };
 
 export type UserRow = RowDataPacket & {
@@ -24,6 +36,7 @@ export type UserRow = RowDataPacket & {
   profile_image: string | null;
   status: "ACTIVE" | "INACTIVE";
   token_version: number;
+  created_at?: string | null;
 };
 
 export type UserAuthRow = RowDataPacket & {
@@ -33,7 +46,25 @@ export type UserAuthRow = RowDataPacket & {
   role: "USER" | "ORGANIZER" | "ADMIN" | "SUPER_ADMIN";
   status: "ACTIVE" | "INACTIVE";
   token_version: number;
+  created_at?: string | null;
 };
+export type Query = RowDataPacket & {
+  id: number;
+  name: string;
+  query: string;
+}
+
+export const addQuery = async (id: number,query: Query): Promise<ResultSetHeader> => {
+  const sql = `
+  UPDATE users SET query = ? WHERE id = ?`;
+
+  const [results] = await db.query<ResultSetHeader>(sql, [
+    query.query,
+    id
+  ]);
+  return results;
+}
+
 
 export const getUserById = async (id: number): Promise<UserRow | undefined> => {
   const [results] = await db.query<UserRow[]>(
@@ -45,11 +76,11 @@ export const getUserById = async (id: number): Promise<UserRow | undefined> => {
         role,
         phone,
         city_id,
-        dob,
+        DATE_FORMAT(dob, '%Y-%m-%d') AS dob,
         gender,
         profile_image,
-        status,
-        token_version
+        created_at,
+        status
       FROM users
       WHERE id = ?
     `,
@@ -74,8 +105,8 @@ export const reactivateUser = async (
   id: number
 ): Promise<{ token_version: number }> => {
   await db.query(
-    `UPDATE users 
-     SET status = 'ACTIVE', deactivated_at = NULL, token_version = token_version + 1 
+    `UPDATE users
+     SET status = 'ACTIVE', token_version = token_version + 1
      WHERE id = ?`,
     [id]
   );
@@ -88,10 +119,29 @@ export const reactivateUser = async (
   return { token_version: rows[0].token_version };
 };
 
+
+export const deactivateUser = async (
+  email: string,
+  reason: string
+): Promise<ResultSetHeader> => {
+  const sql = `
+    UPDATE users 
+    SET 
+      status = 'INACTIVE', 
+      deactivated_at = NOW(), 
+      deactivation_reason = ?, 
+      token_version = token_version + 1 
+    WHERE email = ? AND status = 'ACTIVE'
+  `;
+
+  const [result] = await db.query<ResultSetHeader>(sql, [reason, email]);
+  return result;
+};
+
 export const createUser = async (user: User) => {
   const sql = `
-    INSERT INTO users (name, email, password, role)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO users (name, email, password, role, created_at)
+    VALUES (?, ?, ?, ?, NOW())
   `;
 
   const [results] = await db.query<ResultSetHeader>(sql, [
@@ -124,37 +174,28 @@ export const updatePassword = async (
 
 export const updateUserProfile = async (
   id: number,
-  profile: {
-    name: string;
-    phone: string | null;
-    city_id: number | null;
-    dob: string | null;
-    gender: "MALE" | "FEMALE" | "OTHER" | null;
-    profile_image: string | null;
-  }
+  profile: UpdateProfileInput
 ) => {
-  const sql = `
-    UPDATE users
-    SET
-      name = ?,
-      phone = ?,
-      city_id = ?,
-      dob = ?,
-      gender = ?,
-      profile_image = COALESCE(?, profile_image)
-    WHERE id = ?
-  `;
+  const fields: string[] = [];
+  const values: any[] = [];
 
-  const [results] = await db.query<ResultSetHeader>(sql, [
-    profile.name,
-    profile.phone,
-    profile.city_id,
-    profile.dob,
-    profile.gender,
-    profile.profile_image,
-    id,
-  ]);
+  // Dynamically push only defined properties
+  for (const [key, value] of Object.entries(profile)) {
+    if (value !== undefined) {
+      fields.push(`${key} = ?`);
+      values.push(value);
+    }
+  }
 
+  // If no fields were provided, return a neutral match object
+  if (fields.length === 0) {
+    return { affectedRows: 0, matchedRows: 1 };
+  }
+
+  values.push(id);
+  const sql = `UPDATE users SET ${fields.join(", ")} WHERE id = ?`;
+
+  const [results] = await db.query<ResultSetHeader>(sql, values);
   return results;
 };
 
@@ -169,6 +210,7 @@ export const getAllUsers = async () => {
       u.role,
       u.status,
       u.city_id,
+      u.created_at,
       c.name AS city_name
     FROM users u
     LEFT JOIN cities c
@@ -180,6 +222,4 @@ export const getAllUsers = async () => {
 
   return results;
 };
-
-
 

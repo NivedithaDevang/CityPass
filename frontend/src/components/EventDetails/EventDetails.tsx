@@ -4,19 +4,18 @@ import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import { type Events, type User } from "../../types/auth";
 import { useUser } from "../../context/UserContext";
-import Navbar from "../../components/Navbar/Navbar";
-import { Footer } from "../../components/Footer/Footer";
 import {
   FaMapPin,
   FaCalendarAlt,
   FaArrowLeft,
   FaShieldAlt,
   FaChevronRight,
-  FaTicketAlt,
   FaExternalLinkAlt,
   FaClock,
   FaCheckCircle,
   FaInfoCircle,
+  FaTimes,
+  FaSearchPlus,
 } from "react-icons/fa";
 import { TermsModal } from "../Terms/EventTerms";
 import { OrganiserDetails } from "../OrganiserCard/OrganiserCard";
@@ -37,16 +36,18 @@ interface EventWithTickets extends Events {
   event_tickets?: EventTicket[];
   tickets?: EventTicket[];
   image?: string;
-  image_url?: string;
-  poster_url?: string;
-  banner_image?: string;
   instructions?: string;
   additional_instructions?: string;
   languages?: string | string[];
-  age_restriction?: string;
   age_group?: string;
-  duration?: string;
   duration_hours?: number | string;
+  // Organiser properties
+  organiser_stage_name?: string | null;
+  stage_name?: string | null;
+  organiser_description?: string | null;
+  organizer_description?: string | null;
+  organiser_events_count?: number | string | null;
+  total_events_hosted?: number | string | null;
 }
 
 function EventDetails() {
@@ -57,12 +58,31 @@ function EventDetails() {
   const [event, setEvent] = useState<EventWithTickets | null>(null);
   const [tickets, setTickets] = useState<EventTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<EventTicket | null>(null);
+  const [remainingCapacity, setRemainingCapacity] = useState<number | null>(null);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showTerms, setShowTerms] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showImagePreview, setShowImagePreview] = useState(false);
+
+  // Lock body scroll when image lightbox is open
+  useEffect(() => {
+    if (showImagePreview) {
+      document.body.style.overflow = "hidden";
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") setShowImagePreview(false);
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.body.style.overflow = "unset";
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = "unset";
+    }
+  }, [showImagePreview]);
 
   useEffect(() => {
     const fetchEventDetails = async () => {
@@ -73,6 +93,22 @@ function EventDetails() {
         const response = await axios.get(`${API_BASE_URL}/v1/events/${slug}`);
         const loadedEvent: EventWithTickets = response.data.event || response.data;
         setEvent(loadedEvent);
+
+        const totalCapacity = Number(loadedEvent.capacity ?? 0);
+        const locallyBooked = Number(
+          window.localStorage.getItem(`citypass:event-booked:${loadedEvent.id}`) ?? 0
+        );
+        setRemainingCapacity(
+          Number.isSafeInteger(totalCapacity) && totalCapacity >= 0
+            ? Math.max(
+                0,
+                totalCapacity -
+                  (Number.isSafeInteger(locallyBooked) && locallyBooked > 0
+                    ? Math.min(totalCapacity, locallyBooked)
+                    : 0)
+              )
+            : 0
+        );
 
         const eventTicketList: EventTicket[] = (
           loadedEvent.event_tickets ||
@@ -138,9 +174,8 @@ function EventDetails() {
       const parsed = JSON.parse(languages);
       if (Array.isArray(parsed)) return parsed.join(" / ");
     } catch {
-      // String format like "English, Hindi"
+      /* Ignored: string is plain text, not JSON */
     }
-
     return languages.replace(/,/g, " / ");
   };
 
@@ -159,6 +194,8 @@ function EventDetails() {
   };
 
   const handleBookTicketsClick = () => {
+    if (remainingCapacity === 0) return;
+
     if (!user) {
       setShowAuthModal(true);
       return;
@@ -175,47 +212,27 @@ function EventDetails() {
 
   if (loading) {
     return (
-      <>
-        <Navbar />
-        <div className="details-container details-state">
-          <div className="details-loading-spinner" />
-          <p className="status-text">Loading event details...</p>
-        </div>
-        <Footer />
-      </>
+      <div className="details-container details-state">
+        <div className="details-loading-spinner" />
+        <p className="status-text">Loading event details...</p>
+      </div>
     );
   }
 
   if (error || !event) {
     return (
-      <>
-        <Navbar />
-        <div className="details-container details-state">
-          <p className="status-text">{error || "Event not found."}</p>
-          <button className="back-button" onClick={() => navigate(-1)}>
-            <FaArrowLeft /> Back to Events
-          </button>
-        </div>
-        <Footer />
-      </>
+      <div className="details-container details-state">
+        <p className="status-text">{error || "Event not found."}</p>
+        <button className="back-button" onClick={() => navigate(-1)}>
+          <FaArrowLeft /> Back to Events
+        </button>
+      </div>
     );
   }
 
-  const eventBackgrounds = [
-    "/eventBG/image1.png",
-    "/eventBG/image2.png",
-    "/eventBG/image3.png",
-  ];
-
-  const fallbackImage = eventBackgrounds[event.id % eventBackgrounds.length];
-
-  const eventImage =
-    event.image ||
-    event.poster_url ||
-    event.image_url ||
-    event.banner_image;
-
-  const posterImage = eventImage || fallbackImage;
+  const eventImage = event.image;
+  const seatsLeft = remainingCapacity ?? Number(event.capacity ?? 0);
+  const isSoldOut = !Number.isFinite(seatsLeft) || seatsLeft <= 0;
 
   const formattedTime =
     formatTimeString(event.time) || "(Time yet to be confirmed)";
@@ -239,8 +256,6 @@ function EventDetails() {
 
   return (
     <>
-      <Navbar />
-
       <div className="details-outer-container">
         <div className="details-page-bg">
           <main className="details-wrapper">
@@ -252,14 +267,15 @@ function EventDetails() {
             {/* Event hero */}
             <header className="details-hero">
               <img
-                src={posterImage}
+                src={eventImage}
                 alt={event.name || "Event backdrop"}
                 className="hero-backdrop-img"
+                onClick={() => eventImage && setShowImagePreview(true)}
+                style={{ cursor: eventImage ? "pointer" : "default" }}
                 onError={(e) => {
                   const image = e.currentTarget;
                   if (image.dataset.fallbackApplied !== "true") {
                     image.dataset.fallbackApplied = "true";
-                    image.src = fallbackImage;
                   } else {
                     image.style.visibility = "hidden";
                   }
@@ -269,21 +285,54 @@ function EventDetails() {
               <div className="hero-overlay-shade" />
 
               <div className="hero-grid-content">
-                <div className="hero-poster-wrapper">
+                <div
+                  className="hero-poster-wrapper"
+                  onClick={() => eventImage && setShowImagePreview(true)}
+                  style={{ cursor: eventImage ? "pointer" : "default", position: "relative" }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      if (eventImage) setShowImagePreview(true);
+                    }
+                  }}
+                  title="Click to view full image"
+                >
                   <img
-                    src={posterImage}
+                    src={eventImage}
                     alt={event.name || "Event poster"}
                     className="hero-poster-img"
                     onError={(e) => {
                       const image = e.currentTarget;
                       if (image.dataset.fallbackApplied !== "true") {
                         image.dataset.fallbackApplied = "true";
-                        image.src = fallbackImage;
                       } else {
                         image.style.visibility = "hidden";
                       }
                     }}
                   />
+                  {eventImage && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: "10px",
+                        right: "10px",
+                        background: "rgba(0, 0, 0, 0.65)",
+                        color: "#fff",
+                        padding: "6px 8px",
+                        borderRadius: "6px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        fontSize: "0.75rem",
+                        backdropFilter: "blur(4px)",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      <FaSearchPlus /> Click to view
+                    </div>
+                  )}
                 </div>
 
                 <div className="hero-info-column">
@@ -297,12 +346,12 @@ function EventDetails() {
                     </span>
 
                     <span className="details-sub-tag">
-                      {event.age_group || event.age_restriction || "All Ages"}
+                      {event.age_group || "All Ages"}
                     </span>
 
                     <span className="details-sub-tag">
                       <FaClock className="tag-icon" />{" "}
-                      {formatDurationDisplay(event.duration_hours, event.duration)}
+                      {formatDurationDisplay(event.duration_hours)}
                     </span>
                   </div>
 
@@ -469,75 +518,71 @@ function EventDetails() {
                   <FaChevronRight className="terms-chevron" />
                 </div>
 
+                {/* Organised By expandable card */}
                 <div className="content-card organiser-section">
                   <h2 className="section-title">Organised By</h2>
                   <OrganiserDetails
-                    stageName={event.organiser_stage_name}
-                    userName={event.organiser_user_name}
+                    stageName={event.organiser_stage_name || event.stage_name}
+                    description={event.organiser_description || event.organizer_description}
+                    eventsCount={event.organiser_events_count || event.total_events_hosted}
                   />
                 </div>
               </section>
 
               {/* Booking card */}
-              <aside className="details-sidebar">
-                <div className="booking-card">
-                  <div className="booking-card-header">
-                    <div>
-                      <div className="booking-icon-circle">
-                        <FaTicketAlt />
-                      </div>
-                      <span className="booking-card-title">Reserve Spot</span>
-                      <span className="booking-card-sub">Instant confirmation</span>
-                    </div>
-                  </div>
-
-                  <div className="booking-price-container">
-                    <span className="price-tag-label">
-                      {tickets.length > 0
-                        ? "Selected ticket price"
-                        : "Tickets starting from"}
+              <div className="booking-card">
+                <div className="booking-card-header">
+                  <div>
+                    <span className="booking-card-title">Reserve Spot</span>
+                    <span className="booking-card-sub">
+                      {isSoldOut ? "Tickets sold out" : "Instant confirmation"}
                     </span>
-
-                    <p className="price-tag-amount">
-                      ₹
-                      {(selectedTicket
-                        ? Number(selectedTicket.price)
-                        : startingPrice
-                      ).toLocaleString("en-IN")}
-                    </p>
-
-                    {selectedTicket && (
-                      <p className="selected-ticket-summary">
-                        {selectedTicket.name}
-                      </p>
-                    )}
                   </div>
-
-                  {!isDrawerOpen ? (
-                    <button
-                      type="button"
-                      className="book-now-button"
-                      onClick={handleBookTicketsClick}
-                      disabled={tickets.length > 0 && !selectedTicket}
-                    >
-                      Book Tickets
-                    </button>
-                  ) : (
-                    <div className="inline-booking-wrapper">
-                      <Booking
-                        isOpen={isDrawerOpen}
-                        onClose={() => setIsDrawerOpen(false)}
-                        event={eventForBooking}
-                        onRequireAuth={() => setShowAuthModal(true)}
-                      />
-                    </div>
-                  )}
-
-                  <p className="booking-guarantee">
-                    Official verified ticket • 100% Secure Checkout
-                  </p>
                 </div>
-              </aside>
+
+                {isSoldOut ? (
+                  <p className="booking-capacity-notice sold-out">
+                    Tickets sold out
+                  </p>
+                ) : seatsLeft <= 15 ? (
+                  <p className="booking-capacity-notice" role="status">
+                    Only {seatsLeft}{" "}
+                    {seatsLeft === 1 ? "seat" : "seats"} left
+                  </p>
+                ) : null}
+
+                {!isDrawerOpen ? (
+                  <button
+                    type="button"
+                    className="book-now-button"
+                    onClick={handleBookTicketsClick}
+                    disabled={isSoldOut || (tickets.length > 0 && !selectedTicket)}
+                  >
+                    {isSoldOut ? "Tickets Sold Out" : "Book Tickets"}
+                  </button>
+                ) : (
+                  <div className="inline-booking-wrapper">
+                    <Booking
+                      isOpen={isDrawerOpen}
+                      onClose={() => setIsDrawerOpen(false)}
+                      event={eventForBooking}
+                      capacityLeft={isSoldOut ? 0 : seatsLeft}
+                      onCapacityChanged={(capacityLeft) => {
+                        setRemainingCapacity(capacityLeft);
+                        window.localStorage.setItem(
+                          `citypass:event-booked:${event.id}`,
+                          String(Math.max(0, Number(event.capacity ?? 0) - capacityLeft))
+                        );
+                      }}
+                      onRequireAuth={() => setShowAuthModal(true)}
+                    />
+                  </div>
+                )}
+
+                <p className="booking-guarantee">
+                  Official verified ticket • 100% Secure Checkout
+                </p>
+              </div>
             </div>
           </main>
         </div>
@@ -562,12 +607,77 @@ function EventDetails() {
             type="button"
             className="mobile-book-now-btn"
             onClick={handleBookTicketsClick}
-            disabled={tickets.length > 0 && !selectedTicket}
+            disabled={isSoldOut || (tickets.length > 0 && !selectedTicket)}
           >
-            Book Now
+            {isSoldOut ? "Sold Out" : "Book Now"}
           </button>
         </div>
       </div>
+
+      {showImagePreview && eventImage && (
+        <div
+          className="image-lightbox-overlay"
+          onClick={() => setShowImagePreview(false)}
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.88)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "20px",
+            animation: "fadeIn 0.2s ease-out",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setShowImagePreview(false)}
+            aria-label="Close image preview"
+            style={{
+              position: "absolute",
+              top: "24px",
+              right: "24px",
+              background: "rgba(255, 255, 255, 0.15)",
+              border: "none",
+              color: "#fff",
+              width: "44px",
+              height: "44px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              fontSize: "1.2rem",
+              transition: "background 0.2s",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "rgba(255, 255, 255, 0.3)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "rgba(255, 255, 255, 0.15)")
+            }
+          >
+            <FaTimes />
+          </button>
+
+          <img
+            src={eventImage}
+            alt={event.name || "Event preview"}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: "92vw",
+              maxHeight: "88vh",
+              objectFit: "contain",
+              borderRadius: "12px",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.6)",
+              userSelect: "none",
+            }}
+          />
+        </div>
+      )}
 
       {showAuthModal && (
         <Auth
@@ -582,8 +692,6 @@ function EventDetails() {
         isOpen={showTerms}
         onClose={() => setShowTerms(false)}
       />
-
-      <Footer />
     </>
   );
 }

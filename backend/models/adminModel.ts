@@ -1,5 +1,5 @@
 import { db } from "../config/database.js";
-import { RowDataPacket } from "mysql2";
+import { ResultSetHeader, RowDataPacket } from "mysql2";
 
 export const approveOrganiserRequest = async (
   requestId: number
@@ -95,4 +95,20 @@ export const approveOrganiserRequest = async (
     connection.release();
 
   }
+};
+
+export const rejectOrganiserRequest = async (
+  requestId: number,
+  reason: string
+): Promise<ResultSetHeader> => {
+  const [result] = await db.execute<ResultSetHeader>(
+    `
+    UPDATE organizer_requests
+    SET status = 'REJECTED', rejection_reason = ?
+    WHERE id = ? AND status = 'PENDING'
+    `,
+    [reason, requestId]
+  );
+
+  return result;
 };

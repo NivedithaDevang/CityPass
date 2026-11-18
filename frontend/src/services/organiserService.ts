@@ -1,4 +1,3 @@
-
 import axios from "axios";
 import { API_BASE_URL } from "../config/config";
 
@@ -24,9 +23,7 @@ export type OrganiserEvent = {
   rejection_reason?: string | null;
   languages?: string | string[] | null;
   age_group?: string | null;
-  age_restriction?: string | null;
   duration_hours?: number | string | null;
-  duration?: string | null;
   additional_instructions?: string | null;
   instructions?: string | null;
 };
@@ -42,13 +39,10 @@ export interface CreateOrganiserEventData {
   price: number;
   capacity: number;
   image?: File;
-  // Add the new fields:
   instructions?: string;
   additional_instructions?: string;
   languages?: string | string[];
-  age_restriction?: string;
   age_group?: string;
-  duration?: string;
   duration_hours?: number;
 }
 
@@ -70,19 +64,23 @@ export interface OrganiserBooking {
   booking_status: string | null;
 }
 
-export interface AdminTicketTemplate {
-  id: number;
-  name: string;
-  description?: string;
-  price: number;
-  category: string;
-  status: "ACTIVE" | "DELETED";
-}
-
-
 export interface CancelEvent {
   id: number;
-  status: "CANCELLED"
+  status: "CANCELLED";
+}
+
+export interface OrganiserProfile {
+  id: number;
+  stage_name: string;
+  description: string;
+  user_id?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface UpdateOrganiserProfileData {
+  stage_name: string;
+  description: string;
 }
 
 const organiserApi = axios.create({
@@ -94,11 +92,6 @@ const lookupApi = axios.create({
   baseURL: `${API_BASE_URL}/v1`,
   withCredentials: true,
 });
-
-export const fetchActiveAdminTickets = async (): Promise<AdminTicketTemplate[]> => {
-  const response = await lookupApi.get("/tickets");
-  return response.data?.tickets || [];
-};
 
 export const getOrganiserErrorMessage = (
   error: unknown,
@@ -122,10 +115,7 @@ export const fetchOrganiserBookings = async (): Promise<OrganiserBooking[]> => {
 };
 
 export const createOrganiserEvent = async (
-  data: CreateOrganiserEventData & {
-    ticket_category_name?: string;
-    ticket_tiers?: string;
-  }
+  data: CreateOrganiserEventData
 ): Promise<OrganiserEvent> => {
   const formData = new FormData();
 
@@ -139,36 +129,26 @@ export const createOrganiserEvent = async (
   formData.append("price", String(data.price));
   formData.append("capacity", String(data.capacity));
 
-  // --- Append the missing instruction & badge fields ---
   const instructions = data.additional_instructions || data.instructions;
   if (instructions) {
     formData.append("additional_instructions", instructions);
     formData.append("instructions", instructions);
   }
 
-  const ageGroup = data.age_group || data.age_restriction;
+  const ageGroup = data.age_group;
   if (ageGroup) {
     formData.append("age_group", ageGroup);
-    formData.append("age_restriction", ageGroup);
   }
 
-  const durationVal = data.duration_hours !== undefined ? String(data.duration_hours) : data.duration;
-  if (durationVal) {
-    formData.append("duration", String(durationVal));
-    formData.append("duration_hours", String(durationVal));
+  if (data.duration_hours !== undefined) {
+    formData.append("duration_hours", String(data.duration_hours));
   }
 
   if (data.languages) {
-    const langs = Array.isArray(data.languages) ? JSON.stringify(data.languages) : data.languages;
+    const langs = Array.isArray(data.languages)
+      ? JSON.stringify(data.languages)
+      : data.languages;
     formData.append("languages", langs);
-  }
-
-  if (data.ticket_category_name !== undefined) {
-    formData.append("ticket_category_name", data.ticket_category_name);
-  }
-
-  if (data.ticket_tiers !== undefined) {
-    formData.append("ticket_tiers", data.ticket_tiers);
   }
 
   if (data.image) {
@@ -178,7 +158,6 @@ export const createOrganiserEvent = async (
   const response = await organiserApi.post("/add-event", formData);
   return response.data.event;
 };
-
 
 export const patchOrganiserEvent = async (
   eventId: number | string,
@@ -208,7 +187,6 @@ export const patchOrganiserEvent = async (
   return response.data.event;
 };
 
-
 export const fetchOrganiserCities = async (): Promise<OrganiserLookupOption[]> => {
   const response = await lookupApi.get("/cities");
   return response.data.cities || [];
@@ -219,38 +197,41 @@ export const fetchOrganiserCategories = async (): Promise<OrganiserLookupOption[
   return response.data.categories || [];
 };
 
-
 export const cancelEvent = async (
   eventId: number,
-  status: string = 'CANCELLED'
+  status: string = "CANCELLED"
 ) => {
-  const response = await organiserApi.patch(
-    `/cancel-event/${eventId}`,
-    {
-      id: eventId,
-      status,
-    }
-  );
+  const response = await organiserApi.patch(`/cancel-event/${eventId}`, {
+    id: eventId,
+    status,
+  });
 
   return response.data;
 };
 
-
-export const liveEvent = async (
-  eventId: number,
-  isLive: boolean
-) => {
-  const response = await organiserApi.patch(
-    `/live-event/${eventId}`,
-    {
-      id: eventId,
-      isLive,
-    }
-  );
+export const liveEvent = async (eventId: number, isLive: boolean) => {
+  const response = await organiserApi.patch(`/live-event/${eventId}`, {
+    id: eventId,
+    isLive,
+  });
 
   return response.data;
 };
 
+export const deactivateOrganiser = async (): Promise<void> => {
+  await organiserApi.patch("/deactivate");
+};
+
+export const fetchOrganiserProfile = async (): Promise<OrganiserProfile> => {
+  const response = await organiserApi.get("/profile");
+  return response.data.profile;
+};
+
+export const updateOrganiserProfileDetails = async (
+  data: UpdateOrganiserProfileData
+): Promise<OrganiserProfile> => {
+  const response = await organiserApi.patch("/profile", data);
+  return response.data.profile;
+};
 
 export default organiserApi;
-

@@ -37,8 +37,9 @@ function Hero() {
         ? rawData
         : rawData?.events || rawData?.data || [];
 
-      // Current timestamp (right now)
-      const now = new Date().getTime();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const startOfToday = today.getTime();
 
       const parseToTimestamp = (event: Events): number | null => {
         if (!event.event_date) return null;
@@ -75,13 +76,11 @@ function Hero() {
         return isNaN(timeVal) ? null : timeVal;
       };
 
-      // 1. Filter out all events where the event timestamp is strictly less than right now
-      // 2. Sort by nearest upcoming event first
       const upcomingEvents = eventList
         .filter((event) => {
           const eventTime = parseToTimestamp(event);
           if (eventTime === null) return false;
-          return eventTime >= now;
+          return eventTime >= startOfToday;
         })
         .sort((a, b) => {
           const timeA = parseToTimestamp(a) || 0;

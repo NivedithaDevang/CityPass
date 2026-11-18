@@ -42,12 +42,14 @@ margin: 0 0 28px;
     width: 100%;
     margin-top: 30px;
     padding-bottom: 10px;
+    
     overflow-x: auto;
     overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
     scrollbar-width: thin;
-    -webkit-overflow-scrolling: touch;
 }
 
 .eventsec-card {
@@ -341,6 +343,7 @@ margin: 0 0 28px;
         border-radius: 8px;
     }
 
+    @media (max-width: 640px) {
     .eventsec-grid {
         display: flex !important;
         flex-direction: row !important;
@@ -348,16 +351,16 @@ margin: 0 0 28px;
         width: 100%;
         gap: 10px;
         margin-top: 16px;
+        padding-bottom: 8px;
 
         overflow-x: auto !important;
-        overflow-y: hidden;
-
-        padding-bottom: 8px;
+        overflow-y: hidden !important;
 
         scrollbar-width: none;
         -webkit-overflow-scrolling: touch;
         scroll-snap-type: x mandatory;
     }
+}
 
     .eventsec-grid::-webkit-scrollbar {
         display: none;

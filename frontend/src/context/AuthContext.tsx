@@ -10,16 +10,19 @@ import { API_BASE_URL } from "../config/config";
 
 export interface User {
   id: string;
-  name: string;
+  name?: string;
   email: string;
-  role: "USER" | "ORGANIZER" | "ADMIN" | "SUPER_ADMIN";
+  role: "USER" | "ORGANIZER" | "ADMIN" | "SUPER_ADMIN" | string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isPinVerified: boolean;
+  setIsPinVerified: (verified: boolean) => void;
   login: (userData: User) => void;
   logout: () => Promise<void>;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,15 +36,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Check whether the user is already logged in
-  // when the page loads or refreshes
+  // Restore PIN status from sessionStorage on reload/refresh
+  const [isPinVerified, setIsPinVerifiedState] = useState<boolean>(() => {
+    return sessionStorage.getItem("admin_pin_verified") === "true";
+  });
+
+  const setIsPinVerified = (verified: boolean) => {
+    setIsPinVerifiedState(verified);
+    if (verified) {
+      sessionStorage.setItem("admin_pin_verified", "true");
+    } else {
+      sessionStorage.removeItem("admin_pin_verified");
+    }
+  };
+
+  // Check existing session on load
   useEffect(() => {
     const checkSession = async () => {
       try {
         const response = await authApi.get("/profile");
+        
+        // Normalize multiple common API payload structures
+        const fetchedUser: User | null =
+          response.data?.user ??
+          response.data?.data?.user ??
+          response.data?.data ??
+          response.data ??
+          null;
 
-        setUser(response.data.user);
+        console.log("[AuthContext] Session checked successfully:", fetchedUser);
+        setUser(fetchedUser);
       } catch (error) {
+        console.warn("[AuthContext] No active session found or request failed:", error);
         setUser(null);
       } finally {
         setLoading(false);
@@ -51,21 +77,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkSession();
   }, []);
 
-  // Login
-  // Backend has already created the HttpOnly cookie.
-  // We only store the user information in React state.
+  // Login action
   const login = (userData: User) => {
+    setIsPinVerified(false);
     setUser(userData);
   };
 
-  // Logout
-  // Backend clears the HttpOnly cookie.
+  // Logout action
   const logout = async () => {
     try {
       await authApi.post("/logout");
     } catch (error) {
-      console.error("Logout failed:", error);
+      console.error("[AuthContext] Logout failed:", error);
     } finally {
+      setIsPinVerified(false);
       setUser(null);
     }
   };
@@ -75,8 +100,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         loading,
+        isPinVerified,
+        setIsPinVerified,
         login,
         logout,
+        setUser,
       }}
     >
       {children}
@@ -84,7 +112,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Custom hook
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
 

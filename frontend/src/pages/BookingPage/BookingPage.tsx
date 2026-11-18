@@ -1,7 +1,4 @@
-
-import Navbar from "../../components/Navbar/Navbar";
-import { Footer } from "../../components/Footer/Footer";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../config/config";
 import { useUser } from "../../context/UserContext";
@@ -15,6 +12,7 @@ import {
   FaTimes,
   FaTicketAlt,
   FaUser,
+  FaSearchPlus,
 } from "react-icons/fa";
 import { IoSparkles } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
@@ -43,6 +41,12 @@ interface BookingItem {
   poster_url?: string;
   banner_image?: string;
   image?: string;
+  event?: {
+    image_url?: string;
+    poster_url?: string;
+    banner_image?: string;
+    image?: string;
+  };
   event_ticket_id?: number | null;
   ticket_name?: string | null;
   ticket_description?: string | null;
@@ -50,20 +54,10 @@ interface BookingItem {
   number_of_tickets?: number;
   total_amount?: string | number;
   booking_date?: string;
-  status?: "CONFIRMED" | "CANCELLED";
+  status?: string;
 }
 
-const CITY_IMAGE_MAP: Record<string, string> = {
-  Bengaluru: "/cities/Bangalore.jpeg",
-  Mumbai: "/cities/Mumbai.jpeg",
-  Delhi: "/cities/Delhi.jpeg",
-  Lucknow: "/cities/Lucknow.jpeg",
-  Panaji: "/cities/Goa.jpeg",
-  Goa: "/cities/Goa.jpeg",
-  Hyderabad: "/cities/Hyderabad.jpeg",
-  Chennai: "/cities/Chennai.jpeg",
-  Trivandrum: "/cities/Trivandrum.jpeg",
-};
+type CancelMode = "all" | "partial";
 
 const DEFAULT_POSTER = "/categories/image.png";
 
@@ -73,6 +67,42 @@ const formatCurrency = (
   `₹${Number(amount ?? 0).toLocaleString("en-IN", {
     maximumFractionDigits: 2,
   })}`;
+
+const isEventCompleted = (
+  dateStr?: string,
+  timeStr?: string
+): boolean => {
+  if (!dateStr) return false;
+
+  const now = new Date();
+  const cleanDate = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr.split(" ")[0];
+  const [yearStr, monthStr, dayStr] = cleanDate.split("-");
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+
+  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
+    const fallbackDate = new Date(dateStr);
+    return !Number.isNaN(fallbackDate.getTime()) && fallbackDate < now;
+  }
+
+  let hours = 23;
+  let minutes = 59;
+
+  if (timeStr && timeStr.trim()) {
+    const raw = timeStr.trim();
+    if (raw.includes(":")) {
+      const parts = raw.split(":");
+      const parsedH = parseInt(parts[0], 10);
+      const parsedM = parseInt(parts[1], 10);
+      if (!Number.isNaN(parsedH)) hours = parsedH;
+      if (!Number.isNaN(parsedM)) minutes = parsedM;
+    }
+  }
+
+  const eventDateTime = new Date(year, month - 1, day, hours, minutes, 59);
+  return eventDateTime.getTime() < now.getTime();
+};
 
 const extractFormattedTime = (
   timeField?: string,
@@ -193,12 +223,31 @@ function DigitalTicketModal({
   const isCancelled =
     booking.status?.toUpperCase() === "CANCELLED";
 
+  const isPast =
+    !isCancelled &&
+    isEventCompleted(
+      booking.event_date || booking.booking_date,
+      booking.time || booking.event_time
+    );
+
   const eventTimeFormatted = extractFormattedTime(
     booking.time || booking.event_time,
     booking.event_date
   );
 
-  const ticketCount = booking.number_of_tickets || 1;
+  const ticketCount = booking.number_of_tickets ?? 1;
+
+  const modalStatusText = isCancelled
+    ? "CANCELLED"
+    : isPast
+      ? "COMPLETED"
+      : booking.status || "CONFIRMED";
+
+  const modalStatusClass = isCancelled
+    ? "tag-cancelled"
+    : isPast
+      ? "tag-completed"
+      : "tag-active";
 
   return (
     <div
@@ -212,18 +261,9 @@ function DigitalTicketModal({
         className="ticket-modal-wrapper"
         onClick={(event) => event.stopPropagation()}
       >
-        <button
-          type="button"
-          className="ticket-close-btn"
-          onClick={onClose}
-          aria-label="Close ticket"
-        >
-          <FaTimes />
-        </button>
-
         <div
           className={`digital-ticket-card ${
-            isCancelled ? "ticket-cancelled" : ""
+            isCancelled ? "ticket-cancelled" : isPast ? "ticket-completed" : ""
           }`}
         >
           <div className="ticket-header-band">
@@ -232,6 +272,15 @@ function DigitalTicketModal({
                 <IoSparkles className="sparkle-icon" />
                 CityPass Official
               </span>
+
+              <button
+                type="button"
+                className="book-ticket-close-btn"
+                onClick={onClose}
+                aria-label="Close ticket"
+              >
+                <FaTimes />
+              </button>
             </div>
 
             <h2 className="ticket-main-heading">
@@ -243,7 +292,7 @@ function DigitalTicketModal({
             <div className="ticket-title-row">
               <div>
                 <span className="ticket-event-label">
-                  ADMIT ONE PASS
+                  DIGITAL EVENT PASS
                 </span>
 
                 <h3 className="ticket-event-name">
@@ -251,12 +300,8 @@ function DigitalTicketModal({
                 </h3>
               </div>
 
-              <span
-                className={`ticket-status-tag ${
-                  isCancelled ? "tag-cancelled" : "tag-active"
-                }`}
-              >
-                {isCancelled ? "CANCELLED" : "CONFIRMED"}
+              <span className={`ticket-status-tag ${modalStatusClass}`}>
+                {modalStatusText}
               </span>
             </div>
 
@@ -330,13 +375,13 @@ function DigitalTicketModal({
 
                 <span className="cell-value">
                   {ticketCount} Ticket
-                  {ticketCount > 1 ? "s" : ""}
+                  {ticketCount !== 1 ? "s" : ""}
                 </span>
               </div>
 
               <div className="ticket-cell">
                 <span className="cell-label">
-                  <FaCheckCircle /> TOTAL PAID
+                  <FaCheckCircle /> BOOKING AMOUNT
                 </span>
 
                 <span className="cell-value total-price">
@@ -366,7 +411,7 @@ function DigitalTicketModal({
 }
 
 export function BookingPage() {
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const navigate = useNavigate();
 
   const [bookings, setBookings] = useState<BookingItem[]>([]);
@@ -379,66 +424,163 @@ export function BookingPage() {
   const [selectedBookingForPass, setSelectedBookingForPass] =
     useState<BookingItem | null>(null);
 
+  const [previewPosterUrl, setPreviewPosterUrl] = useState<string | null>(null);
+
+  const [cancelMode, setCancelMode] = useState<CancelMode>("all");
+  const [cancelQuantity, setCancelQuantity] = useState<number>(1);
+
   const [isCancelling, setIsCancelling] = useState<boolean>(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchBookings = async () => {
+    if (previewPosterUrl) {
+      document.body.style.overflow = "hidden";
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") setPreviewPosterUrl(null);
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.body.style.overflow = "unset";
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = "unset";
+    }
+  }, [previewPosterUrl]);
+
+  const fetchBookings = useCallback(async () => {
+    const response = await axios.get(
+      `${API_BASE_URL}/v1/bookings`,
+      { withCredentials: true }
+    );
+
+    const list =
+      response.data.bookings || response.data.booking || [];
+
+    setBookings(Array.isArray(list) ? list : [list]);
+  }, []);
+
+  useEffect(() => {
+    if (userLoading) return;
+
+    let cancelled = false;
+
+    const loadBookings = async () => {
+      if (!user) {
+        setBookings([]);
+        setError("Unable to load bookings. Please sign in and try again.");
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError("");
 
-        const response = await axios.get(
-          `${API_BASE_URL}/v1/bookings`,
-          { withCredentials: true }
-        );
-
-        const list =
-          response.data.bookings || response.data.booking || [];
-
-        setBookings(Array.isArray(list) ? list : [list]);
+        await fetchBookings();
       } catch (err) {
         console.error("Error loading bookings:", err);
-        setError(
-          "Unable to load bookings. Please sign in and try again."
-        );
+
+        if (!cancelled) {
+          setError(
+            "Unable to load bookings. Please sign in and try again."
+          );
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchBookings();
-  }, []);
+    void loadBookings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchBookings, user, userLoading]);
+
+  const openCancelModal = (booking: BookingItem) => {
+    const bookedQuantity = booking.number_of_tickets ?? 1;
+
+    setCancelError(null);
+    setCancelMode("all");
+    setCancelQuantity(bookedQuantity);
+    setSelectedBookingForCancel(booking);
+  };
 
   const handleConfirmCancel = async () => {
-    if (!selectedBookingForCancel) return;
+    if (!selectedBookingForCancel || isCancelling) return;
+
+    const booking = selectedBookingForCancel;
+    const bookedQuantity = booking.number_of_tickets ?? 1;
+
+    const quantityToCancel =
+      cancelMode === "all"
+        ? bookedQuantity
+        : cancelQuantity;
+
+    if (
+      !Number.isSafeInteger(quantityToCancel) ||
+      quantityToCancel < 1 ||
+      quantityToCancel > bookedQuantity
+    ) {
+      setCancelError(
+        "Please select a valid number of tickets to cancel."
+      );
+      return;
+    }
 
     try {
       setIsCancelling(true);
       setCancelError(null);
 
-      await axios.patch(
-        `${API_BASE_URL}/v1/bookings/${selectedBookingForCancel.id}/cancel`,
-        {},
+      const response = await axios.patch(
+        `${API_BASE_URL}/v1/bookings/${booking.id}/cancel`,
+        {
+          quantity: quantityToCancel,
+        },
         { withCredentials: true }
       );
 
+      const result = response.data;
+
       setBookings((previous) =>
-        previous.map((booking) =>
-          booking.id === selectedBookingForCancel.id
-            ? { ...booking, status: "CANCELLED" }
-            : booking
+        previous.map((item) =>
+          item.id === booking.id
+            ? {
+                ...item,
+                number_of_tickets: result.remainingTickets,
+                total_amount: result.remainingAmount,
+                status: result.status,
+              }
+            : item
         )
       );
 
       setSelectedBookingForCancel(null);
-    } catch (err: any) {
-      console.error("Error cancelling booking:", err);
 
-      setCancelError(
-        err.response?.data?.message ||
-          "Failed to cancel your booking. Please try again."
-      );
+      try {
+        await fetchBookings();
+      } catch (refreshError) {
+        console.error(
+          "Cancellation succeeded, but booking refresh failed:",
+          refreshError
+        );
+      }
+    } catch (err: unknown) {
+      console.error("Error cancelling tickets:", err);
+
+      if (axios.isAxiosError(err)) {
+        setCancelError(
+          err.response?.data?.message ||
+            "Failed to cancel your tickets. Please try again."
+        );
+      } else {
+        setCancelError(
+          "Failed to cancel your tickets. Please try again."
+        );
+      }
     } finally {
       setIsCancelling(false);
     }
@@ -449,28 +591,14 @@ export function BookingPage() {
       item.image_url ||
       item.poster_url ||
       item.banner_image ||
-      item.image;
+      item.image ||
+      item.event?.image_url ||
+      item.event?.poster_url ||
+      item.event?.banner_image ||
+      item.event?.image;
 
     if (directEventImage?.trim()) {
       return directEventImage.trim();
-    }
-
-    const cityName = item.city_name?.trim();
-
-    if (cityName && CITY_IMAGE_MAP[cityName]) {
-      return CITY_IMAGE_MAP[cityName];
-    }
-
-    const location = (
-      item.location ||
-      item.venue ||
-      ""
-    ).trim().toLowerCase();
-
-    for (const [name, imagePath] of Object.entries(CITY_IMAGE_MAP)) {
-      if (location.includes(name.toLowerCase())) {
-        return imagePath;
-      }
     }
 
     return DEFAULT_POSTER;
@@ -505,10 +633,34 @@ export function BookingPage() {
     }).format(date);
   };
 
+  const selectedBookedQuantity =
+    selectedBookingForCancel?.number_of_tickets ?? 1;
+
+  const selectedBookingAmount = Number(
+    selectedBookingForCancel?.total_amount ?? 0
+  );
+
+  const estimatedRefund =
+    selectedBookingForCancel &&
+    cancelQuantity === selectedBookedQuantity
+      ? selectedBookingAmount
+      : selectedBookingForCancel
+        ? Math.round(
+            (
+              selectedBookingAmount *
+              cancelQuantity /
+              Math.max(1, selectedBookedQuantity)
+            ) * 100
+          ) / 100
+        : 0;
+
+  const remainingQuantity =
+    cancelMode === "all"
+      ? 0
+      : Math.max(0, selectedBookedQuantity - cancelQuantity);
+
   return (
     <>
-      <Navbar />
-
       <section className="hero-banner">
         <div className="booking-heading">
           <div className="booking-hero">
@@ -549,6 +701,15 @@ export function BookingPage() {
               const isCancelled =
                 item.status?.toUpperCase() === "CANCELLED";
 
+              const isPast =
+                !isCancelled &&
+                isEventCompleted(
+                  item.event_date || item.booking_date,
+                  item.time || item.event_time
+                );
+
+              const isDisabled = isCancelled || isPast;
+
               const cityLabel =
                 item.city_name ||
                 item.location ||
@@ -560,21 +721,35 @@ export function BookingPage() {
 
               const eventSlug =
                 item.slug ||
-                (eventTitle
-                  ? createEventSlug(eventTitle)
-                  : item.pass_id ?? item.id);
+                createEventSlug(eventTitle);
 
               const targetUrl = `/events/${eventSlug}`;
+              const ticketCount = item.number_of_tickets ?? 1;
+              const poster = getBookingPoster(item);
 
               return (
                 <article
                   key={item.id}
-                  className="hz-booking-card"
-                  onClick={() => navigate(targetUrl)}
+                  className={`hz-booking-card ${
+                    isDisabled ? "hz-booking-card-disabled" : ""
+                  }`}
+                  onClick={() => {
+                    if (!isDisabled) {
+                      navigate(targetUrl);
+                    }
+                  }}
+                  style={isDisabled ? { cursor: "default" } : undefined}
                 >
-                  <div className="hz-card-media">
+                  <div
+                    className="hz-card-media"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewPosterUrl(poster);
+                    }}
+                    title="Click to view full image"
+                  >
                     <img
-                      src={getBookingPoster(item)}
+                      src={poster}
                       alt={eventTitle}
                       className="hz-poster-img"
                       onError={(event) => {
@@ -587,33 +762,16 @@ export function BookingPage() {
                         }
 
                         image.dataset.fallbackApplied = "true";
-
-                        const cityName = item.city_name?.trim();
-                        let fallback = cityName
-                          ? CITY_IMAGE_MAP[cityName]
-                          : undefined;
-
-                        if (!fallback) {
-                          const location = (
-                            item.location ||
-                            item.venue ||
-                            ""
-                          ).trim().toLowerCase();
-
-                          fallback = Object.entries(
-                            CITY_IMAGE_MAP
-                          ).find(([name]) =>
-                            location.includes(name.toLowerCase())
-                          )?.[1];
-                        }
-
-                        image.src = fallback || DEFAULT_POSTER;
+                        image.src = DEFAULT_POSTER;
                       }}
                     />
 
                     <div className="hz-media-badges">
                       <span className="hz-location-tag">
                         {cityLabel}
+                      </span>
+                      <span className="hz-view-hint">
+                        <FaSearchPlus /> View
                       </span>
                     </div>
                   </div>
@@ -627,7 +785,11 @@ export function BookingPage() {
 
                       <span
                         className={`hz-status-pill ${
-                          isCancelled ? "cancelled" : "confirmed"
+                          isCancelled
+                            ? "cancelled"
+                            : isPast
+                              ? "completed"
+                              : "confirmed"
                         }`}
                       >
                         {isCancelled ? (
@@ -636,7 +798,11 @@ export function BookingPage() {
                           <FaCheckCircle />
                         )}
 
-                        {isCancelled ? "Cancelled" : "Confirmed"}
+                        {isCancelled
+                          ? "Cancelled"
+                          : isPast
+                            ? "Completed"
+                            : "Confirmed"}
                       </span>
                     </div>
 
@@ -681,20 +847,18 @@ export function BookingPage() {
 
                       <div className="hz-info-col">
                         <span className="hz-col-label">
-                          TICKETS
+                          TICKETS REMAINING
                         </span>
 
                         <span className="hz-col-val">
-                          {item.number_of_tickets || 1} Ticket
-                          {(item.number_of_tickets || 1) > 1
-                            ? "s"
-                            : ""}
+                          {ticketCount} Ticket
+                          {ticketCount !== 1 ? "s" : ""}
                         </span>
                       </div>
 
                       <div className="hz-info-col">
                         <span className="hz-col-label">
-                          TOTAL PAID
+                          BOOKING AMOUNT
                         </span>
 
                         <span className="hz-col-val hz-price">
@@ -712,14 +876,11 @@ export function BookingPage() {
                         className="hz-action-buttons"
                         onClick={(event) => event.stopPropagation()}
                       >
-                        {!isCancelled && (
+                        {!isDisabled && (
                           <button
                             type="button"
                             className="hz-cancel-btn"
-                            onClick={() => {
-                              setCancelError(null);
-                              setSelectedBookingForCancel(item);
-                            }}
+                            onClick={() => openCancelModal(item)}
                           >
                             <FaBan /> Cancel
                           </button>
@@ -744,6 +905,30 @@ export function BookingPage() {
         )}
       </main>
 
+      {/* Lightbox Image Preview Modal */}
+      {previewPosterUrl && (
+        <div
+          className="image-lightbox-overlay"
+          onClick={() => setPreviewPosterUrl(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <button
+            type="button"
+            className="image-lightbox-close"
+            onClick={() => setPreviewPosterUrl(null)}
+            aria-label="Close image preview"
+          >
+            <FaTimes />
+          </button>
+          <img
+            src={previewPosterUrl}
+            alt="Event poster enlarged view"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
       <DigitalTicketModal
         isOpen={Boolean(selectedBookingForPass)}
         onClose={() => setSelectedBookingForPass(null)}
@@ -755,9 +940,11 @@ export function BookingPage() {
           className="cancel-modal-overlay"
           role="dialog"
           aria-modal="true"
+          aria-labelledby="cancel-modal-title"
           onClick={() => {
             if (!isCancelling) {
               setSelectedBookingForCancel(null);
+              setCancelError(null);
             }
           }}
         >
@@ -765,16 +952,16 @@ export function BookingPage() {
             className="cancel-modal-card"
             onClick={(event) => event.stopPropagation()}
           >
-            <h2>Cancel Booking?</h2>
+            <h2 id="cancel-modal-title">Manage Your Tickets</h2>
 
             <p>
-              Are you sure you want to cancel your pass for{" "}
+              Choose how many tickets you want to cancel for{" "}
               <strong>
                 {selectedBookingForCancel.event_title ||
                   selectedBookingForCancel.name ||
                   "this event"}
               </strong>
-              ?
+              .
             </p>
 
             <div className="cancel-summary-box">
@@ -787,43 +974,173 @@ export function BookingPage() {
               </div>
 
               <div className="cancel-summary-row">
-                <span>Passes:</span>
+                <span>Currently booked:</span>
                 <strong>
-                  {selectedBookingForCancel.number_of_tickets || 1}{" "}
-                  Ticket
-                  {(selectedBookingForCancel.number_of_tickets || 1) >
-                  1
-                    ? "s"
-                    : ""}
+                  {selectedBookedQuantity} Ticket
+                  {selectedBookedQuantity !== 1 ? "s" : ""}
                 </strong>
               </div>
 
               <div className="cancel-summary-row">
-                <span>Booking total:</span>
+                <span>Current booking amount:</span>
+                <strong>
+                  {formatCurrency(selectedBookingAmount)}
+                </strong>
+              </div>
+            </div>
+
+            {selectedBookedQuantity > 1 ? (
+              <div className="cancel-options">
+                <label className="cancel-option">
+                  <input
+                    type="radio"
+                    name="cancelMode"
+                    value="all"
+                    checked={cancelMode === "all"}
+                    onChange={() => {
+                      setCancelMode("all");
+                      setCancelQuantity(selectedBookedQuantity);
+                      setCancelError(null);
+                    }}
+                    disabled={isCancelling}
+                  />
+
+                  <span>
+                    <strong>Cancel all tickets</strong>
+                    <small>
+                      Cancel all {selectedBookedQuantity} tickets.
+                    </small>
+                  </span>
+                </label>
+
+                <label className="cancel-option">
+                  <input
+                    type="radio"
+                    name="cancelMode"
+                    value="partial"
+                    checked={cancelMode === "partial"}
+                    onChange={() => {
+                      setCancelMode("partial");
+                      setCancelQuantity(1);
+                      setCancelError(null);
+                    }}
+                    disabled={isCancelling}
+                  />
+
+                  <span>
+                    <strong>Cancel selected tickets</strong>
+                    <small>
+                      Keep the tickets you still want to use.
+                    </small>
+                  </span>
+                </label>
+
+                {cancelMode === "partial" && (
+                  <div className="cancel-quantity-field">
+                    <label htmlFor="cancelQuantity">
+                      Number of tickets to cancel
+                    </label>
+
+                    <select
+                      id="cancelQuantity"
+                      value={cancelQuantity}
+                      onChange={(event) => {
+                        setCancelQuantity(Number(event.target.value));
+                        setCancelError(null);
+                      }}
+                      disabled={isCancelling}
+                    >
+                      {Array.from(
+                        { length: selectedBookedQuantity - 1 },
+                        (_, index) => index + 1
+                      ).map((quantity) => (
+                        <option
+                          key={quantity}
+                          value={quantity}
+                        >
+                          {quantity} Ticket
+                          {quantity !== 1 ? "s" : ""}
+                        </option>
+                      ))}
+                    </select>
+
+                    <small>
+                      You must keep at least one ticket when using
+                      partial cancellation.
+                    </small>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="cancel-options">
+                <p>
+                  You booked only one ticket. Confirm below if you
+                  want to cancel the entire booking.
+                </p>
+              </div>
+            )}
+
+            <div className="cancel-summary-box">
+              <div className="cancel-summary-row">
+                <span>Tickets to cancel:</span>
+                <strong>
+                  {cancelMode === "all"
+                    ? selectedBookedQuantity
+                    : cancelQuantity}
+                </strong>
+              </div>
+
+              <div className="cancel-summary-row">
+                <span>Tickets remaining:</span>
+                <strong>
+                  {remainingQuantity}
+                </strong>
+              </div>
+
+              <div className="cancel-summary-row">
+                <span>Estimated refund:</span>
+                <strong>
+                  {formatCurrency(estimatedRefund)}
+                </strong>
+              </div>
+
+              <div className="cancel-summary-row">
+                <span>Remaining booking amount:</span>
                 <strong>
                   {formatCurrency(
-                    selectedBookingForCancel.total_amount
+                    Math.round(
+                      (
+                        selectedBookingAmount - estimatedRefund
+                      ) * 100
+                    ) / 100
                   )}
                 </strong>
               </div>
             </div>
 
             <p className="cancel-terms-note">
-              Refund eligibility depends on the event's cancellation
-              policy and the applicable refund terms.
+              The displayed refund is an estimate. Actual refund
+              eligibility depends on the event's cancellation policy
+              and payment provider.
             </p>
 
             {cancelError && (
-              <p className="cancel-inline-error">{cancelError}</p>
+              <p
+                className="cancel-inline-error"
+                role="alert"
+              >
+                {cancelError}
+              </p>
             )}
 
             <div className="cancel-modal-actions">
               <button
                 type="button"
                 className="cancel-back-btn"
-                onClick={() =>
-                  setSelectedBookingForCancel(null)
-                }
+                onClick={() => {
+                  setSelectedBookingForCancel(null);
+                  setCancelError(null);
+                }}
                 disabled={isCancelling}
               >
                 Keep Booking
@@ -837,14 +1154,16 @@ export function BookingPage() {
               >
                 {isCancelling
                   ? "Cancelling..."
-                  : "Confirm Cancellation"}
+                  : cancelMode === "all"
+                    ? "Confirm Cancellation"
+                    : `Cancel ${cancelQuantity} Ticket${
+                        cancelQuantity !== 1 ? "s" : ""
+                      }`}
               </button>
             </div>
           </div>
         </div>
       )}
-
-      <Footer />
     </>
   );
 }

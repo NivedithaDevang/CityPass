@@ -13,7 +13,12 @@ const OrganiserProtectedRoute = () => {
         return <Navigate to="/" replace />;
     }
 
-    if (user.role !== "ORGANIZER") {
+    const userRole = String(user.role || "")
+        .toUpperCase()
+        .trim()
+        .replace(/[\s-]+/g, "_");
+
+    if (userRole !== "ORGANIZER" && userRole !== "ORGANISER") {
         return <Navigate to="/" replace />;
     }
 

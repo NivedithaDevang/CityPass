@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useUser } from "../../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../config/config";
+import ConfirmationPopup from "../Terms/ConfirmationPopup";
 import "./Sidebar.css";
 
 import {
@@ -34,31 +35,27 @@ export function Sidebar({
   const { user } = useUser();
   const navigate = useNavigate();
 
-  const [isBookingsOpen, setIsBookingsOpen] =
-    useState(false);
+  const [isBookingsOpen, setIsBookingsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  const [isSettingsOpen, setIsSettingsOpen] =
-    useState(false);
-
-  const normalizedRole =
-    user?.role?.toUpperCase() || "";
+  const normalizedRole = user?.role?.toUpperCase() || "";
 
   const isAdmin =
     normalizedRole === "ADMIN" ||
     normalizedRole === "SUPER_ADMIN" ||
     normalizedRole === "SUPERADMIN";
 
-  const isOrganiser = normalizedRole === "ORGANISER" || normalizedRole === "ORGANIZER";
+  const isOrganiser =
+    normalizedRole === "ORGANISER" || normalizedRole === "ORGANIZER";
 
   const getInitial = () => {
     if (user?.name) {
-      return user.name
-        .charAt(0)
-        .toUpperCase();
+      return user.name.charAt(0).toUpperCase();
     }
-
     return "U";
   };
+
   const getProfileImage = () => {
     if (!user?.profile_image) {
       return "";
@@ -71,10 +68,7 @@ export function Sidebar({
       return user.profile_image;
     }
 
-    return `${API_BASE_URL.replace(
-      /\/$/,
-      ""
-    )}/${user.profile_image.replace(
+    return `${API_BASE_URL.replace(/\/$/, "")}/${user.profile_image.replace(
       /^\/+/,
       ""
     )}`;
@@ -82,14 +76,7 @@ export function Sidebar({
 
   const handleAccountClick = () => {
     onClose();
-
-    if (isAdmin) {
-      navigate("/admin");
-    } else if (isOrganiser) {
-      navigate("/organiser");
-    } else {
-      navigate("/settings/profile");
-    }
+    navigate("/settings/profile");
   };
 
   const handleProfileImageError = (
@@ -98,22 +85,22 @@ export function Sidebar({
     event.currentTarget.style.display = "none";
   };
 
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
+    onClose();
+    onLogout();
+  };
+
   return (
     <>
       {/* Sidebar backdrop */}
       <div
-        className={`sidebar-backdrop ${
-          isOpen ? "show" : ""
-        }`}
+        className={`sidebar-backdrop ${isOpen ? "show" : ""}`}
         onClick={onClose}
       />
 
       {/* Sidebar */}
-      <aside
-        className={`sidebar-drawer ${
-          isOpen ? "open" : ""
-        }`}
-      >
+      <aside className={`sidebar-drawer ${isOpen ? "open" : ""}`}>
         {/* Top */}
         <div className="sidebar-top">
           <button
@@ -133,9 +120,7 @@ export function Sidebar({
               <img
                 src={getProfileImage()}
                 alt="Profile"
-                onError={
-                  handleProfileImageError
-                }
+                onError={handleProfileImageError}
               />
             ) : (
               getInitial()
@@ -143,15 +128,11 @@ export function Sidebar({
           </div>
 
           <div className="profile-details">
-            <h2>
-              {user?.name || "User"}
-            </h2>
+            <h2>{user?.name || "User"}</h2>
 
             <span
               className={`status ${
-                user?.status === "INACTIVE"
-                  ? "status-inactive"
-                  : ""
+                user?.status === "INACTIVE" ? "status-inactive" : ""
               }`}
             >
               {user?.status || "ACTIVE"}
@@ -163,7 +144,6 @@ export function Sidebar({
 
         {/* Sidebar Content */}
         <div className="sidebar-content">
-
           {/* Admin Dashboard */}
           {isAdmin && (
             <button
@@ -207,45 +187,32 @@ export function Sidebar({
             </span>
             <span>My Account</span>
           </button>
+
           {/* My Bookings */}
           <div className="booking-section">
             <button
               type="button"
               className="sidebar-menu-item booking-button"
-              onClick={() =>
-                setIsBookingsOpen(
-                  (prev) => !prev
-                )
-              }
+              onClick={() => setIsBookingsOpen((prev) => !prev)}
             >
               <div className="menu-left">
                 <span className="ticket-icon">
                   <IoTicket />
                 </span>
 
-                <span>
-                  My Bookings
-                </span>
+                <span>My Bookings</span>
               </div>
 
               <span
-                className={`booking-arrow ${
-                  isBookingsOpen
-                    ? "rotate"
-                    : ""
-                }`}
+                className={`booking-arrow ${isBookingsOpen ? "rotate" : ""}`}
               >
-                <IoIosArrowForward
-                  size={20}
-                />
+                <IoIosArrowForward size={20} />
               </span>
             </button>
 
             <div
               className={`booking-categories ${
-                isBookingsOpen
-                  ? "expanded"
-                  : ""
+                isBookingsOpen ? "expanded" : ""
               }`}
             >
               <button
@@ -285,40 +252,28 @@ export function Sidebar({
             <button
               type="button"
               className="sidebar-menu-item settings-button"
-              onClick={() =>
-                setIsSettingsOpen(
-                  (prev) => !prev
-                )
-              }
+              onClick={() => setIsSettingsOpen((prev) => !prev)}
             >
               <div className="menu-left">
                 <span className="setting-icon">
                   <IoSettings />
                 </span>
 
-                <span>
-                  Settings
-                </span>
+                <span>Settings</span>
               </div>
 
               <span
                 className={`sidebar-settings-arrow ${
-                  isSettingsOpen
-                    ? "rotate"
-                    : ""
+                  isSettingsOpen ? "rotate" : ""
                 }`}
               >
-                <IoIosArrowForward
-                  size={20}
-                />
+                <IoIosArrowForward size={20} />
               </span>
             </button>
 
             <div
               className={`booking-categories ${
-                isSettingsOpen
-                  ? "expanded"
-                  : ""
+                isSettingsOpen ? "expanded" : ""
               }`}
             >
               {/* Change Password */}
@@ -326,9 +281,7 @@ export function Sidebar({
                 type="button"
                 onClick={() => {
                   onClose();
-                  navigate(
-                    "/settings/password"
-                  );
+                  navigate("/settings/password");
                 }}
               >
                 Change Password
@@ -339,9 +292,7 @@ export function Sidebar({
                 type="button"
                 onClick={() => {
                   onClose();
-                  navigate(
-                    "/settings/host-an-event"
-                  );
+                  navigate("/settings/host-an-event");
                 }}
               >
                 Host an Event
@@ -352,9 +303,7 @@ export function Sidebar({
                 type="button"
                 onClick={() => {
                   onClose();
-                  navigate(
-                    "/settings/deactivate"
-                  );
+                  navigate("/settings/deactivate");
                 }}
               >
                 Deactivate Account
@@ -375,9 +324,7 @@ export function Sidebar({
               <IoDocumentText />
             </span>
 
-            <span>
-              Terms & Conditions
-            </span>
+            <span>Terms & Conditions</span>
           </button>
 
           {/* Privacy */}
@@ -393,9 +340,7 @@ export function Sidebar({
               <IoShieldCheckmark />
             </span>
 
-            <span>
-              Privacy Policy
-            </span>
+            <span>Privacy Policy</span>
           </button>
         </div>
 
@@ -404,16 +349,27 @@ export function Sidebar({
           <button
             type="button"
             className="logout-btn"
-            onClick={onLogout}
+            onClick={() => setShowLogoutModal(true)}
           >
             <span>
               <IoLogOut />
             </span>
-
             Log Out
           </button>
         </div>
       </aside>
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmationPopup
+        isOpen={showLogoutModal}
+        title="Log Out"
+        message="Are you sure you want to log out of your account?"
+        confirmText="Log Out"
+        danger={true}
+        isLoading={false}
+        onConfirm={handleConfirmLogout}
+        onClose={() => setShowLogoutModal(false)}
+      />
     </>
   );
 }

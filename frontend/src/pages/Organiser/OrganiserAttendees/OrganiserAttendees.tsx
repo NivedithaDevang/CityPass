@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   CalendarDays,
+  Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -37,6 +39,96 @@ const formatAmount = (amount: number) =>
 
 const normaliseStatus = (status: string | null) =>
   (status || "UNKNOWN").toUpperCase();
+
+interface FilterDropdownOption {
+  value: string;
+  label: string;
+}
+
+interface CustomFilterDropdownProps {
+  label: string;
+  value: string;
+  options: FilterDropdownOption[];
+  onChange: (value: string) => void;
+}
+
+function CustomFilterDropdown({
+  label,
+  value,
+  options,
+  onChange,
+}: CustomFilterDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const selectedOption =
+    options.find((opt) => opt.value === value) || options[0];
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className="org-custom-dropdown-container" ref={containerRef}>
+      <span className="org-dropdown-label">{label}</span>
+
+      <button
+        type="button"
+        className={`org-dropdown-trigger ${isOpen ? "open" : ""}`}
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <span className="org-dropdown-trigger-text">
+          {selectedOption ? selectedOption.label : `Select ${label}`}
+        </span>
+        <ChevronDown
+          size={15}
+          className={`org-dropdown-chevron ${isOpen ? "rotate" : ""}`}
+        />
+      </button>
+
+      {isOpen && (
+        <ul className="org-dropdown-menu" role="listbox">
+          {options.map((option) => {
+            const isSelected = option.value === value;
+            return (
+              <li
+                key={option.value}
+                role="option"
+                aria-selected={isSelected}
+                className={`org-dropdown-item ${isSelected ? "selected" : ""}`}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+              >
+                <span className="org-dropdown-item-text">{option.label}</span>
+                {isSelected && (
+                  <Check size={14} className="org-dropdown-check" />
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 function OrganiserAttendees() {
   const [bookings, setBookings] = useState<OrganiserBooking[]>([]);
@@ -90,37 +182,43 @@ function OrganiserAttendees() {
     };
   }, []);
 
-  const eventOptions = useMemo(() => {
+  const eventDropdownOptions: FilterDropdownOption[] = useMemo(() => {
     const unique = new Map<number, string>();
-
     bookings.forEach((booking) =>
       unique.set(booking.event_id, booking.event_name)
     );
 
-    return [...unique.entries()].sort((left, right) =>
-      left[1].localeCompare(right[1])
-    );
+    const sortedEvents = [...unique.entries()]
+      .sort((a, b) => a[1].localeCompare(b[1]))
+      .map(([id, name]) => ({
+        value: String(id),
+        label: name,
+      }));
+
+    return [{ value: "ALL", label: "All events" }, ...sortedEvents];
   }, [bookings]);
 
-  const statusOptions = useMemo(
-    () =>
-      [
-        ...new Set(
-          bookings.map((booking) =>
-            normaliseStatus(booking.booking_status)
-          )
-        ),
-      ].sort(),
-    [bookings]
-  );
+  const statusDropdownOptions: FilterDropdownOption[] = useMemo(() => {
+    const statuses = [
+      ...new Set(
+        bookings.map((booking) => normaliseStatus(booking.booking_status))
+      ),
+    ].sort();
+
+    const formattedStatuses = statuses.map((status) => ({
+      value: status,
+      label: status.charAt(0) + status.slice(1).toLowerCase(),
+    }));
+
+    return [{ value: "ALL", label: "All statuses" }, ...formattedStatuses];
+  }, [bookings]);
 
   const filteredBookings = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
 
     return bookings.filter((booking) => {
       const matchesEvent =
-        eventFilter === "ALL" ||
-        String(booking.event_id) === eventFilter;
+        eventFilter === "ALL" || String(booking.event_id) === eventFilter;
 
       const matchesStatus =
         statusFilter === "ALL" ||
@@ -133,18 +231,13 @@ function OrganiserAttendees() {
           booking.user_email,
           booking.event_name,
           String(booking.booking_id),
-        ].some((value) =>
-          value?.toLocaleLowerCase().includes(query)
-        );
+        ].some((value) => value?.toLocaleLowerCase().includes(query));
 
       return matchesEvent && matchesStatus && matchesSearch;
     });
   }, [bookings, eventFilter, search, statusFilter]);
 
-  const pageCount = Math.max(
-    1,
-    Math.ceil(filteredBookings.length / PAGE_SIZE)
-  );
+  const pageCount = Math.max(1, Math.ceil(filteredBookings.length / PAGE_SIZE));
 
   const pageBookings = filteredBookings.slice(
     (page - 1) * PAGE_SIZE,
@@ -152,14 +245,12 @@ function OrganiserAttendees() {
   );
 
   const totalTickets = filteredBookings.reduce(
-    (sum, booking) =>
-      sum + Number(booking.number_of_tickets || 0),
+    (sum, booking) => sum + Number(booking.number_of_tickets || 0),
     0
   );
 
   const totalAmount = filteredBookings.reduce(
-    (sum, booking) =>
-      sum + Number(booking.total_amount || 0),
+    (sum, booking) => sum + Number(booking.total_amount || 0),
     0
   );
 
@@ -176,9 +267,7 @@ function OrganiserAttendees() {
         <div>
           <span className="org-eyebrow">GUEST MANAGEMENT</span>
           <h1>Bookings & attendees</h1>
-          <p>
-            Bookings for events owned by your organiser account.
-          </p>
+          <p>Bookings for events owned by your organiser account.</p>
         </div>
 
         <div className="org-attendee-count">
@@ -196,15 +285,10 @@ function OrganiserAttendees() {
         </div>
       )}
 
-      <section
-        className="org-attendee-summary"
-        aria-label="Booking summary"
-      >
+      <section className="org-attendee-summary" aria-label="Booking summary">
         <div>
           <small>Bookings shown</small>
-          <strong>
-            {loading ? "—" : filteredBookings.length}
-          </strong>
+          <strong>{loading ? "—" : filteredBookings.length}</strong>
         </div>
 
         <div>
@@ -214,9 +298,7 @@ function OrganiserAttendees() {
 
         <div>
           <small>Booking amount</small>
-          <strong>
-            {loading ? "—" : formatAmount(totalAmount)}
-          </strong>
+          <strong>{loading ? "—" : formatAmount(totalAmount)}</strong>
         </div>
       </section>
 
@@ -224,7 +306,6 @@ function OrganiserAttendees() {
         <div className="org-attendee-toolbar">
           <label className="org-attendee-search">
             <Search size={16} />
-
             <input
               value={search}
               onChange={(event) => {
@@ -237,76 +318,46 @@ function OrganiserAttendees() {
           </label>
 
           <div className="org-attendee-filters">
-            <label>
-              <span>Event</span>
+            <CustomFilterDropdown
+              label="Event"
+              value={eventFilter}
+              options={eventDropdownOptions}
+              onChange={(val) => {
+                setEventFilter(val);
+                setPage(1);
+              }}
+            />
 
-              <select
-                value={eventFilter}
-                onChange={(event) => {
-                  setEventFilter(event.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="ALL">All events</option>
-
-                {eventOptions.map(([id, name]) => (
-                  <option key={id} value={id}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span>Status</span>
-
-              <select
-                value={statusFilter}
-                onChange={(event) => {
-                  setStatusFilter(event.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="ALL">All statuses</option>
-
-                {statusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {status.charAt(0) + status.slice(1).toLowerCase()}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <CustomFilterDropdown
+              label="Status"
+              value={statusFilter}
+              options={statusDropdownOptions}
+              onChange={(val) => {
+                setStatusFilter(val);
+                setPage(1);
+              }}
+            />
           </div>
         </div>
 
         {loading ? (
           <div className="org-attendees-state">
-            <Loader2
-              size={25}
-              className="org-attendees-spin"
-            />
+            <Loader2 size={25} className="org-attendees-spin" />
             <span>Loading attendee bookings...</span>
           </div>
         ) : !error && pageBookings.length === 0 ? (
           <div className="org-attendees-state org-attendees-empty">
             <Users size={32} />
-
             <strong>
-              {bookings.length
-                ? "No matching bookings"
-                : "No bookings yet"}
+              {bookings.length ? "No matching bookings" : "No bookings yet"}
             </strong>
-
             <span>
               {bookings.length
                 ? "Adjust your search or filters."
                 : "When guests book tickets to your events, they will appear here."}
             </span>
-
             {bookings.length > 0 && (
-              <button onClick={clearFilters}>
-                Clear filters
-              </button>
+              <button onClick={clearFilters}>Clear filters</button>
             )}
           </div>
         ) : (
@@ -327,9 +378,7 @@ function OrganiserAttendees() {
 
                   <tbody>
                     {pageBookings.map((booking) => {
-                      const status = normaliseStatus(
-                        booking.booking_status
-                      );
+                      const status = normaliseStatus(booking.booking_status);
 
                       return (
                         <tr key={booking.booking_id}>
@@ -350,10 +399,8 @@ function OrganiserAttendees() {
                                 <strong>
                                   {booking.user_name || "Guest"}
                                 </strong>
-
                                 <small>
-                                  {booking.user_email ||
-                                    "Email unavailable"}
+                                  {booking.user_email || "Email unavailable"}
                                 </small>
                               </div>
                             </div>
@@ -361,21 +408,11 @@ function OrganiserAttendees() {
 
                           <td>
                             <div className="org-attendee-event">
-                              <strong>
-                                {booking.event_name}
-                              </strong>
-
-                              <small>
-                                Booking #{booking.booking_id}
-                              </small>
+                              <strong>{booking.event_name}</strong>
                             </div>
                           </td>
 
-                          <td>
-                            {Number(
-                              booking.number_of_tickets || 0
-                            )}
-                          </td>
+                          <td>{Number(booking.number_of_tickets || 0)}</td>
 
                           <td>
                             <span className="org-booking-date">
@@ -392,8 +429,7 @@ function OrganiserAttendees() {
                             <span
                               className={`org-booking-status ${status.toLowerCase()}`}
                             >
-                              {status.charAt(0) +
-                                status.slice(1).toLowerCase()}
+                              {status.charAt(0) + status.slice(1).toLowerCase()}
                             </span>
                           </td>
                         </tr>
@@ -407,11 +443,8 @@ function OrganiserAttendees() {
                 <footer className="org-attendee-pagination">
                   <span>
                     {(page - 1) * PAGE_SIZE + 1}–
-                    {Math.min(
-                      page * PAGE_SIZE,
-                      filteredBookings.length
-                    )}{" "}
-                    of {filteredBookings.length}
+                    {Math.min(page * PAGE_SIZE, filteredBookings.length)} of{" "}
+                    {filteredBookings.length}
                   </span>
 
                   <div>

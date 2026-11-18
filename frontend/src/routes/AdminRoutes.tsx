@@ -12,7 +12,6 @@ import Cities from "../pages/Admin/Cities/Cities";
 import Categories from "../pages/Admin/Categories/Categories";
 import Users from "../pages/Admin/Users/Users";
 import Organisers from "../pages/Admin/Organisers/Organisers";
-import Tickets from "../pages/Admin/Tickets/Tickets";
 
 const ADMIN_SUB_ROUTES = [
   {
@@ -42,10 +41,6 @@ const ADMIN_SUB_ROUTES = [
   {
     path: "organisers",
     element: <Organisers />,
-  },
-  {
-    path: "tickets",
-    element: <Tickets />,
   },
 ];
 

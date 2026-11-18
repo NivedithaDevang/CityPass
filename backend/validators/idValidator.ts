@@ -1,35 +1,20 @@
-import { Request, Response, NextFunction } from "express";
 
-export const validateIdParam = (
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
-    const rawId = req.params.id;
+import AppError from "../types/appError.js";
 
-    // Check if id exists
-    if (typeof rawId !== "string" || rawId.length === 0) {
-        return res.status(400).json({
-            message: "ID parameter is required"
-        });
-    }
+export const validateId = (value: unknown): number => {
+  if (typeof value !== "string" && typeof value !== "number") {
+    throw new AppError("ID must be a positive integer.", 400);
+  }
 
-    // Check that ID contains only digits
-    if (!/^\d+$/.test(rawId)) {
-        return res.status(400).json({
-            message: "ID must be a positive integer"
-        });
-    }
+  if (typeof value === "string" && !/^\d+$/.test(value)) {
+    throw new AppError("ID must be a positive integer.", 400);
+  }
 
-    // Convert string to number
-    const parsedId = Number(rawId);
+  const id = Number(value);
 
-    // Check that the number is positive and safe
-    if (parsedId <= 0 || !Number.isSafeInteger(parsedId)) {
-        return res.status(400).json({
-            message: "ID must be a valid positive integer"
-        });
-    }
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw new AppError("ID must be a valid positive integer.", 400);
+  }
 
-    next();
+  return id;
 };

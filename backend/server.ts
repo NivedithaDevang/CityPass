@@ -2,7 +2,7 @@ import app from "./app.js";
 import { connectDB } from "./config/database.js";
 import { SERVER_PORT } from "./config/env.js";
 
-const PORT: number | string = SERVER_PORT;
+const PORT: number | string = SERVER_PORT ?? 3000;
 
 async function startServer(): Promise<void> {
   try {

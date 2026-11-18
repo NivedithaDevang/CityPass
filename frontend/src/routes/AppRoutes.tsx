@@ -1,9 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "../context/AuthContext";
+import { CityProvider } from "../context/CityContext";
+import Navbar from "../components/Navbar/Navbar";
+import { Footer } from "../components/Footer/Footer";
 
 // User Pages
 import Home from "../pages/Home/Home";
 import Settings from "../pages/Settings/Settings";
-import Event from "../pages/Events/Events";
+import Event, { Activities, Concerts } from "../pages/Events/Events";
 import BookingPage from "../pages/BookingPage/BookingPage";
 import EventDetails from "../components/EventDetails/EventDetails";
 import TermsConditions from "../pages/PrivacyPolicy/TermsConditions";
@@ -19,76 +23,45 @@ import AdminRoutes from "./AdminRoutes";
 function AppRoutes() {
   return (
     <BrowserRouter>
-      <Routes>
+      {/* AuthProvider wraps all routes so useAuth() is accessible everywhere */}
+      <AuthProvider>
+        <CityProvider>
+          <Navbar />
+          <Routes>
+            <Route path="/" element={<Home />} />
 
-        <Route
-          path="/"
-          element={<Home />}
-        />
-
-          <Route
-            path="/settings"
-            element={
-              <Navigate
-                to="/settings/profile"
-                replace
-              />
-            }
-          />
-
-          <Route
-            path="/settings/:tabSlug"
-            element={<Settings />}
-          />
-
-          <Route
-            path="/events"
-            element={<Event />}
-          />
-
-          <Route
-            path="/events/:slug"
-            element={<EventDetails />}
-          />
-
-          <Route
-            path="/bookings"
-            element={<BookingPage />}
-          />
-
-          <Route
-            path="/terms"
-            element={<TermsConditions />}
-          />
-
-          <Route
-            path="/privacy"
-            element={<PrivacyPolicy />}
-          />
-
-
-        <Route element={<OrganiserProtectedRoute />}>
-          <Route
-            path="/organiser/*"
-            element={<Organiser />}
-          />
-        </Route>
-
-        <Route
-          path="/admin/*"
-          element={<AdminRoutes />}
-        />
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to="/"
-              replace
+            <Route
+              path="/settings"
+              element={<Navigate to="/settings/profile" replace />}
             />
-          }
-        />
 
-      </Routes>
+            <Route path="/settings/:tabSlug" element={<Settings />} />
+
+            <Route path="/events" element={<Event />} />
+
+            <Route path="/activities" element={<Activities />} />
+
+            <Route path="/concerts" element={<Concerts />} />
+
+            <Route path="/events/:slug" element={<EventDetails />} />
+
+            <Route path="/bookings" element={<BookingPage />} />
+
+            <Route path="/terms" element={<TermsConditions />} />
+
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+
+            <Route element={<OrganiserProtectedRoute />}>
+              <Route path="/organiser/*" element={<Organiser />} />
+            </Route>
+
+            <Route path="/admin/*" element={<AdminRoutes />} />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+          <Footer />
+        </CityProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

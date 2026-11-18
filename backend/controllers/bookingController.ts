@@ -1,42 +1,17 @@
 
 import { Request, Response, NextFunction } from "express";
 import { RowDataPacket } from "mysql2/promise";
+
 import { db } from "../config/database.js";
+import AppError from "../types/appError.js";
+
 import {
   getBookingsByUserId,
   createBooking,
-  updateBookingStatus,
+  cancelBookingTickets,
 } from "../models/bookingModel.js";
 
-export const getBookings = async (
-  req: Request,
-  res: Response,
-  _next: NextFunction
-) => {
-  try {
-    const activeUserId = req.user?.id;
-
-    if (!activeUserId) {
-      return res.status(401).json({
-        message:
-          "Authentication required. Please sign in to view your bookings.",
-      });
-    }
-
-    const results = await getBookingsByUserId(Number(activeUserId));
-
-    return res.status(200).json({
-      message: "Bookings fetched successfully",
-      bookings: results,
-    });
-  } catch (err) {
-    console.error("Error fetching bookings:", err);
-
-    return res.status(500).json({
-      message: "Failed to fetch bookings",
-    });
-  }
-};
+import { validateId } from "../validators/idValidator.js";
 
 interface ActiveEventTicket extends RowDataPacket {
   id: number;
@@ -44,40 +19,74 @@ interface ActiveEventTicket extends RowDataPacket {
   price: number | string;
 }
 
-export const addBooking = async (
+// Get bookings belonging to the authenticated user.
+export const getBookings = async (
   req: Request,
   res: Response,
-  _next: NextFunction
+  next: NextFunction
 ) => {
   try {
     const activeUserId = req.user?.id;
 
     if (!activeUserId) {
-      return res.status(401).json({
-        message: "Authentication required. Please sign in to proceed.",
-      });
+      throw new AppError(
+        "Authentication required. Please sign in to view your bookings.",
+        401
+      );
     }
 
-    const { pass_id, event_ticket_id, number_of_tickets } = req.body;
+    const results = await getBookingsByUserId(
+      Number(activeUserId)
+    );
 
-    const eventId = Number(pass_id);
-    const ticketId = Number(event_ticket_id);
+    return res.status(200).json({
+      success: true,
+      message: "Bookings fetched successfully",
+      bookings: results,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Create a booking.
+export const addBooking = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const activeUserId = req.user?.id;
+
+    if (!activeUserId) {
+      throw new AppError(
+        "Authentication required. Please sign in to proceed.",
+        401
+      );
+    }
+
+    const {
+      pass_id,
+      event_ticket_id,
+      number_of_tickets,
+    } = req.body;
+
+    const eventId = validateId(pass_id);
+    const ticketId = validateId(event_ticket_id);
+
     const quantity = Number(number_of_tickets);
 
     if (
-      !Number.isInteger(eventId) ||
-      eventId <= 0 ||
-      !Number.isInteger(ticketId) ||
-      ticketId <= 0 ||
-      !Number.isInteger(quantity) ||
+      !Number.isSafeInteger(quantity) ||
       quantity < 1
     ) {
-      return res.status(400).json({
-        message: "Select a valid event ticket and quantity.",
-      });
+      throw new AppError(
+        "Ticket quantity must be a positive integer.",
+        400
+      );
     }
 
-    // Confirm that the selected ticket belongs to this event and is active.
+    // Confirm that the ticket belongs to this event and is active.
     const [ticketRows] = await db.query<ActiveEventTicket[]>(
       `
         SELECT
@@ -97,21 +106,27 @@ export const addBooking = async (
     const ticket = ticketRows[0];
 
     if (!ticket) {
-      return res.status(400).json({
-        message: "This ticket is unavailable for the selected event.",
-      });
+      throw new AppError(
+        "This ticket is unavailable for the selected event.",
+        404
+      );
     }
 
     const ticketPrice = Number(ticket.price);
 
-    if (!Number.isFinite(ticketPrice) || ticketPrice < 0) {
-      return res.status(400).json({
-        message: "The selected ticket has an invalid price.",
-      });
+    if (
+      !Number.isFinite(ticketPrice) ||
+      ticketPrice < 0
+    ) {
+      throw new AppError(
+        "The selected ticket has an invalid price.",
+        400
+      );
     }
 
-    // Calculate the total using the price stored in the database.
-    const totalAmount = Number((ticketPrice * quantity).toFixed(2));
+    const totalAmount = Number(
+      (ticketPrice * quantity).toFixed(2)
+    );
 
     const result = await createBooking({
       user_id: Number(activeUserId),
@@ -124,6 +139,7 @@ export const addBooking = async (
     });
 
     return res.status(201).json({
+      success: true,
       message: "Booking created successfully",
       bookingId: result.insertId,
       event_ticket_id: ticketId,
@@ -133,51 +149,66 @@ export const addBooking = async (
       status: "CONFIRMED",
     });
   } catch (err) {
-    console.error("Error creating booking:", err);
-
-    return res.status(500).json({
-      message: "Failed to create booking",
-    });
+    next(err);
   }
 };
 
+// Cancel all tickets or a selected number of tickets.
 export const cancelBooking = async (
   req: Request,
   res: Response,
-  _next: NextFunction
+  next: NextFunction
 ) => {
   try {
-    const bookingId = Number(req.params.id);
     const activeUserId = req.user?.id;
 
     if (!activeUserId) {
-      return res.status(401).json({
-        message: "Please log in to manage your bookings.",
-      });
+      throw new AppError(
+        "Please log in to manage your bookings.",
+        401
+      );
     }
 
-    if (!Number.isInteger(bookingId) || bookingId <= 0) {
-      return res.status(400).json({
-        message: "Invalid booking ID.",
-      });
+    const bookingId = validateId(req.params.id);
+    const { quantity } = req.body ?? {};
+
+    // Accept a positive integer number or a numeric string.
+    // Reject booleans, blank strings, decimals and invalid values.
+    if (
+      quantity !== undefined &&
+      (
+        (typeof quantity !== "number" &&
+          typeof quantity !== "string") ||
+        (typeof quantity === "string" &&
+          quantity.trim() === "") ||
+        !Number.isSafeInteger(Number(quantity)) ||
+        Number(quantity) <= 0
+      )
+    ) {
+      throw new AppError(
+        "Cancellation quantity must be a positive integer.",
+        400
+      );
     }
 
-    await updateBookingStatus(
+    // When quantity is omitted, the model cancels all tickets.
+    const result = await cancelBookingTickets(
       bookingId,
       Number(activeUserId),
-      "CANCELLED"
+      quantity === undefined
+        ? undefined
+        : Number(quantity)
     );
 
     return res.status(200).json({
-      message: "Booking cancelled successfully",
-      bookingId,
-      status: "CANCELLED",
+      success: true,
+      message:
+        result.remainingTickets === 0
+          ? "All tickets cancelled successfully."
+          : "Selected tickets cancelled successfully.",
+      ...result,
     });
   } catch (err) {
-    console.error("Error cancelling booking:", err);
-
-    return res.status(500).json({
-      message: "Failed to cancel booking",
-    });
+    next(err);
   }
 };

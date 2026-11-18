@@ -1,4 +1,9 @@
+/* =========================================================
+   CONTAINER & HEADER
+   ========================================================= */
+
 .cities-container {
+  width: 100%;
   padding: 0;
   min-height: auto;
   background: transparent;
@@ -38,24 +43,20 @@
 
 .add-city-btn {
   border: none;
-  border-radius: 8px;
-
   padding: 11px 18px;
-
+  border-radius: 8px;
   background: #6c3cff;
   color: #fff;
-
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-
   cursor: pointer;
-
-  transition: 0.2s ease;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.2s ease, transform 0.2s ease;
 }
 
 .add-city-btn:hover {
-  background: #5930d8;
+  background: #5930d6;
+  transform: translateY(-1px);
 }
 
 .add-city-btn:disabled {
@@ -63,26 +64,26 @@
   cursor: not-allowed;
 }
 
+/* =========================================================
+   MESSAGES & TOASTS
+   ========================================================= */
+
 .cities-message {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-
   padding: 13px 16px;
   margin-bottom: 20px;
-
   border-radius: 8px;
-
   font-size: 14px;
 }
 
 .cities-message button {
   border: none;
   background: transparent;
-
   cursor: pointer;
-
+  font-family: inherit;
   font-size: 13px;
   font-weight: 600;
 }
@@ -105,23 +106,24 @@
   color: #218838;
 }
 
+/* =========================================================
+   ADD CITY INLINE FORM
+   ========================================================= */
+
 .city-form {
   padding: 24px;
   margin-bottom: 24px;
-
   background: #fff;
-
-  border: 1px solid #eee;
+  border: 1px solid #eeeeee;
   border-radius: 12px;
-
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 
 .city-form h2 {
   margin: 0 0 22px;
-
-  color: #222;
+  color: #1f1f1f;
   font-size: 20px;
+  font-weight: 700;
 }
 
 .city-form-group {
@@ -130,38 +132,30 @@
 
 .city-form-group label {
   display: block;
-
   margin-bottom: 7px;
-
   color: #444;
-
   font-size: 13px;
   font-weight: 600;
 }
 
 .city-form-group input,
-.city-form-group textarea {
+.city-form-group textarea,
+.city-form-group select {
   width: 100%;
-
-  padding: 12px 14px;
-
+  padding: 11px 13px;
   border: 1px solid #ddd;
   border-radius: 8px;
-
-  box-sizing: border-box;
   outline: none;
-
-  background: #fff;
+  box-sizing: border-box;
   color: #333;
-
   font-family: inherit;
   font-size: 14px;
-
   resize: vertical;
 }
 
 .city-form-group input:focus,
-.city-form-group textarea:focus {
+.city-form-group textarea:focus,
+.city-form-group select:focus {
   border-color: #6c3cff;
   box-shadow: 0 0 0 3px rgba(108, 60, 255, 0.08);
 }
@@ -172,32 +166,31 @@
   cursor: not-allowed;
 }
 
+/* =========================================================
+   TOOLBAR, SEARCH & FILTERS
+   ========================================================= */
+
 .cities-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-
   gap: 18px;
-
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .cities-search {
   width: 100%;
   max-width: 450px;
-
   padding: 12px 14px;
-
   border: 1px solid #ddd;
   border-radius: 8px;
-
   box-sizing: border-box;
   outline: none;
-
   background: #fff;
-
+  color: #333;
   font-family: inherit;
   font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .cities-search::placeholder {
@@ -206,9 +199,7 @@
 
 .cities-search:focus {
   border-color: #6c3cff;
-
-  box-shadow:
-    0 0 0 3px rgba(108, 60, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(108, 60, 255, 0.08);
 }
 
 .cities-filters {
@@ -218,19 +209,14 @@
 
 .city-filter-btn {
   padding: 9px 15px;
-
   border: 1px solid #ddd;
   border-radius: 7px;
-
   background: #fff;
   color: #555;
-
   cursor: pointer;
-
   font-family: inherit;
   font-size: 13px;
   font-weight: 500;
-
   transition: 0.2s ease;
 }
 
@@ -241,74 +227,108 @@
 
 .city-filter-btn.active {
   border-color: #6c3cff;
-
   background: #6c3cff;
   color: #fff;
 }
 
-.cities-grid {
-  display: grid;
+/* =========================================================
+   TABLE VIEW
+   ========================================================= */
 
-  grid-template-columns:
-    repeat(3, minmax(0, 1fr));
-
-  gap: 20px;
-}
-
-.city-card {
-  display: flex;
-  flex-direction: column;
-
-  min-height: 190px;
-
-  padding: 20px;
-
-  background: #fff;
-
-  border: 1px solid #eee;
+.cities-table-container {
+  width: 100%;
+  overflow-x: auto;
+  background: #ffffff;
+  border: 1px solid #eeeeee;
   border-radius: 12px;
-
-  box-sizing: border-box;
-
-  box-shadow:
-    0 2px 10px rgba(0, 0, 0, 0.04);
-
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 
-.city-card:hover {
-  box-shadow:
-    0 5px 18px rgba(0, 0, 0, 0.07);
+.cities-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px;
 }
 
-.city-card-header {
+.cities-table thead {
+  background: #fafafa;
+}
+
+.cities-table th {
+  padding: 15px 18px;
+  border-bottom: 1px solid #eeeeee;
+  color: #555;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.cities-table td {
+  padding: 16px 18px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.cities-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.cities-table tbody tr:hover {
+  background: #faf9ff;
+}
+
+.cities-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.city-table-name {
+  font-weight: 600;
+  color: #1f1f1f;
+}
+
+.city-table-desc {
+  color: #666;
+  font-size: 13.5px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.city-table-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.city-table-thumb-placeholder {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #f1f5f9;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-
-  gap: 12px;
-}
-
-.city-card-header h3 {
-  margin: 0;
-
-  color: #222;
-
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
   font-size: 18px;
-  font-weight: 650;
 }
 
 .city-status {
-  flex-shrink: 0;
-
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
   padding: 5px 10px;
-
   border-radius: 20px;
-
   font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
 .city-status.active {
@@ -321,70 +341,45 @@
   color: #d93025;
 }
 
-.city-description {
-  flex: 1;
-
-  margin: 16px 0 20px;
-
-  color: #777;
-
-  font-size: 14px;
-  line-height: 1.6;
-
-  text-align: left;
-}
-
-.city-card-footer {
+.cities-table-actions {
   display: flex;
-  justify-content: flex-end;
   align-items: center;
-
   gap: 8px;
-
-  margin-top: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .city-edit-btn {
   padding: 8px 13px;
-
-  border: 1px solid #d8cdfc;
+  border: 1px solid #cfc4ff;
   border-radius: 7px;
-
   background: #fff;
   color: #6c3cff;
-
   cursor: pointer;
-
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-
-  transition: 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .city-edit-btn:hover {
-  background: #f5f1ff;
+  background: #f4f0ff;
   border-color: #6c3cff;
 }
 
 .city-deactivate-btn,
 .city-activate-btn {
   padding: 8px 13px;
-
   border-radius: 7px;
-
   cursor: pointer;
-
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-
-  transition: 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .city-deactivate-btn {
   border: 1px solid #e0b4b4;
-
   background: #fff;
   color: #c62828;
 }
@@ -396,7 +391,6 @@
 
 .city-activate-btn {
   border: 1px solid #b7d9c0;
-
   background: #fff;
   color: #218838;
 }
@@ -412,217 +406,287 @@
   cursor: not-allowed;
 }
 
-.city-edit-form {
+.cities-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 180px;
+  background: #fff;
+  border: 1px solid #eeeeee;
+  border-radius: 12px;
+  color: #777;
+  font-size: 14px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.city-image-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.city-image-preview img {
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid #cbd5e1;
+}
+
+.city-image-preview span {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.city-image-preview button {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.city-image-preview button:hover {
+  background: #fee2e2;
+}
+
+/* =========================================================
+   CITY EDIT MODAL POPUP
+   ========================================================= */
+
+.city-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: modalFadeIn 0.2s ease-out;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.city-modal-content {
+  position: relative;
+  background: #ffffff;
+  width: 100%;
+  max-width: 520px;
+  border-radius: 14px;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
-
-  height: 100%;
+  padding: 0;
 }
 
-.city-edit-form .city-card-header {
-  margin-bottom: 18px;
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-.city-edit-form .city-card-header h3 {
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.city-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 0;
+}
+
+.city-modal-header h2 {
   margin: 0;
-
-  color: #222;
-
-  font-size: 18px;
-  font-weight: 650;
+  font-size: 19px;
+  font-weight: 700;
+  color: #1e293b;
 }
 
-.city-edit-group {
-  margin-bottom: 16px;
+.city-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 26px;
+  line-height: 1;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
-.city-edit-group label {
+.city-modal-close:hover {
+  color: #0f172a;
+  background-color: #f1f5f9;
+}
+
+.city-modal-content form {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.city-modal-content .city-form-group {
+  margin: 0;
+}
+
+.city-modal-content .city-form-group label {
   display: block;
-
-  margin-bottom: 7px;
-
-  color: #444;
-
   font-size: 13px;
   font-weight: 600;
+  color: #334155;
+  margin-bottom: 8px;
 }
 
-.city-edit-group input,
-.city-edit-group textarea,
-.city-edit-group select {
+.city-modal-content .city-form-group input[type="text"],
+.city-modal-content .city-form-group textarea,
+.city-modal-content .city-form-group select {
   width: 100%;
-
-  padding: 10px 12px;
-
-  border: 1px solid #ddd;
-  border-radius: 7px;
-
-  box-sizing: border-box;
-  outline: none;
-
-  background: #fff;
-  color: #333;
-
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
   font-family: inherit;
-  font-size: 13px;
+  color: #1e293b;
+  background-color: #ffffff;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.city-edit-group textarea {
-  min-height: 80px;
-  resize: vertical;
-}
-
-.city-edit-group input:focus,
-.city-edit-group textarea:focus,
-.city-edit-group select:focus {
+.city-modal-content .city-form-group input[type="text"]:focus,
+.city-modal-content .city-form-group textarea:focus,
+.city-modal-content .city-form-group select:focus {
   border-color: #6c3cff;
+  box-shadow: 0 0 0 3px rgba(108, 60, 255, 0.15);
+}
 
-  box-shadow:
-    0 0 0 3px rgba(108, 60, 255, 0.08);
+.city-modal-content input[type="file"] {
+  display: block;
+  width: 100%;
+  font-size: 13px;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.city-modal-content input[type="file"]::file-selector-button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 600;
+  font-size: 12px;
+  margin-right: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.city-modal-content input[type="file"]::file-selector-button:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .city-edit-actions {
   display: flex;
   justify-content: flex-end;
-
-  gap: 8px;
-
-  margin-top: auto;
-  padding-top: 10px;
-}
-
-.city-cancel-btn,
-.city-save-btn {
-  padding: 8px 13px;
-
-  border-radius: 7px;
-
-  cursor: pointer;
-
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-
-  transition: 0.2s ease;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
 }
 
 .city-cancel-btn {
-  border: 1px solid #ddd;
-
-  background: #fff;
-  color: #555;
+  padding: 10px 18px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
 .city-cancel-btn:hover {
-  background: #f5f5f5;
+  background: #f8fafc;
 }
 
 .city-save-btn {
-  border: 1px solid #6c3cff;
-
+  padding: 10px 20px;
+  border: none;
   background: #6c3cff;
-  color: #fff;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
 .city-save-btn:hover {
-  background: #5930d8;
+  background: #5930d6;
 }
 
-.city-cancel-btn:disabled,
-.city-save-btn:disabled {
+.city-save-btn:disabled,
+.city-cancel-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
-
-.cities-placeholder {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  min-height: 180px;
-
-  background: #fff;
-
-  border: 1px solid #eee;
-  border-radius: 12px;
-
-  color: #777;
-
-  font-size: 14px;
-
-  box-shadow:
-    0 2px 10px rgba(0, 0, 0, 0.04);
-}
-
-.city-image-preview {
-  margin-top: 10px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 10px 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  width: fit-content;
-  max-width: 100%;
-}
-
-.city-image-preview img {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  flex-shrink: 0;
-}
-
-.city-image-preview span {
-  font-size: 0.875rem;
-  color: #475569;
-  font-weight: 500;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.city-image-preview button {
-  background: transparent;
-  color: #ef4444;
-  border: 1px solid #fca5a5;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.city-image-preview button:hover {
-  background: #fee2e2;
-  border-color: #ef4444;
-}
-
-@media (max-width: 1100px) {
-  .cities-grid {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
-  }
-}
+/* =========================================================
+   RESPONSIVE BREAKPOINTS
+   ========================================================= */
 
 @media (max-width: 768px) {
-  .cities-container {
-    padding: 20px;
+  .cities-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
   }
 
-  .cities-header {
-    flex-direction: column;
-    align-items: flex-start;
+  .cities-header h1 {
+    font-size: 26px;
+  }
+
+  .add-city-btn {
+    width: 100%;
   }
 
   .cities-toolbar {
-    flex-direction: column;
     align-items: stretch;
+    flex-direction: column;
   }
 
   .cities-search {
@@ -637,26 +701,22 @@
     flex: 1;
   }
 
-  .cities-grid {
-    grid-template-columns: 1fr;
+  .cities-table-container {
+    border-radius: 10px;
   }
 }
 
 @media (max-width: 480px) {
-  .cities-container {
-    padding: 16px;
+  .cities-header {
+    margin-bottom: 20px;
   }
 
   .cities-header h1 {
-    font-size: 25px;
+    font-size: 24px;
   }
 
-  .city-form {
-    padding: 18px;
-  }
-
-  .city-card {
-    padding: 16px;
+  .cities-header p {
+    font-size: 13px;
   }
 
   .cities-message {
@@ -664,21 +724,28 @@
     flex-direction: column;
   }
 
-  .city-card-header {
+  .city-edit-actions {
     flex-direction: column;
   }
 
-  .city-status {
-    align-self: flex-start;
+  .city-save-btn,
+  .city-cancel-btn {
+    width: 100%;
   }
 
-  .city-card-footer {
-    flex-wrap: wrap;
+  .cities-table th,
+  .cities-table td {
+    padding: 13px 14px;
+  }
+
+  .cities-table-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .city-edit-btn,
   .city-deactivate-btn,
   .city-activate-btn {
-    flex: 1;
+    width: 100%;
   }
 }

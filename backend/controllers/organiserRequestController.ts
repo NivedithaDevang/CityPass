@@ -1,279 +1,278 @@
-
 import { Request, Response, NextFunction } from "express";
 import { RowDataPacket } from "mysql2";
 import { db } from "../config/database.js";
-
+import AppError from "../types/appError.js";
+import cloudinary from "../config/cloudinary.js";
 import {
-    getAllRequests,
-    getOrganizerRequestById,
-    getActiveRequestByUserId,
-    createRequest
+  getAllRequests,
+  getLatestRequestByUserId,
+  createRequest,
+  resubmitRejectedRequest,
 } from "../models/organiserRequestModel.js";
 
-type IdRow = { id: number } & RowDataPacket;
+import { validateId } from "../validators/idValidator.js";
 
+interface IdRow extends RowDataPacket {
+  id: number;
+}
 
+// GET /v1/organiser-requests/status
+export const getMyRequestStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authenticatedUserId = req.user?.id;
+    if (!authenticatedUserId) {
+      throw new AppError("Authentication required", 401);
+    }
+
+    const userId = validateId(authenticatedUserId);
+    const request = await getLatestRequestByUserId(userId);
+
+    return res.status(200).json({
+      success: true,
+      status: request?.status ?? "NONE",
+      rejection_reason: request?.rejection_reason ?? null,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// GET /v1/organisers/requests
 export const getRequests = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
-    try {
-        const results = await getAllRequests();
+  try {
+    const results = await getAllRequests();
 
-        return res.status(200).json({
-            message: "Requests fetched successfully",
-            requests: results
-        });
-    } catch (err) {
-        next(err);
-    }
+    return res.status(200).json({
+      success: true,
+      message: "Requests fetched successfully",
+      requests: results,
+    });
+  } catch (error) {
+    return next(error);
+  }
 };
 
-
-export const getRequestById = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
-    try {
-        const id = Number(req.params.id);
-
-        if (!Number.isInteger(id) || id <= 0) {
-            return res.status(400).json({
-                message: "Invalid organizer request ID."
-            });
-        }
-
-        const request = await getOrganizerRequestById(id);
-
-        if (!request) {
-            return res.status(404).json({
-                message: "Organizer request not found."
-            });
-        }
-
-        return res.status(200).json({
-            message: "Organizer request fetched successfully",
-            request
-        });
-    } catch (err) {
-        next(err);
-    }
-};
-
-
+// POST /v1/organisers/requests
 export const addRequest = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
-    try {
-        const userId = req.user?.id;
+  try {
+    const authenticatedUserId = req.user?.id;
 
-        if (!userId) {
-            return res.status(401).json({
-                message: "Unauthorized: Please log in again."
-            });
-        }
-        const existing = await getActiveRequestByUserId(Number(userId));
-
-        if (existing) {
-            return res.status(409).json({
-                message:
-                    existing.status === "APPROVED"
-                        ? "You are already a registered organizer."
-                        : "You already have an organizer application pending review."
-            });
-        }
-
-
-        const stageName = (
-            req.body.organization_name ||
-            req.body.stageName ||
-            ""
-        ).trim();
-
-        const description = (
-            req.body.description ||
-            ""
-        ).trim();
-
-        const categoryIdFromBody = Number(req.body.category_id);
-        const cityIdFromBody = Number(req.body.city_id);
-
-        const categoryName = (
-            req.body.category ||
-            ""
-        ).trim();
-
-        const cityName = (
-            req.body.city ||
-            ""
-        ).trim();
-
-        const email = (
-            req.body.email ||
-            ""
-        ).trim();
-
-        const phone = (
-            req.body.phone ||
-            ""
-        ).trim();
-
-        const id_proof = (
-            req.body.id_proof ||
-            ""
-        ).trim().toUpperCase();
-
-        if (
-            !stageName ||
-            !description ||
-            !email ||
-            !phone ||
-            !id_proof
-        ) {
-            return res.status(400).json({
-                message: "All fields are required. Please fill in every field."
-            });
-        }
-
-        if (description.length < 10) {
-            return res.status(400).json({
-                message: "Description must be at least 10 characters long."
-            });
-        }
-
-        if (description.length > 300) {
-            return res.status(400).json({
-                message: "Description cannot exceed 300 characters."
-            });
-        }
-
-        let categoryId: number | null = null;
-
-        if (
-            Number.isInteger(categoryIdFromBody) &&
-            categoryIdFromBody > 0
-        ) {
-            categoryId = categoryIdFromBody;
-        } else if (categoryName) {
-            const categorySql = `
-                SELECT id
-                FROM categories
-                WHERE name = ?
-                LIMIT 1
-            `;
-
-            const [categoryRows] = await db.query<
-                IdRow[]
-            >(categorySql, [categoryName]);
-
-            if (categoryRows.length === 0) {
-                return res.status(400).json({
-                    message: "Selected category does not exist."
-                });
-            }
-
-            categoryId = categoryRows[0].id;
-        }
-
-        if (!categoryId) {
-            return res.status(400).json({
-                message: "Category is required."
-            });
-        }
-
-        let cityId: number | null = null;
-
-        if (
-            Number.isInteger(cityIdFromBody) &&
-            cityIdFromBody > 0
-        ) {
-            cityId = cityIdFromBody;
-        } else if (cityName) {
-            const citySql = `
-                SELECT id
-                FROM cities
-                WHERE name = ?
-                LIMIT 1
-            `;
-
-            const [cityRows] = await db.query<
-                IdRow[]
-            >(citySql, [cityName]);
-
-            if (cityRows.length === 0) {
-                return res.status(400).json({
-                    message: "Selected city does not exist."
-                });
-            }
-
-            cityId = cityRows[0].id;
-        }
-
-        if (!cityId) {
-            return res.status(400).json({
-                message: "City is required."
-            });
-        }
-
-        const [categoryCheck] = await db.query<
-            IdRow[]
-        >(
-            `
-                SELECT id
-                FROM categories
-                WHERE id = ?
-                  AND status = 'ACTIVE'
-                LIMIT 1
-            `,
-            [categoryId]
-        );
-
-        if (categoryCheck.length === 0) {
-            return res.status(400).json({
-                message: "Selected category is inactive or does not exist."
-            });
-        }
-
-        const [cityCheck] = await db.query<
-            IdRow[]
-        >(
-            `
-                SELECT id
-                FROM cities
-                WHERE id = ?
-                  AND status = 'ACTIVE'
-                LIMIT 1
-            `,
-            [cityId]
-        );
-
-        if (cityCheck.length === 0) {
-            return res.status(400).json({
-                message: "Selected city is inactive or does not exist."
-            });
-        }
-
-        const result = await createRequest({
-            user_id: Number(userId),
-            organization_name: stageName,
-            description,
-            category_id: categoryId,
-            city_id: cityId,
-            id_proof,
-            email,
-            phone,
-            status: "PENDING"
-        });
-
-        return res.status(201).json({
-            message: "Organizer request submitted successfully!",
-            requestId: result.insertId
-        });
-    } catch (err) {
-        next(err);
+    if (!authenticatedUserId) {
+      throw new AppError("Authentication required", 401);
     }
+
+    const userId = validateId(authenticatedUserId);
+
+    // Get the most recent application
+    const latestRequest = await getLatestRequestByUserId(userId);
+
+    if (latestRequest?.status) {
+      const normalizedStatus = String(latestRequest.status).trim().toUpperCase();
+
+      if (normalizedStatus === "APPROVED") {
+        throw new AppError("You are already a registered organizer.", 409);
+      }
+
+      if (normalizedStatus === "PENDING") {
+        throw new AppError(
+          "You already have an organizer application pending review.",
+          409
+        );
+      }
+    }
+
+    const organizationName =
+      req.body.organization_name || req.body.stageName;
+
+    const description = req.body.description;
+
+    const email =
+      typeof req.body.email === "string" ? req.body.email.trim() : "";
+
+    const phone =
+      typeof req.body.phone === "string" ? req.body.phone.trim() : "";
+
+    const idProof =
+      typeof req.body.id_proof === "string"
+        ? req.body.id_proof.trim().toUpperCase()
+        : "";
+
+    if (
+      typeof organizationName !== "string" ||
+      !organizationName.trim() ||
+      typeof description !== "string" ||
+      !description.trim() ||
+      !email ||
+      !phone ||
+      !idProof
+    ) {
+      throw new AppError(
+        "All fields are required. Please fill in every field.",
+        400
+      );
+    }
+
+    const stageName = organizationName.trim();
+    const cleanDescription = description.trim();
+
+    if (cleanDescription.length < 10) {
+      throw new AppError(
+        "Description must be at least 10 characters long.",
+        400
+      );
+    }
+
+    if (cleanDescription.length > 300) {
+      throw new AppError(
+        "Description cannot exceed 300 characters.",
+        400
+      );
+    }
+
+    // Resolve city ID
+    let cityId: number;
+
+    if (
+      req.body.city_id !== undefined &&
+      req.body.city_id !== null &&
+      req.body.city_id !== ""
+    ) {
+      cityId = validateId(req.body.city_id);
+    } else if (
+      typeof req.body.city === "string" &&
+      req.body.city.trim()
+    ) {
+      const [cityRows] = await db.query<IdRow[]>(
+        `SELECT id
+         FROM cities
+         WHERE name = ?
+         LIMIT 1`,
+        [req.body.city.trim()]
+      );
+
+      if (cityRows.length === 0) {
+        throw new AppError("Selected city does not exist.", 400);
+      }
+
+      cityId = cityRows[0].id;
+    } else {
+      throw new AppError("City is required.", 400);
+    }
+
+    // Confirm city is active
+    const [cityCheck] = await db.query<IdRow[]>(
+      `SELECT id
+       FROM cities
+       WHERE id = ? AND is_active = 1
+       LIMIT 1`,
+      [cityId]
+    );
+
+    if (cityCheck.length === 0) {
+      throw new AppError(
+        "Selected city is inactive or does not exist.",
+        400
+      );
+    }
+
+    // ID proof file upload (OPTIONAL: defaults to null or previous file on resubmission)
+    let idProofFileUrl: string | null = latestRequest?.id_proof_file ?? null;
+    const uploadedFile = req.file;
+
+    if (uploadedFile) {
+      const cloudinaryResult = await new Promise<{
+        secure_url: string;
+      }>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "citypass/id-proof",
+            public_id: `user_${userId}_id_proof`,
+            overwrite: true,
+            resource_type: "auto",
+          },
+          (error, result) => {
+            if (error || !result) {
+              reject(new AppError("Cloudinary upload failed", 502));
+              return;
+            }
+
+            resolve({ secure_url: result.secure_url });
+          }
+        );
+
+        stream.end(uploadedFile.buffer);
+      });
+
+      idProofFileUrl = cloudinaryResult.secure_url;
+    }
+
+    const requestData = {
+      user_id: userId,
+      organization_name: stageName,
+      description: cleanDescription,
+      city_id: cityId,
+      id_proof: idProof,
+      id_proof_file: idProofFileUrl,
+      email,
+      phone,
+      status: "PENDING",
+    } as const;
+
+    if (latestRequest?.status === "REJECTED") {
+      const result = await resubmitRejectedRequest(
+        latestRequest.id,
+        userId,
+        requestData
+      );
+
+      if (result.affectedRows === 0) {
+        throw new AppError(
+          "This rejected request can no longer be resubmitted. Refresh and try again.",
+          409
+        );
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Organizer request resubmitted successfully!",
+        requestId: latestRequest.id,
+      });
+    }
+
+    const result = await createRequest(requestData);
+
+    return res.status(201).json({
+      success: true,
+      message: "Organizer request submitted successfully!",
+      requestId: result.insertId,
+    });
+  } catch (error: unknown) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "ER_DUP_ENTRY"
+    ) {
+      return next(
+        new AppError(
+          "An application with this email or identity proof already exists.",
+          409
+        )
+      );
+    }
+
+    return next(error);
+  }
 };

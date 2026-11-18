@@ -1,11 +1,12 @@
 import {
   useEffect,
-  useMemo,
   useState,
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import { ImagePlus, Loader2, Plus, Ticket, Trash2, X } from "lucide-react";
+import { ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 import {
   createOrganiserEvent,
@@ -16,48 +17,32 @@ import {
   type OrganiserEvent,
   type OrganiserLookupOption,
 } from "../../../services/organiserService";
-import axios from "axios";
-import { API_BASE_URL } from "../../../config/config";
-
+import { createCustomEventTicket } from "../../../services/eventTicketService";
+import {
+  type OrganiserEventDraft,
+  type OrganiserEventDraftForm,
+} from "../../../services/organiserEventDrafts";
 import "./CreateEventModal.css";
-
-interface AdminTicketTemplate {
-  id: number;
-  name: string;
-  description?: string;
-  price: number;
-  category: string;
-  status?: string;
-}
-
-export interface SelectedTicketTier {
-  id?: number | string;
-  name: string;
-  price: number;
-  type: "ADMIN" | "CUSTOM";
-}
 
 interface CreateEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onEventSaved: (savedEvent: OrganiserEvent) => void;
   eventToEdit?: OrganiserEvent | null;
+  draftToEdit?: OrganiserEventDraft | null;
+  organiserId: string;
+  onDraftSaved: (draft: OrganiserEventDraft) => Promise<void>;
+  onDraftSubmitted: (draftId: string) => Promise<void>;
 }
 
-interface FormState {
+export interface TicketDraft {
+  id?: number;
   name: string;
   description: string;
-  instructions: string;
-  location: string;
-  city_id: string;
-  category_id: string;
-  event_date: string;
-  time: string;
-  price: number;
-  capacity: number;
-  age_restriction: string;
-  duration: string;
+  price: string;
 }
+
+type FormState = OrganiserEventDraftForm;
 
 const initialFormState: FormState = {
   name: "",
@@ -68,11 +53,15 @@ const initialFormState: FormState = {
   category_id: "",
   event_date: "",
   time: "",
-  price: 0,
-  capacity: 50,
-  age_restriction: "All Ages",
-  duration: "2 Hours",
+  price: "",
+  capacity: "",
+  age_group: "All Ages",
+  duration: "",
 };
+
+const defaultInitialTickets: TicketDraft[] = [
+  { name: "General Admission", description: "Standard entry pass", price: "" },
+];
 
 const AVAILABLE_LANGUAGES = [
   "English",
@@ -80,6 +69,8 @@ const AVAILABLE_LANGUAGES = [
   "Kannada",
   "Tamil",
   "Telugu",
+  "Urdu",
+  "Konkani",
   "Malayalam",
   "Marathi",
   "Bengali",
@@ -87,18 +78,97 @@ const AVAILABLE_LANGUAGES = [
   "Gujarati",
 ];
 
-const AGE_RESTRICTIONS = ["All Ages", "3+", "7+", "12+", "16+", "18+", "21+"];
-
+const AGE_GROUPS = ["All Ages", "3+", "7+", "12+", "16+", "18+", "21+"];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const allowedImageTypes = ["image/jpeg", "image/png", "image/webp"];
+
+const HOUR_OPTIONS = Array.from({ length: 13 }, (_, i) => i);
+const MINUTE_OPTIONS = [0, 15, 30, 45];
+
+const parseDurationString = (durStr?: string): { hours: number; minutes: number } => {
+  if (!durStr) return { hours: 2, minutes: 0 };
+
+  const lower = durStr.toLowerCase();
+  let hours = 0;
+  let minutes = 0;
+
+  const hourMatch = lower.match(/(\d+)\s*(?:hour|hr|h)/);
+  if (hourMatch) {
+    hours = parseInt(hourMatch[1], 10);
+  }
+
+  const minMatch = lower.match(/(\d+)\s*(?:minute|min|m)/);
+  if (minMatch) {
+    minutes = parseInt(minMatch[1], 10);
+  }
+
+  if (!hourMatch && !minMatch) {
+    const rawNum = parseFloat(durStr);
+    if (!isNaN(rawNum)) {
+      hours = Math.floor(rawNum);
+      minutes = Math.round((rawNum - hours) * 60);
+    }
+  }
+
+  return { hours, minutes };
+};
+
+const formatDurationString = (hours: number, minutes: number): string => {
+  const parts: string[] = [];
+  if (hours > 0) {
+    parts.push(`${hours} ${hours === 1 ? "Hour" : "Hours"}`);
+  }
+  if (minutes > 0) {
+    parts.push(`${minutes} Mins`);
+  }
+  return parts.length > 0 ? parts.join(" ") : "30 Mins";
+};
+
+const getTodayMidnight = (): Date => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const extractCleanDate = (dateVal?: string): string => {
+  if (!dateVal) return "";
+  if (dateVal.includes("T")) return dateVal.split("T")[0];
+  if (dateVal.includes(" ")) return dateVal.split(" ")[0];
+  return dateVal;
+};
+
+const parseDateStringToDate = (dateStr?: string): Date | null => {
+  if (!dateStr) return null;
+  const clean = extractCleanDate(dateStr);
+  const [yearStr, monthStr, dayStr] = clean.split("-");
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+  return new Date(year, month - 1, day);
+};
+
+const formatDateToYMD = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 export const CreateEventModal = ({
   isOpen,
   onClose,
   onEventSaved,
   eventToEdit,
+  draftToEdit,
+  organiserId,
+  onDraftSaved,
+  onDraftSubmitted,
 }: CreateEventModalProps) => {
   const [formData, setFormData] = useState<FormState>(initialFormState);
+  const [durationHours, setDurationHours] = useState<number>(2);
+  const [durationMinutes, setDurationMinutes] = useState<number>(0);
+
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([
     "English",
   ]);
@@ -106,15 +176,9 @@ export const CreateEventModal = ({
   const [imagePreview, setImagePreview] = useState("");
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
+  const [tickets, setTickets] = useState<TicketDraft[]>(defaultInitialTickets);
   const [cities, setCities] = useState<OrganiserLookupOption[]>([]);
   const [categories, setCategories] = useState<OrganiserLookupOption[]>([]);
-  const [adminTickets, setAdminTickets] = useState<AdminTicketTemplate[]>([]);
-
-  const [ticketMode, setTicketMode] = useState<"NONE" | "ADMIN" | "CUSTOM">("NONE");
-  const [selectedAdminTicketIds, setSelectedAdminTicketIds] = useState<number[]>([]);
-  const [customTiers, setCustomTiers] = useState<Array<{ name: string; price: number }>>([]);
-  const [newCustomTierName, setNewCustomTierName] = useState("");
-  const [newCustomTierPrice, setNewCustomTierPrice] = useState<number>(0);
 
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -122,24 +186,20 @@ export const CreateEventModal = ({
 
   const isEditMode = Boolean(eventToEdit);
 
-  const selectedCategoryName = useMemo(() => {
-    const found = categories.find((c) => String(c.id) === String(formData.category_id));
-    return found ? found.name.toLowerCase() : "";
-  }, [categories, formData.category_id]);
-
-  const availableAdminTickets = useMemo(() => {
-    if (!selectedCategoryName) return [];
-    return adminTickets.filter(
-      (ticket) =>
-        ticket.status !== "DELETED" &&
-        ticket.category.trim().toLowerCase() === selectedCategoryName
-    );
-  }, [adminTickets, selectedCategoryName]);
-
   useEffect(() => {
     if (!isOpen) return;
 
     if (eventToEdit) {
+      const rawDuration =
+        (eventToEdit as any).duration_hours !== undefined &&
+        (eventToEdit as any).duration_hours !== null
+          ? `${(eventToEdit as any).duration_hours} Hours`
+          : (eventToEdit as any).duration || "2 Hours";
+
+      const parsedDur = parseDurationString(rawDuration);
+      setDurationHours(parsedDur.hours);
+      setDurationMinutes(parsedDur.minutes);
+
       setFormData({
         name: eventToEdit.name || "",
         description: eventToEdit.description || "",
@@ -150,19 +210,18 @@ export const CreateEventModal = ({
         location: eventToEdit.location || "",
         city_id: String((eventToEdit as any).city_id || ""),
         category_id: String((eventToEdit as any).category_id || ""),
-        event_date: eventToEdit.event_date ? eventToEdit.event_date.slice(0, 10) : "",
+        event_date: extractCleanDate(eventToEdit.event_date),
         time: eventToEdit.time ? eventToEdit.time.slice(0, 5) : "",
-        price: Number(eventToEdit.price) || 0,
-        capacity: Number(eventToEdit.capacity) || 50,
-        age_restriction:
-          (eventToEdit as any).age_group ||
-          (eventToEdit as any).age_restriction ||
-          "All Ages",
-        duration:
-          (eventToEdit as any).duration_hours !== undefined &&
-          (eventToEdit as any).duration_hours !== null
-            ? `${(eventToEdit as any).duration_hours} Hours`
-            : (eventToEdit as any).duration || "2 Hours",
+        price:
+          eventToEdit.price !== undefined && eventToEdit.price !== null
+            ? Number(eventToEdit.price)
+            : "",
+        capacity:
+          eventToEdit.capacity !== undefined && eventToEdit.capacity !== null
+            ? String(eventToEdit.capacity)
+            : "",
+        age_group: (eventToEdit as any).age_group || "All Ages",
+        duration: rawDuration,
       });
 
       const langs = (eventToEdit as any).languages;
@@ -177,36 +236,36 @@ export const CreateEventModal = ({
         }
       }
 
-      const existingTiers = (eventToEdit as any).ticket_tiers;
-      if (Array.isArray(existingTiers) && existingTiers.length > 0) {
-        setTicketMode("CUSTOM");
-        setCustomTiers(existingTiers);
-      } else if ((eventToEdit as any).ticket_category_name) {
-        setTicketMode("CUSTOM");
-        setCustomTiers([
-          {
-            name: (eventToEdit as any).ticket_category_name,
-            price: Number(eventToEdit.price) || 0,
-          },
-        ]);
-      } else {
-        setTicketMode("NONE");
-        setCustomTiers([]);
-      }
-
-      const existingImg = (eventToEdit as any).image_url || (eventToEdit as any).image;
+      const existingImg =
+        (eventToEdit as any).image_url || (eventToEdit as any).image;
       if (existingImg) setImagePreview(existingImg);
+    } else if (draftToEdit) {
+      const parsedDur = parseDurationString(draftToEdit.formData.duration);
+      setDurationHours(parsedDur.hours);
+      setDurationMinutes(parsedDur.minutes);
+
+      setFormData({
+        ...draftToEdit.formData,
+        event_date: extractCleanDate(draftToEdit.formData.event_date),
+        age_group: draftToEdit.formData.age_group || "All Ages",
+      });
+      setSelectedLanguages(draftToEdit.selectedLanguages);
+      setTickets(draftToEdit.tickets);
+      setImage(draftToEdit.image);
+      setImagePreview(
+        draftToEdit.image ? URL.createObjectURL(draftToEdit.image) : "",
+      );
     } else {
       setFormData(initialFormState);
+      setDurationHours(2);
+      setDurationMinutes(0);
       setSelectedLanguages(["English"]);
       setImage(null);
       setImagePreview("");
-      setTicketMode("NONE");
-      setSelectedAdminTicketIds([]);
-      setCustomTiers([]);
+      setTickets([{ name: "", description: "", price: "" }]);
     }
     setIsLightboxOpen(false);
-  }, [isOpen, eventToEdit]);
+  }, [isOpen, eventToEdit, draftToEdit]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -215,25 +274,19 @@ export const CreateEventModal = ({
     setError(null);
     setLoadingOptions(true);
 
-    const fetchTickets = async (): Promise<AdminTicketTemplate[]> => {
-      try {
-        const res = await axios.get(`${API_BASE_URL}/v1/tickets`);
-        return res.data?.tickets || [];
-      } catch {
-        return [];
-      }
-    };
-
-    Promise.all([fetchOrganiserCities(), fetchOrganiserCategories(), fetchTickets()])
-      .then(([cityOptions, categoryOptions, ticketTemplates]) => {
+    Promise.all([fetchOrganiserCities(), fetchOrganiserCategories()])
+      .then(([cityOptions, categoryOptions]) => {
         if (!active) return;
         setCities(cityOptions.filter((option) => option.is_active !== false));
-        setCategories(categoryOptions.filter((option) => option.is_active !== false));
-        setAdminTickets(ticketTemplates.filter((t) => t.status !== "DELETED"));
+        setCategories(
+          categoryOptions.filter((option) => option.is_active !== false),
+        );
       })
       .catch((lookupError: unknown) => {
         if (active) {
-          setError(getOrganiserErrorMessage(lookupError, "Unable to load form data."));
+          setError(
+            getOrganiserErrorMessage(lookupError, "Unable to load form data."),
+          );
         }
       })
       .finally(() => {
@@ -244,12 +297,6 @@ export const CreateEventModal = ({
       active = false;
     };
   }, [isOpen]);
-
-  useEffect(() => {
-    setSelectedAdminTicketIds((prev) =>
-      prev.filter((id) => availableAdminTickets.some((t) => t.id === id))
-    );
-  }, [availableAdminTickets]);
 
   useEffect(() => {
     return () => {
@@ -264,84 +311,88 @@ export const CreateEventModal = ({
   const requestClose = () => {
     if (!submitting) {
       setFormData(initialFormState);
+      setDurationHours(2);
+      setDurationMinutes(0);
       setSelectedLanguages(["English"]);
       setImage(null);
       setImagePreview("");
+      setTickets(defaultInitialTickets);
       setError(null);
       setIsLightboxOpen(false);
-      setTicketMode("NONE");
-      setSelectedAdminTicketIds([]);
-      setCustomTiers([]);
       onClose();
     }
   };
 
   const handleChange = (
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    event: ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value, type } = event.target;
     setError(null);
     setFormData((current) => ({
       ...current,
-      [name]: type === "number" ? (value === "" ? 0 : Number(value)) : value,
+      [name]: type === "number" ? (value === "" ? "" : Number(value)) : value,
+    }));
+  };
+
+  const handleDurationHoursChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const h = parseInt(e.target.value, 10);
+    setDurationHours(h);
+    setError(null);
+    setFormData((current) => ({
+      ...current,
+      duration: formatDurationString(h, durationMinutes),
+    }));
+  };
+
+  const handleDurationMinutesChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const m = parseInt(e.target.value, 10);
+    setDurationMinutes(m);
+    setError(null);
+    setFormData((current) => ({
+      ...current,
+      duration: formatDurationString(durationHours, m),
+    }));
+  };
+
+  const handleCapacityChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const cleanNumeric = event.target.value.replace(/\D/g, "");
+    setError(null);
+    setFormData((current) => ({
+      ...current,
+      capacity: cleanNumeric,
+    }));
+  };
+
+  const handleDateChange = (date: Date | null) => {
+    setError(null);
+
+    if (!date) {
+      setFormData((current) => ({ ...current, event_date: "" }));
+      return;
+    }
+
+    const todayMidnight = getTodayMidnight();
+    const chosenMidnight = new Date(date);
+    chosenMidnight.setHours(0, 0, 0, 0);
+
+    if (chosenMidnight.getTime() < todayMidnight.getTime()) {
+      setFormData((current) => ({ ...current, event_date: "" }));
+      setError("Past dates are not allowed. Please select today or a future date.");
+      return;
+    }
+
+    setFormData((current) => ({
+      ...current,
+      event_date: formatDateToYMD(date),
     }));
   };
 
   const toggleLanguage = (lang: string) => {
     setSelectedLanguages((prev) =>
-      prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang]
+      prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang],
     );
-  };
-
-  const handleToggleAdminTicket = (ticket: AdminTicketTemplate) => {
-    setSelectedAdminTicketIds((prev) => {
-      const exists = prev.includes(ticket.id);
-      const next = exists ? prev.filter((id) => id !== ticket.id) : [...prev, ticket.id];
-
-      const chosenTiers = adminTickets.filter((t) => next.includes(t.id));
-      if (chosenTiers.length > 0) {
-        const lowestPrice = Math.min(...chosenTiers.map((t) => Number(t.price)));
-        setFormData((fd) => ({ ...fd, price: lowestPrice }));
-      }
-      return next;
-    });
-  };
-
-  const handleAddCustomTier = () => {
-    if (!newCustomTierName.trim()) {
-      setError("Please provide a name for the custom tier.");
-      return;
-    }
-    setCustomTiers((prev) => [
-      ...prev,
-      { name: newCustomTierName.trim(), price: Number(newCustomTierPrice) || 0 },
-    ]);
-    if (formData.price === 0 || Number(newCustomTierPrice) < formData.price) {
-      setFormData((fd) => ({ ...fd, price: Number(newCustomTierPrice) || 0 }));
-    }
-    setNewCustomTierName("");
-    setNewCustomTierPrice(0);
-  };
-
-  const handleRemoveCustomTier = (index: number) => {
-    setCustomTiers((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const getFinalTicketTiers = (): SelectedTicketTier[] => {
-    if (ticketMode === "ADMIN") {
-      return adminTickets
-        .filter((t) => selectedAdminTicketIds.includes(t.id))
-        .map((t) => ({ id: t.id, name: t.name, price: Number(t.price), type: "ADMIN" }));
-    }
-    if (ticketMode === "CUSTOM") {
-      return customTiers.map((c, i) => ({
-        id: `custom-${i}`,
-        name: c.name,
-        price: c.price,
-        type: "CUSTOM",
-      }));
-    }
-    return [{ name: "General Admission", price: Number(formData.price), type: "ADMIN" }];
   };
 
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -363,64 +414,148 @@ export const CreateEventModal = ({
 
     setImage(file);
     setImagePreview(URL.createObjectURL(file));
+    event.target.value = "";
+  };
+
+  const handleAddTicket = () => {
+    setTickets((prev) => [
+      ...prev,
+      { name: "", description: "", price: "" },
+    ]);
+  };
+
+  const handleRemoveTicket = (index: number) => {
+    if (tickets.length === 1) {
+      return setError("At least one ticket category is required.");
+    }
+    setTickets((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleTicketChange = (
+    index: number,
+    field: keyof TicketDraft,
+    value: string,
+  ) => {
+    setError(null);
+    setTickets((prev) =>
+      prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)),
+    );
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
 
+    const parsedCapacity = Number(formData.capacity);
+    if (
+      !formData.capacity.trim() ||
+      isNaN(parsedCapacity) ||
+      parsedCapacity < 1
+    ) {
+      return setError("Capacity must be at least 1 attendee.");
+    }
+
+    if (durationHours === 0 && durationMinutes === 0) {
+      return setError("Please select a valid duration for your event.");
+    }
+
     if (selectedLanguages.length === 0) {
       return setError("Please select at least one language for the event.");
     }
-    if (ticketMode === "ADMIN" && selectedAdminTicketIds.length === 0) {
-      return setError("Please choose at least one admin ticket tier.");
-    }
-    if (ticketMode === "CUSTOM" && customTiers.length === 0) {
-      return setError("Please add at least one custom ticket tier.");
+
+    const cleanDate = extractCleanDate(formData.event_date);
+    const cleanTime = formData.time ? formData.time.slice(0, 5) : "";
+
+    if (!cleanDate || !cleanTime) {
+      return setError("Date and start time are required.");
     }
 
-    const compiledTiers = getFinalTicketTiers();
-    const primaryTierName = compiledTiers.map((t) => t.name).join(", ");
+    const todayMidnight = getTodayMidnight();
+    const chosenDate = parseDateStringToDate(cleanDate);
+    if (!chosenDate || chosenDate.getTime() < todayMidnight.getTime()) {
+      return setError("Past dates are not allowed. Please select today or a future date.");
+    }
+
+    if (!isEditMode) {
+      if (tickets.length === 0) {
+        return setError("Please add at least one ticket category.");
+      }
+
+      for (let i = 0; i < tickets.length; i++) {
+        const t = tickets[i];
+        if (!t.name.trim()) {
+          return setError(`Ticket category #${i + 1} needs a name.`);
+        }
+        const parsedP = Number(t.price);
+        if (t.price.trim() === "" || isNaN(parsedP) || parsedP < 0) {
+          return setError(
+            `Ticket category "${t.name}" needs a valid price (₹).`,
+          );
+        }
+      }
+    }
+
     const languagesPayload = JSON.stringify(selectedLanguages);
+    const finalDuration = formatDurationString(durationHours, durationMinutes);
 
     if (!isEditMode) {
       if (!formData.name.trim()) return setError("Event name is required.");
       if (!formData.city_id || !formData.category_id)
         return setError("Choose a city and category.");
-      if (!formData.event_date || !formData.time)
-        return setError("Date and time are required.");
-      if (formData.capacity < 1) return setError("Capacity must be at least 1.");
       if (!image) return setError("Please upload an event image.");
+
+      const validPrices = tickets
+        .map((t) => Number(t.price))
+        .filter((p) => !isNaN(p));
+      const minStartingPrice = validPrices.length ? Math.min(...validPrices) : 0;
 
       try {
         setSubmitting(true);
+
         const createdEvent = await createOrganiserEvent({
           name: formData.name.trim(),
           description: formData.description.trim() || undefined,
           instructions: formData.instructions.trim() || undefined,
           additional_instructions: formData.instructions.trim() || undefined,
           languages: languagesPayload,
-          age_restriction: formData.age_restriction,
-          age_group: formData.age_restriction,
-          duration: formData.duration.trim() || "2 Hours",
-          duration_hours: formData.duration.trim() || "2 Hours",
+          age_group: formData.age_group,
+          duration: finalDuration,
+          duration_hours: finalDuration,
           location: formData.location.trim() || undefined,
           city_id: Number(formData.city_id),
           category_id: Number(formData.category_id),
-          event_date: formData.event_date,
-          time: formData.time,
-          price: Number(formData.price),
-          capacity: Number(formData.capacity),
-          ticket_category_name: primaryTierName,
-          ticket_tiers: JSON.stringify(compiledTiers),
+          event_date: cleanDate,
+          time: cleanTime,
+          price: minStartingPrice,
+          capacity: parsedCapacity,
           image,
         } as any);
 
+        const newEventId = Number(
+          createdEvent.id || (createdEvent as any).event?.id,
+        );
+
+        if (newEventId) {
+          await Promise.all(
+            tickets.map((t) =>
+              createCustomEventTicket(newEventId, {
+                name: t.name.trim(),
+                description: t.description.trim(),
+                price: Number(t.price),
+              }),
+            ),
+          );
+        }
+
         onEventSaved(createdEvent);
+        if (draftToEdit) await onDraftSubmitted(draftToEdit.id);
         requestClose();
       } catch (submitError: unknown) {
         setError(
-          getOrganiserErrorMessage(submitError, "Could not submit event. Please try again.")
+          getOrganiserErrorMessage(
+            submitError,
+            "Could not submit event. Please try again.",
+          ),
         );
       } finally {
         setSubmitting(false);
@@ -428,6 +563,7 @@ export const CreateEventModal = ({
       return;
     }
 
+    // Edit flow
     if (!eventToEdit) return;
     const patchPayload: Record<string, any> = {};
 
@@ -440,29 +576,31 @@ export const CreateEventModal = ({
     if (formData.location.trim() !== (eventToEdit.location || "").trim()) {
       patchPayload.location = formData.location.trim();
     }
-    if (formData.city_id && Number(formData.city_id) !== Number((eventToEdit as any).city_id)) {
+    if (
+      formData.city_id &&
+      Number(formData.city_id) !== Number((eventToEdit as any).city_id)
+    ) {
       patchPayload.city_id = Number(formData.city_id);
     }
-    if (formData.category_id && Number(formData.category_id) !== Number((eventToEdit as any).category_id)) {
+    if (
+      formData.category_id &&
+      Number(formData.category_id) !== Number((eventToEdit as any).category_id)
+    ) {
       patchPayload.category_id = Number(formData.category_id);
     }
-    if (formData.event_date && formData.event_date !== (eventToEdit.event_date || "").slice(0, 10)) {
-      patchPayload.event_date = formData.event_date;
+    if (cleanDate && cleanDate !== extractCleanDate(eventToEdit.event_date)) {
+      patchPayload.event_date = cleanDate;
     }
-    if (formData.time && formData.time !== (eventToEdit.time || "").slice(0, 5)) {
-      patchPayload.time = formData.time;
+    if (cleanTime && cleanTime !== (eventToEdit.time || "").slice(0, 5)) {
+      patchPayload.time = cleanTime;
     }
-    if (Number(formData.price) !== Number(eventToEdit.price)) {
-      patchPayload.price = Number(formData.price);
-    }
-    if (Number(formData.capacity) !== Number(eventToEdit.capacity)) {
-      patchPayload.capacity = Number(formData.capacity);
+    if (parsedCapacity !== Number(eventToEdit.capacity)) {
+      patchPayload.capacity = parsedCapacity;
     }
     if (image instanceof File) {
       patchPayload.image = image;
     }
 
-    // Instructions
     const originalInstructions = (
       (eventToEdit as any).additional_instructions ||
       (eventToEdit as any).instructions ||
@@ -473,47 +611,79 @@ export const CreateEventModal = ({
       patchPayload.instructions = formData.instructions.trim();
     }
 
-    // Age restriction / group
-    const originalAge = (
-      (eventToEdit as any).age_group ||
-      (eventToEdit as any).age_restriction ||
-      "All Ages"
-    ).trim();
-    if (formData.age_restriction !== originalAge) {
-      patchPayload.age_group = formData.age_restriction;
-      patchPayload.age_restriction = formData.age_restriction;
+    const originalAge = ((eventToEdit as any).age_group || "All Ages").trim();
+    if (formData.age_group !== originalAge) {
+      patchPayload.age_group = formData.age_group;
     }
 
-    // Duration
-    const originalDuration = String(
-      (eventToEdit as any).duration_hours !== undefined && (eventToEdit as any).duration_hours !== null
-        ? `${(eventToEdit as any).duration_hours} Hours`
-        : (eventToEdit as any).duration || ""
-    ).trim();
-    if (formData.duration.trim() !== originalDuration) {
-      patchPayload.duration_hours = formData.duration.trim();
-      patchPayload.duration = formData.duration.trim();
-    }
+    patchPayload.duration_hours = finalDuration;
+    patchPayload.duration = finalDuration;
 
-    // Languages
-    const currentLanguagesStr = typeof (eventToEdit as any).languages === "string"
-      ? (eventToEdit as any).languages
-      : JSON.stringify((eventToEdit as any).languages || []);
+    const currentLanguagesStr =
+      typeof (eventToEdit as any).languages === "string"
+        ? (eventToEdit as any).languages
+        : JSON.stringify((eventToEdit as any).languages || []);
     if (languagesPayload !== currentLanguagesStr) {
       patchPayload.languages = languagesPayload;
     }
 
-    patchPayload.ticket_category_name = primaryTierName;
-    patchPayload.ticket_tiers = JSON.stringify(compiledTiers);
+    patchPayload.status = "PENDING";
+    patchPayload.is_live = false;
+    patchPayload.rejection_reason = null;
 
     try {
       setSubmitting(true);
-      const updatedEvent = await patchOrganiserEvent(eventToEdit.id, patchPayload);
+      const updatedEvent = await patchOrganiserEvent(
+        eventToEdit.id,
+        patchPayload,
+      );
       onEventSaved(updatedEvent);
       requestClose();
     } catch (patchError: unknown) {
       setError(
-        getOrganiserErrorMessage(patchError, "Could not update event details. Please try again.")
+        getOrganiserErrorMessage(
+          patchError,
+          "Could not submit event for review. Please try again.",
+        ),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (isEditMode || submitting) return;
+
+    setError(null);
+    setSubmitting(true);
+
+    const now = new Date().toISOString();
+    const finalDuration = formatDurationString(durationHours, durationMinutes);
+
+    const draft: OrganiserEventDraft = {
+      id: draftToEdit?.id ?? crypto.randomUUID(),
+      organiserId: draftToEdit?.organiserId ?? organiserId,
+      createdAt: draftToEdit?.createdAt ?? now,
+      updatedAt: now,
+      formData: {
+        ...formData,
+        duration: finalDuration,
+        event_date: extractCleanDate(formData.event_date),
+      },
+      selectedLanguages: [...selectedLanguages],
+      tickets: tickets.map((ticket) => ({ ...ticket })),
+      image,
+    };
+
+    try {
+      await onDraftSaved(draft);
+      requestClose();
+    } catch (saveError: unknown) {
+      setError(
+        getOrganiserErrorMessage(
+          saveError,
+          "Could not save your draft. Please try again.",
+        ),
       );
     } finally {
       setSubmitting(false);
@@ -537,10 +707,18 @@ export const CreateEventModal = ({
           <header className="org-modal-header">
             <div>
               <span className="org-modal-eyebrow">
-                {isEditMode ? "EDIT EVENT" : "NEW LISTING"}
+                {isEditMode
+                  ? "EDIT & RESUBMIT"
+                  : draftToEdit
+                    ? "EDIT SAVED DRAFT"
+                    : "NEW LISTING"}
               </span>
               <h3 id="org-create-title">
-                {isEditMode ? "Edit event details" : "Create an event"}
+                {isEditMode
+                  ? "Edit event details"
+                  : draftToEdit
+                    ? "Edit saved draft"
+                    : "Create an event"}
               </h3>
             </div>
 
@@ -555,7 +733,7 @@ export const CreateEventModal = ({
             </button>
           </header>
 
-          <form onSubmit={handleSubmit} className="org-modal-form">
+          <form onSubmit={handleSubmit} className="org-modal-form" noValidate>
             {error && (
               <div className="org-form-error" role="alert">
                 {error}
@@ -565,7 +743,10 @@ export const CreateEventModal = ({
             <div className="org-form-field org-form-wide">
               <span>Event image</span>
               {!imagePreview ? (
-                <label htmlFor="event-image" className="org-event-image-upload">
+                <label
+                  htmlFor="event-image"
+                  className="org-event-image-upload"
+                >
                   <ImagePlus size={28} />
                   <strong>Upload event image</strong>
                   <small>JPG, PNG or WebP · Max 5 MB</small>
@@ -579,16 +760,25 @@ export const CreateEventModal = ({
                 </label>
               ) : (
                 <div className="org-event-image-preview">
-                  <img
-                    src={imagePreview}
-                    alt="Event preview"
-                    className="org-clickable-preview"
-                    title="Click to view full image"
+                  <button
+                    type="button"
+                    className="org-image-preview-button"
                     onClick={() => setIsLightboxOpen(true)}
-                  />
+                    aria-label="View full event image"
+                    title="View full image"
+                  >
+                    <img
+                      src={imagePreview}
+                      alt="Event preview"
+                      className="org-clickable-preview"
+                    />
+                  </button>
 
                   <div className="org-event-image-preview-actions">
-                    <label htmlFor="event-image-change" className="org-image-change-btn">
+                    <label
+                      htmlFor="event-image-change"
+                      className="org-image-change-btn"
+                    >
                       Change image
                     </label>
                     <button
@@ -614,7 +804,10 @@ export const CreateEventModal = ({
               )}
             </div>
 
-            <label className="org-form-field org-form-wide" htmlFor="event-name">
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-name"
+            >
               <span>Event name</span>
               <input
                 id="event-name"
@@ -622,12 +815,14 @@ export const CreateEventModal = ({
                 value={formData.name}
                 onChange={handleChange}
                 maxLength={120}
-                required
                 placeholder="Give your event a name"
               />
             </label>
 
-            <label className="org-form-field org-form-wide" htmlFor="event-description">
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-description"
+            >
               <span>Description</span>
               <textarea
                 id="event-description"
@@ -639,7 +834,10 @@ export const CreateEventModal = ({
               />
             </label>
 
-            <label className="org-form-field org-form-wide" htmlFor="event-instructions">
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-instructions"
+            >
               <span>Instructions, Amenities & Guidelines</span>
               <textarea
                 id="event-instructions"
@@ -651,7 +849,6 @@ export const CreateEventModal = ({
               />
             </label>
 
-            {/* Languages Multi-select */}
             <div className="org-form-field org-form-wide">
               <span>Languages</span>
               <div
@@ -687,16 +884,15 @@ export const CreateEventModal = ({
               </div>
             </div>
 
-            {/* Age restriction and Duration */}
             <label className="org-form-field" htmlFor="event-age">
-              <span>Age restriction</span>
+              <span>Age group</span>
               <select
                 id="event-age"
-                name="age_restriction"
-                value={formData.age_restriction}
+                name="age_group"
+                value={formData.age_group}
                 onChange={handleChange}
               >
-                {AGE_RESTRICTIONS.map((age) => (
+                {AGE_GROUPS.map((age) => (
                   <option key={age} value={age}>
                     {age}
                   </option>
@@ -704,17 +900,36 @@ export const CreateEventModal = ({
               </select>
             </label>
 
-            <label className="org-form-field" htmlFor="event-duration">
+            <div className="org-form-field">
               <span>Duration</span>
-              <input
-                id="event-duration"
-                name="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                placeholder="e.g. 2 Hours, 90 Mins, Full Day"
-                required
-              />
-            </label>
+              <div style={{ display: "flex", gap: "8px", width: "100%" }}>
+                <select
+                  aria-label="Duration Hours"
+                  value={durationHours}
+                  onChange={handleDurationHoursChange}
+                  style={{ flex: 1 }}
+                >
+                  {HOUR_OPTIONS.map((h) => (
+                    <option key={h} value={h}>
+                      {h} {h === 1 ? "Hour" : "Hours"}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  aria-label="Duration Minutes"
+                  value={durationMinutes}
+                  onChange={handleDurationMinutesChange}
+                  style={{ flex: 1 }}
+                >
+                  {MINUTE_OPTIONS.map((m) => (
+                    <option key={m} value={m}>
+                      {m} Mins
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             <label className="org-form-field" htmlFor="event-city">
               <span>City</span>
@@ -723,7 +938,6 @@ export const CreateEventModal = ({
                 name="city_id"
                 value={formData.city_id}
                 onChange={handleChange}
-                required
                 disabled={loadingOptions}
               >
                 <option value="">
@@ -744,7 +958,6 @@ export const CreateEventModal = ({
                 name="category_id"
                 value={formData.category_id}
                 onChange={handleChange}
-                required
                 disabled={loadingOptions}
               >
                 <option value="">
@@ -758,7 +971,10 @@ export const CreateEventModal = ({
               </select>
             </label>
 
-            <label className="org-form-field org-form-wide" htmlFor="event-location">
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-location"
+            >
               <span>Venue or location</span>
               <input
                 id="event-location"
@@ -769,17 +985,21 @@ export const CreateEventModal = ({
               />
             </label>
 
-            <label className="org-form-field" htmlFor="event-date">
-              <span>Date</span>
-              <input
+            <div className="org-form-field">
+              <label htmlFor="event-date">Date</label>
+              <DatePicker
                 id="event-date"
-                name="event_date"
-                type="date"
-                value={formData.event_date}
-                onChange={handleChange}
-                required
+                selected={parseDateStringToDate(formData.event_date)}
+                minDate={getTodayMidnight()}
+                onChange={handleDateChange}
+                dateFormat="dd-MM-yyyy"
+                placeholderText="DD-MM-YYYY"
+                showMonthDropdown
+                showYearDropdown
+                dropdownMode="select"
+                autoComplete="off"
               />
-            </label>
+            </div>
 
             <label className="org-form-field" htmlFor="event-time">
               <span>Start time</span>
@@ -789,168 +1009,116 @@ export const CreateEventModal = ({
                 type="time"
                 value={formData.time}
                 onChange={handleChange}
-                required
               />
             </label>
 
-            <div className="org-form-field org-form-wide org-tier-section">
-              <div className="org-tier-header">
-                <Ticket size={16} />
-                <span>Ticket Category & Tiers</span>
-              </div>
-
-              <div className="org-tier-radios">
-                <label className="org-tier-radio-label">
-                  <input
-                    type="radio"
-                    name="tierMode"
-                    checked={ticketMode === "NONE"}
-                    onChange={() => {
-                      setTicketMode("NONE");
-                      setSelectedAdminTicketIds([]);
-                      setCustomTiers([]);
-                    }}
-                  />
-                  No category (General Admission)
-                </label>
-
-                <label className="org-tier-radio-label">
-                  <input
-                    type="radio"
-                    name="tierMode"
-                    checked={ticketMode === "ADMIN"}
-                    onChange={() => setTicketMode("ADMIN")}
-                  />
-                  Admin ticket tiers {selectedCategoryName ? `(${selectedCategoryName})` : ""}
-                </label>
-
-                <label className="org-tier-radio-label">
-                  <input
-                    type="radio"
-                    name="tierMode"
-                    checked={ticketMode === "CUSTOM"}
-                    onChange={() => setTicketMode("CUSTOM")}
-                  />
-                  Custom tiers
-                </label>
-              </div>
-
-              {ticketMode === "ADMIN" && (
-                <div className="org-tier-list">
-                  {!formData.category_id ? (
-                    <p className="org-tier-hint">
-                      👉 Select an event category above to see matching ticket tiers.
-                    </p>
-                  ) : availableAdminTickets.length === 0 ? (
-                    <p className="org-tier-error">
-                      No admin tiers configured for the <strong>{selectedCategoryName}</strong> category yet.
-                    </p>
-                  ) : (
-                    availableAdminTickets.map((t) => {
-                      const isSelected = selectedAdminTicketIds.includes(t.id);
-                      return (
-                        <div
-                          key={t.id}
-                          className={`org-tier-card ${isSelected ? "selected" : ""}`}
-                          onClick={() => handleToggleAdminTicket(t)}
-                        >
-                          <div className="org-tier-card-left">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => {}}
-                              style={{ pointerEvents: "none" }}
-                            />
-                            <div className="org-tier-details">
-                              <strong>{t.name}</strong>
-                              {t.description && <p>{t.description}</p>}
-                            </div>
-                          </div>
-                          <span className="org-tier-price">₹{Number(t.price).toLocaleString()}</span>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-
-              {ticketMode === "CUSTOM" && (
-                <div className="org-custom-builder">
-                  <div className="org-custom-inputs">
-                    <input
-                      type="text"
-                      placeholder="Tier name (e.g. VIP, Early Bird)"
-                      value={newCustomTierName}
-                      onChange={(e) => setNewCustomTierName(e.target.value)}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Price (₹)"
-                      value={newCustomTierPrice || ""}
-                      onChange={(e) => setNewCustomTierPrice(Number(e.target.value))}
-                    />
-                    <button
-                      type="button"
-                      className="org-custom-add-btn"
-                      onClick={handleAddCustomTier}
-                    >
-                      <Plus size={15} /> Add
-                    </button>
-                  </div>
-
-                  {customTiers.map((tier, idx) => (
-                    <div key={idx} className="org-custom-item">
-                      <span>{tier.name}</span>
-                      <div className="org-custom-item-actions">
-                        <strong>₹{tier.price.toLocaleString()}</strong>
-                        <button
-                          type="button"
-                          className="org-custom-remove-btn"
-                          onClick={() => handleRemoveCustomTier(idx)}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <label className="org-form-field" htmlFor="event-price">
-              <span>Starting / base ticket price (₹)</span>
-              <input
-                id="event-price"
-                name="price"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.price}
-                onChange={handleChange}
-                required
-              />
-            </label>
-
-            <label className="org-form-field" htmlFor="event-capacity">
-              <span>Capacity</span>
+            <label
+              className="org-form-field org-form-wide"
+              htmlFor="event-capacity"
+            >
+              <span>Total attendee capacity</span>
               <input
                 id="event-capacity"
                 name="capacity"
-                type="number"
-                min="1"
-                step="1"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="Enter attendee limit across all categories (e.g. 100)"
                 value={formData.capacity}
-                onChange={handleChange}
-                required
+                onChange={handleCapacityChange}
               />
             </label>
+
+            {!isEditMode && (
+              <div className="org-form-field org-form-wide org-ticket-builder">
+                <div className="org-ticket-builder-header">
+                  <div>
+                    <span className="org-ticket-builder-title">
+                      Ticket categories
+                    </span>
+                    <small>
+                      Create ticket tiers for this event (e.g. Early Bird, VIP,
+                      General)
+                    </small>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="org-add-ticket-btn"
+                    onClick={handleAddTicket}
+                  >
+                    <Plus size={15} /> Add category
+                  </button>
+                </div>
+
+                <div className="org-ticket-builder-list">
+                  {tickets.map((ticket, index) => (
+                    <div key={index} className="org-ticket-builder-item">
+                      <div className="org-ticket-row-top">
+                        <input
+                          type="text"
+                          placeholder="Category name (e.g. VIP Pass)"
+                          value={ticket.name}
+                          onChange={(e) =>
+                            handleTicketChange(index, "name", e.target.value)
+                          }
+                          className="org-ticket-name-input"
+                        />
+
+                        <div className="org-ticket-price-input-wrapper">
+                          <span className="currency-prefix">₹</span>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="Price"
+                            value={ticket.price}
+                            onChange={(e) => {
+                              const clean = e.target.value.replace(
+                                /[^0-9.]/g,
+                                "",
+                              );
+                              handleTicketChange(index, "price", clean);
+                            }}
+                            className="org-ticket-price-input"
+                          />
+                        </div>
+
+                        {tickets.length > 1 && (
+                          <button
+                            type="button"
+                            className="org-ticket-delete-btn"
+                            onClick={() => handleRemoveTicket(index)}
+                            aria-label="Remove ticket category"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+
+                      <input
+                        type="text"
+                        placeholder="Short description / perks (e.g. Front row seat + welcome drink)"
+                        value={ticket.description}
+                        onChange={(e) =>
+                          handleTicketChange(
+                            index,
+                            "description",
+                            e.target.value,
+                          )
+                        }
+                        className="org-ticket-desc-input"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="org-modal-footer org-form-wide">
               <p>
                 {isEditMode
-                  ? "Edits may re-require admin approval."
-                  : "New events are submitted as pending for admin approval."}
+                  ? "Editing this event will reset its status to pending and require admin approval before it can go live."
+                  : "New events and their ticket tiers are submitted as pending for admin approval."}
               </p>
 
               <div>
@@ -963,6 +1131,17 @@ export const CreateEventModal = ({
                   Cancel
                 </button>
 
+                {!isEditMode && (
+                  <button
+                    type="button"
+                    className="org-button-secondary org-save-draft-button"
+                    onClick={() => void handleSaveDraft()}
+                    disabled={submitting}
+                  >
+                    {submitting ? "Saving..." : "Save as draft"}
+                  </button>
+                )}
+
                 <button
                   type="submit"
                   className="org-button-primary"
@@ -971,12 +1150,12 @@ export const CreateEventModal = ({
                   {submitting ? (
                     <>
                       <Loader2 size={16} className="org-spin" />
-                      {isEditMode ? "Saving changes..." : "Submitting..."}
+                      {isEditMode
+                        ? "Submitting for review..."
+                        : "Submitting event & tickets..."}
                     </>
-                  ) : isEditMode ? (
-                    "Save changes"
                   ) : (
-                    "Submit for approval"
+                    "Submit for review"
                   )}
                 </button>
               </div>

@@ -17,6 +17,11 @@ export const fetchAdminUsers = async () => {
   return response.data;
 };
 
+export const fetchAdminUserDetails = async (userId: number) => {
+  const response = await adminApi.get(`/users/${userId}/details`);
+  return response.data.user;
+};
+
 
 export const fetchAdminEvents = async () => {
   const response = await adminApi.get("/events");
@@ -45,15 +50,15 @@ export const fetchAdminOrganiserRequests = async (
 };
 
 export const updateOrganizerStatus = async (
-  requestId: number,
-  status: string
+  id: number,
+  status: "APPROVED" | "REJECTED",
+  reason?: string
 ) => {
-  const response = await adminApi.patch(
-    `/organiser-requests/${requestId}/approve`,
-    { status }
+  return await axios.patch(
+    `${API_BASE_URL}/v1/admin/organiser-requests/${id}`,
+    { status, reason },
+    { withCredentials: true }
   );
-
-  return response.data;
 };
 
 export const fetchAdminOrganisers = async () => {
@@ -104,11 +109,23 @@ export const updateCity = async (
     name?: string;
     description?: string;
     is_active?: boolean;
+    image?: File | null;
   }
 ) => {
+  const formData = new FormData();
+
+  if (data.name !== undefined) formData.append("name", data.name);
+  if (data.description !== undefined) {
+    formData.append("description", data.description);
+  }
+  if (data.is_active !== undefined) {
+    formData.append("is_active", String(data.is_active));
+  }
+  if (data.image) formData.append("image", data.image);
+
   const response = await adminApi.patch(
     `/cities/${cityId}`,
-    data
+    formData
   );
 
   return response.data;
@@ -123,13 +140,18 @@ export const fetchAdminCategories = async () => {
 };
 
 export const addCategory = async (
-  name: string
+  name: string,
+  image?: File | null
 ) => {
+  const formData = new FormData();
+  formData.append("name", name);
+  if (image) {
+    formData.append("image", image);
+  }
+
   const response = await adminApi.post(
     "/add-category",
-    {
-      name,
-    }
+    formData
   );
 
   return response.data;
@@ -140,11 +162,19 @@ export const updateCategory = async (
   data: {
     name?: string;
     is_active?: boolean;
+    image?: File | null;
   }
 ) => {
+  const formData = new FormData();
+  if (data.name !== undefined) formData.append("name", data.name);
+  if (data.is_active !== undefined) {
+    formData.append("is_active", String(data.is_active));
+  }
+  if (data.image) formData.append("image", data.image);
+
   const response = await adminApi.patch(
     `/categories/${categoryId}`,
-    data
+    formData
   );
 
   return response.data;
@@ -159,36 +189,6 @@ export const updateEventStatus = async (
     {
       status,
     }
-  );
-
-  return response.data;
-};
-
-export const fetchAdminTickets = async () => {
-  const response = await adminApi.get("/tickets");
-
-  return response.data;
-};
-
-export const addAdminTicket = async (data: {
-  name: string;
-  description?: string;
-  price: number;
-  category: string;
-}) => {
-  const response = await adminApi.post(
-    "/add-ticket",
-    data
-  );
-
-  return response.data;
-};
-
-export const deleteAdminTicket = async (
-  ticketId: number
-) => {
-  const response = await adminApi.patch(
-    `/tickets/${ticketId}/delete`
   );
 
   return response.data;

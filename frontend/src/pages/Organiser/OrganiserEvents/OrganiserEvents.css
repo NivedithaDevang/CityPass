@@ -95,6 +95,156 @@
   background: rgba(22, 101, 52, 0.1);
 }
 
+.org-saved-drafts {
+  display: grid;
+  gap: 18px;
+  padding: 24px 28px; 
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  width: 100%;
+}
+
+.org-saved-drafts-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.org-saved-drafts-heading .org-eyebrow {
+  margin-bottom: 3px;
+}
+
+.org-saved-drafts-heading h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.org-saved-drafts-count,
+.org-draft-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.org-saved-drafts-count {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+}
+
+/* Increased min card width to 380px so titles have ample room before wrapping */
+.org-drafts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+.org-draft-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  padding: 16px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fbfcfe;
+}
+
+/* Container for text side to constrain flex child and prevent overflow */
+.org-draft-card > div:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Allows long titles like "The Great Dim Sum & Dumpling Masterclass" to wrap cleanly */
+.org-draft-card h3 {
+  margin: 6px 0 4px;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.org-draft-card p,
+.org-drafts-message,
+.org-drafts-error {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.org-drafts-error {
+  color: #b91c1c;
+}
+
+.org-draft-status {
+  min-height: 20px;
+  padding: 2px 8px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+.org-draft-actions {
+  display: flex;
+  flex: 0 0 auto; /* Keeps buttons locked at full size without getting compressed */
+  align-items: center;
+  gap: 8px;
+}
+
+.org-draft-edit,
+.org-draft-delete {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.org-draft-edit {
+  padding: 0 12px;
+}
+
+.org-draft-delete {
+  width: 36px;
+  color: #b42336;
+}
+
+.org-draft-edit:hover,
+.org-draft-delete:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.org-draft-delete:hover {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
 .org-event-toolbar {
   display: flex;
   align-items: center;
@@ -185,10 +335,12 @@
 }
 
 .org-cards-grid {
+align-items: center;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-  gap: 24px;
-  width: 100%;
+  grid-template-columns: repeat(3, minmax(310px, 1fr));
+  gap: 30px;
+  width: 95%;
+  height: 100%;
   box-sizing: border-box;
 }
 
@@ -215,8 +367,7 @@
 
 .org-card-media {
   position: relative;
-  height: 190px;
-  min-height: 190px;
+  min-height: 350px;
   background-color: #fef9c3;
   background-size: cover;
   background-position: center;
@@ -490,6 +641,7 @@
     transform: rotate(360deg);
   }
 }
+
 .org-detail-backdrop {
   position: fixed;
   inset: 0;
@@ -617,7 +769,6 @@
   color: #0f172a;
 }
 
-/* Modal interior scroll isolation */
 .org-detail-content {
   padding: 20px 24px;
   display: flex;
@@ -887,6 +1038,11 @@
   text-transform: uppercase;
 }
 
+.org-status-badge.approved { background: #dcfce7; color: #166534; }
+.org-status-badge.rejected { background: #fee2e2; color: #991b1b; }
+.org-status-badge.pending  { background: #fef3c7; color: #92400e; }
+.org-status-badge.cancelled{ background: #f1f5f9; color: #475569; }
+.org-status-badge.completed{ background: #e0e7ff; color: #3730a3; }
 
 .cancel-action-btn {
   margin-left: 120px;
@@ -910,14 +1066,12 @@
   transform: translateY(-1px);
 }
 
-/* Container between card header and footer */
 .go-live-container {
   margin: 10px 0 14px 0;
   display: flex;
   align-items: center;
 }
 
-/* Base button */
 .go-live-toggle {
   display: inline-flex;
   align-items: center;
@@ -936,7 +1090,6 @@
   border-color: #cbd5e1;
 }
 
-/* The pill track */
 .go-live-switch {
   width: 34px;
   height: 20px;
@@ -948,7 +1101,6 @@
   transition: background-color 0.25s ease;
 }
 
-/* The circular slider thumb */
 .go-live-thumb {
   width: 16px;
   height: 16px;
@@ -958,7 +1110,6 @@
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Label text */
 .go-live-text {
   font-size: 13px;
   font-weight: 600;
@@ -967,7 +1118,6 @@
   transition: color 0.2s ease;
 }
 
-/* --- ACTIVE / LIVE STATE --- */
 .go-live-toggle.is-live {
   background: #fef2f2;
   border-color: #fecaca;
@@ -989,7 +1139,6 @@
   gap: 6px;
 }
 
-/* Pulsing dot when live */
 .go-live-toggle.is-live .go-live-text::before {
   content: "";
   display: inline-block;
@@ -998,6 +1147,69 @@
   border-radius: 50%;
   background-color: #ef4444;
   animation: pulse-dot 1.4s infinite ease-in-out;
+}
+
+/* Card Disabled / Greyed State (PENDING, REJECTED, CANCELLED, COMPLETED) */
+.org-grid-card.is-disabled {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  opacity: 0.82;
+  box-shadow: none !important;
+}
+
+.org-grid-card.is-disabled .org-card-media {
+  filter: grayscale(85%) !important;
+}
+
+.org-grid-card.is-disabled .org-card-status-pill {
+  filter: grayscale(0%) !important;
+}
+
+/* Completed Card Specific Styling */
+.org-grid-card.is-completed {
+  opacity: 0.72;
+  cursor: pointer;
+}
+
+.org-grid-card.is-completed:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+}
+
+.org-grid-card.is-completed .org-card-date {
+  color: #64748b;
+}
+
+.org-card-status-pill.completed {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.org-status-badge.completed {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.org-grid-card.is-disabled .org-card-action-btn:disabled,
+.org-grid-card.is-disabled .org-card-edit-btn:disabled,
+.org-grid-card.is-disabled .cancel-action-btn:disabled,
+.org-grid-card.is-disabled .go-live-toggle:disabled,
+.org-grid-card.is-disabled .go-live-toggle.btn-disabled,
+.org-card-action-btn:disabled,
+.org-card-edit-btn:disabled,
+.org-detail-footer-btn:disabled,
+.cancel-action-btn:disabled,
+.go-live-toggle:disabled,
+.go-live-toggle.btn-disabled {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  opacity: 0.45 !important;
+  box-shadow: none !important;
 }
 
 @keyframes pulse-dot {
@@ -1015,13 +1227,168 @@
   }
 }
 
-.org-status-badge.approved { background: #dcfce7; color: #166534; }
-.org-status-badge.rejected { background: #fee2e2; color: #991b1b; }
-.org-status-badge.pending  { background: #fef3c7; color: #92400e; }
-.org-status-badge.cancelled{ background: #f1f5f9; color: #475569; }
-.org-status-badge.completed{ background: #e0e7ff; color: #3730a3; }
+/* Card Disabled / Greyed State (PENDING, REJECTED, CANCELLED) */
+.org-grid-card.is-disabled {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  opacity: 0.82;
+  box-shadow: none !important;
+}
+
+.org-grid-card.is-disabled .org-card-media {
+  filter: grayscale(85%) !important;
+}
+
+.org-grid-card.is-disabled .org-card-status-pill {
+  filter: grayscale(0%) !important;
+}
+
+/* Muted / Non-clickable Controls */
+.org-grid-card.is-disabled .org-card-action-btn,
+.org-grid-card.is-disabled .cancel-action-btn:disabled,
+.org-grid-card.is-disabled .go-live-toggle:disabled,
+.org-grid-card.is-disabled .go-live-toggle.btn-disabled,
+.org-card-action-btn:disabled,
+.org-card-edit-btn:disabled,
+.org-detail-footer-btn:disabled,
+.cancel-action-btn:disabled,
+.go-live-toggle:disabled,
+.go-live-toggle.btn-disabled {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  opacity: 0.45 !important;
+  box-shadow: none !important;
+}
+
+/* Edit & Re-submit Button (Active on grey cards for REJECTED status) */
+.org-grid-card.is-disabled .org-card-edit-btn.btn-resubmit,
+.org-card-edit-btn.btn-resubmit,
+.org-detail-footer-btn.btn-resubmit {
+  background-color: #5144ed !important;
+  color: #ffffff !important;
+  border: 1px solid #4336d6 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 6px rgba(81, 68, 237, 0.25) !important;
+}
+
+.org-grid-card.is-disabled .org-card-edit-btn.btn-resubmit:hover,
+.org-card-edit-btn.btn-resubmit:hover,
+.org-detail-footer-btn.btn-resubmit:hover {
+  background-color: #4336d6 !important;
+  transform: translateY(-1px);
+}
+
+/* Container for the tooltip */
+.go-live-tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Tooltip bubble hidden by default */
+.go-live-tooltip-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background-color: #0f172a;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+  padding: 6px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+  z-index: 100;
+}
+
+/* Downward indicator arrow */
+.go-live-tooltip-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #0f172a transparent transparent transparent;
+}
+
+/* Show smoothly when hovering over the toggle */
+.go-live-tooltip-wrapper:hover .go-live-tooltip-bubble {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Allow hover detection over the disabled button */
+.go-live-toggle.btn-disabled {
+  pointer-events: none;
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.go-live-tooltip-wrapper:hover {
+  cursor: not-allowed;
+}
+
+/* Stack container for the toggle and its micro-hint */
+.go-live-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+/* Subtle micro-hint below the locked button */
+.go-live-inline-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #64748b;
+  letter-spacing: 0.01em;
+  padding-left: 2px;
+}
+
+.go-live-inline-hint svg {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+/* Disabled appearance for toggle */
+.go-live-toggle.btn-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 @media (max-width: 680px) {
+  .org-draft-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .org-draft-actions {
+    width: 100%;
+  }
+
+  .org-draft-edit {
+    flex: 1;
+  }
+
   .org-cards-grid {
     grid-template-columns: 1fr;
   }

@@ -7,7 +7,6 @@ import {
 } from "../../controllers/bookingController.js";
 
 import { authenticate } from "../../middleware/authMiddleware.js";
-import { validateIdParam } from "../../validators/idValidator.js";
 
 const bookRouter = express.Router();
 
@@ -21,11 +20,6 @@ bookRouter.post("/", authenticate, addBooking);
 
 
 // Only logged-in user can cancel their own booking
-bookRouter.patch(
-  "/:id/cancel",
-  validateIdParam,
-  authenticate,
-  cancelBooking
-);
+bookRouter.patch("/:id/cancel", authenticate, cancelBooking);
 
 export default bookRouter;

@@ -1,16 +1,13 @@
-
 .details-outer-container {
-  margin-top: 92px auto 30px;
-  padding-top: 62px;
+  padding-top: 12px;
+  margin: 0;
 }
-
-
 
 .details-page-bg {
   min-height: 85vh;
   background-color: #f8fafc;
   padding-bottom: 5rem;
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+  transition: margin-left 0.35s cubic-bezier(0.16, 1, 0.3, 1),
               margin-right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -307,7 +304,7 @@
   display: grid;
   grid-template-columns: 1.75fr 1fr;
   gap: 2.25rem;
-  align-items: start;
+  align-items: start; /* Prevents columns from stretching together */
 }
 
 /* Content Cards */
@@ -392,15 +389,17 @@
   color: #5144ed;
 }
 
-/* Sticky Booking Card */
+/* Sticky Booking Card (Reserve Spot) */
 .booking-card {
   position: sticky;
-  top: 6rem;
+  top: 96px;
+  align-self: flex-start;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 22px;
   padding: 2.25rem;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  z-index: 10;
 }
 
 .booking-card-header {
@@ -408,18 +407,6 @@
   align-items: center;
   gap: 0.85rem;
   margin-bottom: 1.25rem;
-}
-
-.booking-icon-circle {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: #eff0fe;
-  color: #5144ed;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
 }
 
 .booking-card-title {
@@ -434,6 +421,24 @@
   font-size: 0.8rem;
   font-weight: 600;
   color: #16a34a;
+}
+
+.booking-capacity-notice {
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.booking-capacity-notice.sold-out {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
 }
 
 /* Urgency Banner */
@@ -509,10 +514,10 @@
   margin: 1.1rem 0 0 0;
 }
 
-/* Shifts page left on desktop when drawer is active */
+/* Shifts page left on desktop when drawer is active without breaking sticky viewport context */
 @media (min-width: 1024px) {
   .details-outer-container.drawer-active .details-page-bg {
-    transform: translateX(-60px);
+    margin-left: -60px;
     margin-right: 440px;
   }
 }
@@ -537,7 +542,9 @@
   }
 
   .booking-card {
-    position: static;
+    position: sticky;
+    top: 88px;
+    z-index: 2;
     margin-top: 1rem;
   }
 
